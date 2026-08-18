@@ -4498,7 +4498,7 @@ show_sidebar_perf = st.sidebar.checkbox("📊 Performance Tracking Dashboard", v
 if show_sidebar_perf:
     render_performance_tracker_ui(df_active)
 
-show_sidebar_xai = st.sidebar.checkbox("🧠 Explainable AI (XAI)", value=False, help="Inspect SHAP, LIME, and Counterfactual model explanations.")
+show_sidebar_xai = st.sidebar.checkbox("🧠 Explainable AI", value=False, help="Inspect SHAP, LIME, and Counterfactual model explanations.")
 if show_sidebar_xai:
     render_xai_ui(df_active)
 

@@ -1,0 +1,267 @@
+{
+  "NEXUS PATTERN SNIPER": [
+    {
+      "id": "NEXUS PATTERN SNIPER_20260817101011062_1787077587.808087",
+      "issue": "20260817101011062",
+      "prediction": {
+        "name": "NEXUS PATTERN SNIPER",
+        "border": "border-emerald",
+        "color": "#10b981",
+        "dice1": 5,
+        "dice2": 3,
+        "dice3": 3,
+        "premium": "533",
+        "sum": 11,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "bs_conf": 72.0,
+        "oe_conf": 71.0,
+        "kelly": 7.436,
+        "steps": [
+          "1. 84% Spillover Anchor: Locked Dice [5] from previous draw [2, 5, 5].",
+          "2. Elastic Jump Limit: Constrained search to [7 \u2014 17] around last sum (12).",
+          "3. Parity Reversion: Standard cut -> Projected Small.",
+          "4. Parity Wave: Alternating parity -> Odd.",
+          "5. Triad Resolution: [5][3][3] -> Sum=11 (Big, Odd) | Kelly=7.4%."
+        ],
+        "meta": {
+          "anchor": 5,
+          "window": "[7 \u2014 17]",
+          "dragon_streak": 2,
+          "harmonic_wave": "Lag5=Even, Lag10=Odd"
+        }
+      },
+      "actual": {
+        "dice1": 6,
+        "dice2": 5,
+        "dice3": 2,
+        "sum": 13,
+        "bs": "Big",
+        "oe": "Odd",
+        "premium": "652"
+      },
+      "confidence": 0.72,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:56:27.808087",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:56:27.817089"
+    },
+    {
+      "id": "NEXUS PATTERN SNIPER_20260817101011063_1787077588.783721",
+      "issue": "20260817101011063",
+      "prediction": {
+        "name": "NEXUS PATTERN SNIPER",
+        "border": "border-emerald",
+        "color": "#10b981",
+        "dice1": 5,
+        "dice2": 3,
+        "dice3": 3,
+        "premium": "533",
+        "sum": 11,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "bs_conf": 72.0,
+        "oe_conf": 71.0,
+        "kelly": 7.436,
+        "steps": [
+          "1. 84% Spillover Anchor: Locked Dice [5] from previous draw [2, 5, 5].",
+          "2. Elastic Jump Limit: Constrained search to [7 \u2014 17] around last sum (12).",
+          "3. Parity Reversion: Standard cut -> Projected Small.",
+          "4. Parity Wave: Alternating parity -> Odd.",
+          "5. Triad Resolution: [5][3][3] -> Sum=11 (Big, Odd) | Kelly=7.4%."
+        ],
+        "meta": {
+          "anchor": 5,
+          "window": "[7 \u2014 17]",
+          "dragon_streak": 2,
+          "harmonic_wave": "Lag5=Even, Lag10=Odd"
+        }
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 3,
+        "dice3": 1,
+        "sum": 6,
+        "bs": "Small",
+        "oe": "Even",
+        "premium": "231"
+      },
+      "confidence": 0.72,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:56:28.783721",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:56:28.794723"
+    }
+  ],
+  "NEXUS TRIPLE THREAT": [
+    {
+      "id": "NEXUS TRIPLE THREAT_20260817101011062_1787077588.166523",
+      "issue": "20260817101011062",
+      "prediction": {
+        "name": "NEXUS K3 TRIPLE THREAT",
+        "border": "border-dual",
+        "color": "#38bdf8",
+        "dice1": 2,
+        "dice2": 1,
+        "dice3": 2,
+        "premium": "212",
+        "sum": 5,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 58.98279571533203,
+        "oe_conf": 56.42672348022461,
+        "sum_conf": 16.956808872768423,
+        "kelly_bs": "8.982796",
+        "kelly_oe": "6.4267216",
+        "kelly_sum": 5.0,
+        "safe_kelly": "6.4267216",
+        "kelly": "6.4267216",
+        "steps": [
+          "1. Ingestion: Processed 50 issues. Feature tensor generated.",
+          "2. Multi-Task Output: BS=Small (59.0%), OE=Odd (56.4%), Sum=5 (17.0%).",
+          "3. Triad Resolution: [2][1][2] -> Premium #212 | Safe Kelly=6.4%."
+        ],
+        "meta": {
+          "w_nn": 0.52,
+          "w_xgb": 0.48
+        }
+      },
+      "actual": {
+        "dice1": 6,
+        "dice2": 5,
+        "dice3": 2,
+        "sum": 13,
+        "bs": "Big",
+        "oe": "Odd",
+        "premium": "652"
+      },
+      "confidence": 0.5898279571533203,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:56:28.166523",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:56:28.171529"
+    }
+  ],
+  "QUANTUM TEMPORAL ORACLE": [
+    {
+      "id": "QUANTUM TEMPORAL ORACLE_20260817101011062_1787077588.188089",
+      "issue": "20260817101011062",
+      "prediction": {
+        "name": "QUANTUM TEMPORAL ORACLE K3",
+        "border": "border-purple",
+        "color": "#c084fc",
+        "dice1": 2,
+        "dice2": 3,
+        "dice3": 4,
+        "premium": "234",
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 92.0,
+        "oe_conf": 89.0,
+        "kelly": 6.5,
+        "steps": [
+          "1. Temporal Fusion Transformer pass.",
+          "2. Conformal calibration synced."
+        ]
+      },
+      "actual": {
+        "dice1": 6,
+        "dice2": 5,
+        "dice3": 2,
+        "sum": 13,
+        "bs": "Big",
+        "oe": "Odd",
+        "premium": "652"
+      },
+      "confidence": 0.92,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:56:28.188089",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:56:28.193090"
+    }
+  ],
+  "SENTINEL PRIME OMEGA": [
+    {
+      "id": "SENTINEL PRIME OMEGA_20260817101011062_1787077588.343413",
+      "issue": "20260817101011062",
+      "prediction": {
+        "name": "SENTINEL PRIME OMEGA K3",
+        "border": "border-gold",
+        "color": "#fbbf24",
+        "dice1": 5,
+        "dice2": 4,
+        "dice3": 5,
+        "premium": "545",
+        "sum": 14,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "bs_conf": 69.5896434483391,
+        "oe_conf": 65.1238617343157,
+        "kelly": 7.2,
+        "steps": [
+          "Trained Random Forest (BS) + Extra Trees (OE) on lag tensors."
+        ]
+      },
+      "actual": {
+        "dice1": 6,
+        "dice2": 5,
+        "dice3": 2,
+        "sum": 13,
+        "bs": "Big",
+        "oe": "Odd",
+        "premium": "652"
+      },
+      "confidence": 0.695896434483391,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:56:28.343413",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:56:28.348412"
+    }
+  ],
+  "BAYESIAN NEURAL NETWORK": [
+    {
+      "id": "BAYESIAN NEURAL NETWORK_20260817101011062_1787077588.75477",
+      "issue": "20260817101011062",
+      "prediction": {
+        "name": "BAYESIAN NEURAL NETWORK",
+        "border": "border-purple",
+        "color": "#c084fc",
+        "dice1": 4,
+        "dice2": 3,
+        "dice3": 4,
+        "premium": "434",
+        "sum": 11,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "bs_conf": 60.0,
+        "oe_conf": 60.0,
+        "kelly": 3.0,
+        "steps": [
+          "BNN runtime fallback: name 'TensorDataset' is not defined"
+        ],
+        "uncertainty": {
+          "epistemic_sum": 0.15,
+          "total_uncertainty": 0.4
+        },
+        "meta": {
+          "bnn_trained": false
+        }
+      },
+      "actual": {
+        "dice1": 6,
+        "dice2": 5,
+        "dice3": 2,
+        "sum": 13,
+        "bs": "Big",
+        "oe": "Odd",
+        "premium": "652"
+      },
+      "confidence": 0.6,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:56:28.754770",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:56:28.762721"
+    }
+  ]
+}

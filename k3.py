@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from datetime import datetime
 from collections import deque, defaultdict
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Tuple
 import math
 from itertools import permutations
 from scipy import stats
@@ -1445,6 +1445,652 @@ def on_new_draw(actual):
         st.session_state.pred_logger.validate_prediction(
             model, str(actual.get('issue', actual.get('issueNumber', ''))), actual
         )
+
+
+# ============================================================================
+# EXPLAINABLE AI (XAI) FOR K3 PREDICTION
+# ============================================================================
+
+class K3FeatureEngineer:
+    """
+    Engineers interpretable features from K3 history.
+    
+    Features designed to be human-understandable:
+    - Recent trends
+    - Statistical measures
+    - Pattern indicators
+    - Historical comparisons
+    """
+    
+    def __init__(self):
+        self.feature_names = [
+            'sum_mean_10', 'sum_std_10', 'sum_trend_10',
+            'big_ratio_10', 'odd_ratio_10',
+            'dice1_freq_1', 'dice1_freq_2', 'dice1_freq_3',
+            'dice2_freq_1', 'dice2_freq_2', 'dice2_freq_3',
+            'dice3_freq_1', 'dice3_freq_2', 'dice3_freq_3',
+            'last_dice1', 'last_dice2', 'last_dice3',
+            'last_sum', 'last_bs', 'last_oe',
+            'streak_bs', 'streak_oe',
+            'sum_recent_bias', 'odd_recent_bias'
+        ]
+    
+    def extract_features(self, df: pd.DataFrame, lookback: int = 20) -> np.ndarray:
+        """
+        Extract interpretable features from K3 history.
+        """
+        if df is None or len(df) == 0:
+            return np.zeros(len(self.feature_names), dtype=np.float32)
+            
+        df_clean = df.copy()
+        for col in ['dice1', 'dice2', 'dice3', 'sum']:
+            if col in df_clean.columns:
+                df_clean[col] = pd.to_numeric(df_clean[col], errors='coerce').fillna(3)
+        if 'big_small' not in df_clean.columns and 'bs' in df_clean.columns:
+            df_clean['big_small'] = df_clean['bs']
+        if 'odd_even' not in df_clean.columns and 'oe' in df_clean.columns:
+            df_clean['odd_even'] = df_clean['oe']
+            
+        if len(df_clean) < lookback:
+            lookback = len(df_clean)
+        
+        df_recent = df_clean.head(lookback)
+        features = []
+        
+        # 1. Sum statistics (3 features)
+        sum_mean = float(df_recent['sum'].mean()) if not df_recent.empty else 10.5
+        sum_std = float(df_recent['sum'].std()) if len(df_recent) > 1 else 0.0
+        sum_trend = float(df_recent['sum'].iloc[0] - df_recent['sum'].iloc[-1]) if len(df_recent) > 1 else 0.0
+        features.extend([sum_mean, sum_std, sum_trend])
+        
+        # 2. Binary ratios (2 features)
+        big_ratio = float((df_recent['big_small'] == 'Big').mean()) if 'big_small' in df_recent.columns else 0.5
+        odd_ratio = float((df_recent['odd_even'] == 'Odd').mean()) if 'odd_even' in df_recent.columns else 0.5
+        features.extend([big_ratio, odd_ratio])
+        
+        # 3. Dice value frequencies (9 features: top 3 values per position)
+        for dice_col in ['dice1', 'dice2', 'dice3']:
+            value_counts = df_recent[dice_col].value_counts(normalize=True) if dice_col in df_recent.columns else {}
+            for val in [1, 2, 3]:
+                features.append(float(value_counts.get(val, 0.0)))
+        
+        # 4. Last draw features (5 features)
+        if len(df_clean) > 0:
+            last_row = df_clean.iloc[0]
+            features.extend([
+                float(last_row.get('dice1', 3)), float(last_row.get('dice2', 3)), float(last_row.get('dice3', 3)),
+                float(last_row.get('sum', 9)),
+                1.0 if str(last_row.get('big_small', 'Small')).lower() == 'big' else 0.0
+            ])
+            features.append(1.0 if str(last_row.get('odd_even', 'Even')).lower() == 'odd' else 0.0)
+        else:
+            features.extend([3.0, 3.0, 3.0, 10.0, 0.0, 0.0])
+        
+        # 5. Streak features (2 features)
+        streak_bs = 1
+        if len(df_recent) > 1 and 'big_small' in df_recent.columns:
+            current = df_recent['big_small'].iloc[0]
+            for i in range(1, len(df_recent)):
+                if df_recent['big_small'].iloc[i] == current:
+                    streak_bs += 1
+                else:
+                    break
+        
+        streak_oe = 1
+        if len(df_recent) > 1 and 'odd_even' in df_recent.columns:
+            current = df_recent['odd_even'].iloc[0]
+            for i in range(1, len(df_recent)):
+                if df_recent['odd_even'].iloc[i] == current:
+                    streak_oe += 1
+                else:
+                    break
+        features.extend([float(streak_bs), float(streak_oe)])
+        
+        # 6. Bias indicators (2 features)
+        historical_mean = float(df_clean['sum'].mean()) if len(df_clean) > lookback else sum_mean
+        sum_bias = float(sum_mean - historical_mean)
+        historical_odd = float((df_clean['odd_even'] == 'Odd').mean()) if (len(df_clean) > lookback and 'odd_even' in df_clean.columns) else 0.5
+        odd_bias = float(odd_ratio - historical_odd)
+        features.extend([sum_bias, odd_bias])
+        
+        while len(features) < len(self.feature_names):
+            features.append(0.0)
+        features = features[:len(self.feature_names)]
+        return np.array(features, dtype=np.float32)
+    
+    def get_feature_description(self, feature_name: str) -> str:
+        descriptions = {
+            'sum_mean_10': 'Average sum over last 10 draws',
+            'sum_std_10': 'Variability of recent sums',
+            'sum_trend_10': 'Recent trend (up or down)',
+            'big_ratio_10': 'Frequency of Big outcomes recently',
+            'odd_ratio_10': 'Frequency of Odd outcomes recently',
+            'dice1_freq_1': 'How often Dice 1 shows 1',
+            'dice1_freq_2': 'How often Dice 1 shows 2',
+            'dice1_freq_3': 'How often Dice 1 shows 3',
+            'dice2_freq_1': 'How often Dice 2 shows 1',
+            'dice2_freq_2': 'How often Dice 2 shows 2',
+            'dice2_freq_3': 'How often Dice 2 shows 3',
+            'dice3_freq_1': 'How often Dice 3 shows 1',
+            'dice3_freq_2': 'How often Dice 3 shows 2',
+            'dice3_freq_3': 'How often Dice 3 shows 3',
+            'last_dice1': 'Most recent Dice 1 value',
+            'last_dice2': 'Most recent Dice 2 value',
+            'last_dice3': 'Most recent Dice 3 value',
+            'last_sum': 'Most recent sum',
+            'last_bs': 'Most recent Big/Small outcome',
+            'last_oe': 'Most recent Odd/Even outcome',
+            'streak_bs': 'Current consecutive streak of B/S',
+            'streak_oe': 'Current consecutive streak of O/E',
+            'sum_recent_bias': 'Recent sums vs historical average',
+            'odd_recent_bias': 'Recent odd frequency vs historical'
+        }
+        return descriptions.get(feature_name, feature_name)
+
+
+class SHAPExplainer:
+    """
+    Simplified SHAP implementation for K3 models.
+    """
+    
+    def __init__(self, model_func, feature_engineer: K3FeatureEngineer):
+        self.model_func = model_func
+        self.feature_engineer = feature_engineer
+        self.feature_names = feature_engineer.feature_names
+    
+    def explain_prediction(self, features: np.ndarray, baseline: np.ndarray = None) -> Dict:
+        if baseline is None:
+            baseline = np.zeros_like(features)
+        
+        baseline_pred = self.model_func(baseline.reshape(1, -1))
+        actual_pred = self.model_func(features.reshape(1, -1))
+        
+        n_features = len(features)
+        shap_values = np.zeros(n_features)
+        
+        for i in range(n_features):
+            features_without_i = features.copy()
+            features_without_i[i] = baseline[i]
+            pred_without = self.model_func(features_without_i.reshape(1, -1))
+            
+            if isinstance(actual_pred, dict):
+                contrib = {}
+                for key in ['sum', 'confidence']:
+                    if key in actual_pred and key in pred_without:
+                        v_act = actual_pred[key]
+                        v_wo = pred_without[key]
+                        contrib[key] = float(v_act - v_wo)
+                shap_values[i] = np.mean(list(contrib.values())) if contrib else 0.0
+            else:
+                shap_values[i] = float(actual_pred - pred_without)
+        
+        feature_importance = list(zip(self.feature_names, shap_values.tolist()))
+        feature_importance.sort(key=lambda x: abs(x[1]), reverse=True)
+        
+        return {
+            'shap_values': shap_values,
+            'feature_importance': feature_importance,
+            'baseline_pred': baseline_pred,
+            'actual_pred': actual_pred,
+            'top_features': feature_importance[:5],
+            'bottom_features': feature_importance[-5:]
+        }
+    
+    def global_feature_importance(self, df: pd.DataFrame, n_samples: int = 50) -> List[Tuple[str, float]]:
+        all_importances = np.zeros(len(self.feature_names))
+        valid_samples = min(n_samples, max(1, len(df) - 20))
+        
+        for i in range(valid_samples):
+            subset = df.iloc[i:i+20]
+            features = self.feature_engineer.extract_features(subset)
+            explanation = self.explain_prediction(features)
+            all_importances += np.abs(explanation['shap_values'])
+        
+        all_importances /= valid_samples
+        importance_pairs = list(zip(self.feature_names, all_importances.tolist()))
+        importance_pairs.sort(key=lambda x: x[1], reverse=True)
+        return importance_pairs
+
+
+class LIMEExplainer:
+    """
+    Simplified LIME implementation.
+    """
+    
+    def __init__(self, model_func, feature_engineer: K3FeatureEngineer):
+        self.model_func = model_func
+        self.feature_engineer = feature_engineer
+        self.feature_names = feature_engineer.feature_names
+    
+    def explain(self, features: np.ndarray, n_perturbations: int = 100) -> Dict:
+        original_pred = self.model_func(features.reshape(1, -1))
+        perturbations = []
+        predictions = []
+        
+        for _ in range(n_perturbations):
+            noise = np.random.normal(0, 0.1, features.shape)
+            perturbed = features + noise
+            pred = self.model_func(perturbed.reshape(1, -1))
+            val = pred['sum'] if isinstance(pred, dict) else float(pred)
+            perturbations.append(perturbed)
+            predictions.append(val)
+        
+        perturbations = np.array(perturbations)
+        predictions = np.array(predictions).flatten()
+        
+        distances = np.linalg.norm(perturbations - features, axis=1)
+        weights = np.exp(-distances / (distances.std() + 1e-8))
+        
+        try:
+            from sklearn.linear_model import Ridge
+            model = Ridge(alpha=1.0)
+            model.fit(perturbations, predictions, sample_weight=weights)
+            
+            coefficients = model.coef_
+            feature_weights = list(zip(self.feature_names, coefficients.tolist()))
+            feature_weights.sort(key=lambda x: abs(x[1]), reverse=True)
+            
+            return {
+                'coefficients': coefficients,
+                'feature_weights': feature_weights,
+                'intercept': model.intercept_,
+                'original_pred': original_pred,
+                'r_squared': float(model.score(perturbations, predictions, sample_weight=weights))
+            }
+        except Exception as e:
+            return {'error': f'Could not fit explanation model: {e}'}
+
+
+class NaturalLanguageExplainer:
+    """
+    Generates human-readable explanations from model outputs.
+    """
+    
+    def __init__(self):
+        pass
+    
+    def explain(self, shap_explanation: Dict, prediction: Dict) -> str:
+        top_features = shap_explanation['top_features']
+        explanation_parts = []
+        
+        pred_sum = prediction.get('sum', 10.5)
+        pred_bs = prediction.get('bs_pred', 'Unknown')
+        explanation_parts.append(
+            f"🤖 **Model Synthesis:** Predicts Sum=`{pred_sum:.1f}` ({pred_bs})."
+        )
+        
+        explanation_parts.append("\n📊 **Key Driver Signals:**")
+        for i, (feature, impact) in enumerate(top_features[:3]):
+            feature_desc = self._humanize_feature(feature)
+            direction = "UP / BIG" if impact > 0 else "DOWN / SMALL"
+            explanation_parts.append(
+                f"  {i+1}. **{feature_desc}** (`{feature}`) → Impact: `{impact:+.3f}` ({direction})"
+            )
+        
+        explanation_parts.append("\n💡 **Probabilistic Interpretation:**")
+        explanation_parts.append(
+            f"The engine identifies `{top_features[0][0]}` ({self._humanize_feature(top_features[0][0])}) as the primary statistical driver."
+        )
+        
+        explanation_parts.append("\n🔄 **Counterfactual Sensitivity:**")
+        bottom_feature = shap_explanation['bottom_features'][0][0]
+        bottom_desc = self._humanize_feature(bottom_feature)
+        explanation_parts.append(
+            f"  • Changes to **{bottom_desc}** (`{bottom_feature}`) currently have minimal impact on the prediction boundary."
+        )
+        
+        return "\n".join(explanation_parts)
+    
+    def _humanize_feature(self, feature_name: str) -> str:
+        humanized = {
+            'sum_mean_10': 'Recent average sum',
+            'sum_std_10': 'Recent sum variability',
+            'sum_trend_10': 'Recent sum trend',
+            'big_ratio_10': 'Recent Big/Small balance',
+            'odd_ratio_10': 'Recent Odd/Even balance',
+            'dice1_freq_1': 'How often Dice 1 shows 1',
+            'dice1_freq_2': 'How often Dice 1 shows 2',
+            'dice1_freq_3': 'How often Dice 1 shows 3',
+            'dice2_freq_1': 'How often Dice 2 shows 1',
+            'dice2_freq_2': 'How often Dice 2 shows 2',
+            'dice2_freq_3': 'How often Dice 2 shows 3',
+            'dice3_freq_1': 'How often Dice 3 shows 1',
+            'dice3_freq_2': 'How often Dice 3 shows 2',
+            'dice3_freq_3': 'How often Dice 3 shows 3',
+            'last_dice1': 'Last Dice 1 value',
+            'last_dice2': 'Last Dice 2 value',
+            'last_dice3': 'Last Dice 3 value',
+            'last_sum': 'Last draw sum',
+            'last_bs': 'Last Big/Small outcome',
+            'last_oe': 'Last Odd/Even outcome',
+            'streak_bs': 'Current Big/Small streak',
+            'streak_oe': 'Current Odd/Even streak',
+            'sum_recent_bias': 'Recent sums vs historical average',
+            'odd_recent_bias': 'Recent odd frequency vs historical'
+        }
+        return humanized.get(feature_name, feature_name.replace('_', ' ').title())
+
+
+class CounterfactualAnalyzer:
+    """
+    "What if" analysis - shows minimal changes needed to flip prediction.
+    """
+    
+    def __init__(self, model_func, feature_engineer: K3FeatureEngineer):
+        self.model_func = model_func
+        self.feature_engineer = feature_engineer
+    
+    def find_counterfactual(self, features: np.ndarray, desired_output: str = 'Small') -> Dict:
+        current_pred = self.model_func(features.reshape(1, -1))
+        changes = []
+        
+        for i in range(len(features)):
+            for delta in [-2.0, -1.0, 1.0, 2.0, -0.5, 0.5, -0.2, 0.2]:
+                modified = features.copy()
+                modified[i] += delta
+                new_pred = self.model_func(modified.reshape(1, -1))
+                
+                if isinstance(new_pred, dict):
+                    new_bs = new_pred.get('bs_pred', '')
+                    new_oe = new_pred.get('oe_pred', '')
+                    
+                    matched = False
+                    if desired_output in ['Big', 'Small'] and new_bs == desired_output and new_bs != current_pred.get('bs_pred', ''):
+                        matched = True
+                    elif desired_output in ['Odd', 'Even'] and new_oe == desired_output and new_oe != current_pred.get('oe_pred', ''):
+                        matched = True
+                        
+                    if matched:
+                        changes.append({
+                            'feature_index': i,
+                            'feature_name': self.feature_engineer.feature_names[i],
+                            'original_value': float(features[i]),
+                            'new_value': float(modified[i]),
+                            'change': float(delta),
+                            'new_prediction': new_pred
+                        })
+                        break
+        
+        changes.sort(key=lambda x: abs(x['change']))
+        return {
+            'current_prediction': current_pred,
+            'desired_output': desired_output,
+            'counterfactuals': changes[:5],
+            'n_changes_needed': len(changes)
+        }
+
+
+class SimpleK3Model:
+    """
+    Simple interpretable model for XAI demonstration.
+    """
+    
+    def __init__(self):
+        self.weights = {
+            'sum_mean_10': 0.5,
+            'big_ratio_10': 2.0,
+            'odd_ratio_10': 1.5,
+            'last_sum': 0.3,
+            'streak_bs': 0.2,
+            'sum_recent_bias': 1.0
+        }
+        self.bias = 9.0
+    
+    def predict(self, features: np.ndarray) -> Dict:
+        if features.ndim == 1:
+            features = features.reshape(1, -1)
+        
+        feature_names = [
+            'sum_mean_10', 'sum_std_10', 'sum_trend_10',
+            'big_ratio_10', 'odd_ratio_10',
+            'dice1_freq_1', 'dice1_freq_2', 'dice1_freq_3',
+            'dice2_freq_1', 'dice2_freq_2', 'dice2_freq_3',
+            'dice3_freq_1', 'dice3_freq_2', 'dice3_freq_3',
+            'last_dice1', 'last_dice2', 'last_dice3',
+            'last_sum', 'last_bs', 'last_oe',
+            'streak_bs', 'streak_oe',
+            'sum_recent_bias', 'odd_recent_bias'
+        ]
+        
+        feature_dict = {name: float(features[0, i]) if i < features.shape[1] else 0.0 for i, name in enumerate(feature_names)}
+        
+        prediction_sum = self.bias
+        for name, weight in self.weights.items():
+            if name in feature_dict:
+                prediction_sum += feature_dict[name] * weight
+        
+        prediction_sum = float(np.clip(prediction_sum, 3.0, 18.0))
+        bs_pred = 'Big' if prediction_sum >= 11.0 else 'Small'
+        oe_pred = 'Odd' if int(round(prediction_sum)) % 2 == 1 else 'Even'
+        
+        threshold_distance = abs(prediction_sum - 11.0)
+        confidence = min(0.95, 0.50 + threshold_distance * 0.05)
+        
+        return {
+            'sum': prediction_sum,
+            'bs_pred': bs_pred,
+            'oe_pred': oe_pred,
+            'confidence': float(confidence),
+            'feature_dict': feature_dict
+        }
+
+
+def render_xai_ui(df):
+    """
+    Complete XAI dashboard.
+    """
+    st.markdown("## 🧠 Explainable AI (XAI) & Interpretability Suite")
+    st.markdown("Understand **WHY** AI models make specific predictions with SHAP attribution, LIME perturbations, and Counterfactual Sensitivity.")
+    
+    if 'xai_components' not in st.session_state:
+        st.session_state.xai_components = {
+            'feature_engineer': K3FeatureEngineer(),
+            'model': SimpleK3Model(),
+            'shap': None,
+            'lime': None,
+            'nl_explainer': NaturalLanguageExplainer(),
+            'cf_analyzer': None
+        }
+        
+        st.session_state.xai_components['shap'] = SHAPExplainer(
+            st.session_state.xai_components['model'].predict,
+            st.session_state.xai_components['feature_engineer']
+        )
+        
+        st.session_state.xai_components['lime'] = LIMEExplainer(
+            st.session_state.xai_components['model'].predict,
+            st.session_state.xai_components['feature_engineer']
+        )
+        
+        st.session_state.xai_components['cf_analyzer'] = CounterfactualAnalyzer(
+            st.session_state.xai_components['model'].predict,
+            st.session_state.xai_components['feature_engineer']
+        )
+    
+    components = st.session_state.xai_components
+    fe = components['feature_engineer']
+    model = components['model']
+    
+    if 'xai_current_features' not in st.session_state or st.session_state.xai_current_features is None:
+        st.session_state.xai_current_features = fe.extract_features(df)
+        
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "🎯 Explain Single Prediction",
+        "📊 Global Feature Importance",
+        "🔍 SHAP Values",
+        "🧪 LIME Analysis",
+        "🔄 Counterfactuals"
+    ])
+    
+    # TAB 1
+    with tab1:
+        st.markdown("### 🎯 Explain a Single Prediction")
+        st.caption("Inspect exactly why the model made this prediction.")
+        
+        if st.button("🔄 Sync with Most Recent State", key="btn_xai_sync"):
+            st.session_state.xai_current_features = fe.extract_features(df)
+            st.rerun()
+            
+        features = st.session_state.xai_current_features
+        prediction = model.predict(features)
+        shap_exp = components['shap'].explain_prediction(features)
+        
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Predicted Sum", f"{prediction['sum']:.1f}")
+        col2.metric("Big / Small Outcome", prediction['bs_pred'])
+        col3.metric("Decision Confidence", f"{prediction['confidence']*100:.1f}%")
+        
+        st.markdown("#### 💬 Natural Language Explanation")
+        nl_explanation = components['nl_explainer'].explain(shap_exp, prediction)
+        st.markdown(nl_explanation)
+        
+        st.markdown("#### 📊 Top Contributing Factors")
+        top_5 = shap_exp['top_features'][:5]
+        
+        fig = go.Figure(data=[
+            go.Bar(
+                x=[f[1] for f in top_5],
+                y=[f[0] for f in top_5],
+                orientation='h',
+                marker_color=['#10b981' if f[1] > 0 else '#ef4444' for f in top_5],
+                text=[f"{f[1]:+.3f}" for f in top_5],
+                textposition='auto'
+            )
+        ])
+        fig.update_layout(
+            title="Feature Impact on Prediction (SHAP Values)",
+            xaxis_title="Impact (SHAP value)",
+            template="plotly_dark",
+            height=350
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+    # TAB 2
+    with tab2:
+        st.markdown("### 📊 Global Feature Importance")
+        st.caption("Which features matter most across historical draw regimes?")
+        
+        n_samples = st.slider("Historical Window Sample Count", 10, 100, 30, key="slider_xai_samples")
+        if st.button("🚀 Analyze Global Importance Across History", key="btn_xai_global"):
+            with st.spinner(f"Analyzing feature attribution across {n_samples} historical steps..."):
+                importance = components['shap'].global_feature_importance(df, n_samples)
+                importance_df = pd.DataFrame(importance, columns=['Feature', 'Importance'])
+                
+                col1, col2 = st.columns([2, 1])
+                with col1:
+                    fig_glob = go.Figure(data=[
+                        go.Bar(
+                            x=importance_df['Importance'][:15],
+                            y=importance_df['Feature'][:15],
+                            orientation='h',
+                            marker_color='#3b82f6',
+                            text=[f"{v:.3f}" for v in importance_df['Importance'][:15]],
+                            textposition='auto'
+                        )
+                    ])
+                    fig_glob.update_layout(
+                        title="Top 15 Most Influential Global Features",
+                        xaxis_title="Average |SHAP Value|",
+                        template="plotly_dark",
+                        height=480,
+                        yaxis={'autorange': 'reversed'}
+                    )
+                    st.plotly_chart(fig_glob, use_container_width=True)
+                
+                with col2:
+                    st.markdown("**Feature Telemetry Descriptions:**")
+                    for feature, imp in importance[:7]:
+                        desc = fe.get_feature_description(feature)
+                        st.markdown(f"**`{feature}`**: {desc} (Impact: `{imp:.4f}`)")
+
+    # TAB 3
+    with tab3:
+        st.markdown("### 🔍 SHAP Value Analysis")
+        st.caption("SHapley Additive exPlanations measuring game-theoretic feature payoffs.")
+        
+        features = st.session_state.xai_current_features
+        shap_exp = components['shap'].explain_prediction(features)
+        sorted_features = sorted(shap_exp['feature_importance'], key=lambda x: x[1], reverse=True)
+        
+        col_u, col_d = st.columns(2)
+        with col_u:
+            st.markdown("##### 🔼 Features Pushing Prediction UP:")
+            for feature, impact in sorted_features[:5]:
+                if impact > 0:
+                    desc = fe.get_feature_description(feature)
+                    st.markdown(f"• **`{feature}`**: `{impact:+.3f}` <small style='color:#94a3b8;'>({desc})</small>", unsafe_allow_html=True)
+        with col_d:
+            st.markdown("##### 🔽 Features Pushing Prediction DOWN:")
+            for feature, impact in sorted_features[-5:]:
+                if impact < 0:
+                    desc = fe.get_feature_description(feature)
+                    st.markdown(f"• **`{feature}`**: `{impact:+.3f}` <small style='color:#94a3b8;'>({desc})</small>", unsafe_allow_html=True)
+                    
+        st.markdown("#### Full Feature Attribution Matrix")
+        contrib_df = pd.DataFrame(shap_exp['feature_importance'], columns=['Feature', 'SHAP Value'])
+        contrib_df['Description'] = contrib_df['Feature'].apply(fe.get_feature_description)
+        contrib_df['Impact Direction'] = contrib_df['SHAP Value'].apply(lambda x: '⬆️ Positive (Up)' if x > 0 else '🔽 Negative (Down)')
+        st.dataframe(contrib_df, use_container_width=True, height=350)
+
+    # TAB 4
+    with tab4:
+        st.markdown("### 🧪 LIME Analysis (Local Interpretable Model-agnostic Explanations)")
+        st.caption("Fits localized distance-weighted surrogate Ridge regressions around the current draw.")
+        
+        features = st.session_state.xai_current_features
+        if st.button("🔬 Compute Local LIME Surrogate", key="btn_xai_lime"):
+            with st.spinner("Generating 100 Gaussian perturbations and solving Ridge surrogate..."):
+                lime_exp = components['lime'].explain(features)
+                
+            if 'error' not in lime_exp:
+                st.success("✅ LIME Local Surrogate Solved Successfully!")
+                top_local = lime_exp['feature_weights'][:10]
+                
+                fig_lime = go.Figure(data=[
+                    go.Bar(
+                        x=[f[1] for f in top_local],
+                        y=[f[0] for f in top_local],
+                        orientation='h',
+                        marker_color=['#10b981' if f[1] > 0 else '#ef4444' for f in top_local],
+                        text=[f"{f[1]:+.3f}" for f in top_local],
+                        textposition='auto'
+                    )
+                ])
+                fig_lime.update_layout(
+                    title="LIME Local Surrogate Feature Weights",
+                    xaxis_title="Surrogate Weight Coefficient",
+                    template="plotly_dark",
+                    height=450
+                )
+                st.plotly_chart(fig_lime, use_container_width=True)
+                st.metric("Surrogate Explanation Quality (R²)", f"{lime_exp.get('r_squared', 0.0):.3f}")
+
+    # TAB 5
+    with tab5:
+        st.markdown("### 🔄 Counterfactual Analysis (What-If Boundary Inversion)")
+        st.caption("Calculates the minimal feature perturbations required to flip the forecast outcome.")
+        
+        features = st.session_state.xai_current_features
+        current_pred = model.predict(features)
+        st.info(f"**Current Baseline Forecast:** Sum=`{current_pred['sum']:.1f}`, **{current_pred['bs_pred']}**, **{current_pred['oe_pred']}**")
+        
+        desired = st.selectbox("Select Desired Target Inversion Outcome", ["Small", "Big", "Odd", "Even"], key="sel_xai_cf")
+        if st.button(f"🎯 Find Counterfactual Paths to flip to '{desired}'", key="btn_xai_cf"):
+            with st.spinner("Analyzing decision hyperplane boundaries..."):
+                cf_result = components['cf_analyzer'].find_counterfactual(features, desired)
+                
+            if cf_result['counterfactuals']:
+                st.success(f"Found {len(cf_result['counterfactuals'])} minimal counterfactual shifts to achieve '{desired}'!")
+                for i, cf in enumerate(cf_result['counterfactuals'][:5], 1):
+                    c1, c2, c3 = st.columns(3)
+                    c1.markdown(f"**Strategy {i}**")
+                    c2.markdown(f"Feature: `{cf['feature_name']}`")
+                    c3.markdown(f"Value Shift: `{cf['original_value']:.2f}` → `{cf['new_value']:.2f}` (`{cf['change']:+.2f}`)")
+                    new_p = cf['new_prediction']
+                    st.caption(f"Resulting Forecast: Sum=`{new_p.get('sum', 0):.1f}` ({new_p.get('bs_pred', '')}, {new_p.get('oe_pred', '')})")
+                    st.divider()
+            else:
+                st.warning(f"No simple 1-step counterfactual was sufficient to invert to '{desired}'.")
 
 def run_bias_aware_prediction(df):
     """Generates prediction weighted by observed historical biases."""
@@ -3852,6 +4498,10 @@ show_sidebar_perf = st.sidebar.checkbox("📊 Performance Tracking Dashboard", v
 if show_sidebar_perf:
     render_performance_tracker_ui(df_active)
 
+show_sidebar_xai = st.sidebar.checkbox("🧠 Explainable AI (XAI)", value=False, help="Inspect SHAP, LIME, and Counterfactual model explanations.")
+if show_sidebar_xai:
+    render_xai_ui(df_active)
+
 st.sidebar.markdown("## 🎯 Probabilistic Priors")
 bias_mode = st.sidebar.toggle("🎯 Bias Compensation Mode (Bayesian Priors)", value=False, help="Injects empirical Dirichlet priors for observed Odd-Even bias and positional face deficits.")
 if bias_mode:
@@ -4324,6 +4974,12 @@ with st.expander("📊 Comprehensive Model Performance Tracking & Walk-Forward A
         render_performance_tracker_ui(df_active)
     else:
         st.info("Need at least 15 draws for full performance tracking suite.")
+
+with st.expander("🧠 Explainable AI (XAI) & Model Interpretability (SHAP, LIME, Counterfactuals)", expanded=False):
+    if len(df_active) >= 10:
+        render_xai_ui(df_active)
+    else:
+        st.info("Need at least 10 draws for explainable AI analysis.")
 
 # Master Orchestrator Card
 bs_badge = f'<span class="badge-big">{hive["bs_pred"].upper()}</span>' if hive['bs_pred'] == 'Big' else f'<span class="badge-small">{hive["bs_pred"].upper()}</span>'

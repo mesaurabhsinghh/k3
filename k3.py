@@ -1641,7 +1641,7 @@ def render_full_pipeline_ui(df):
     Renders an interactive, comprehensive dashboard for Phase 1 Backtesting & Phase 2 Ensemble Pipeline.
     Allows user to click and inspect complete execution output, model comparison matrix, and next draw forecast.
     """
-    st.markdown("""
+    render_html("""
     <div style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95)); border: 1px solid rgba(59, 130, 246, 0.35); border-radius: 12px; padding: 18px; margin-bottom: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.4);">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div>
@@ -1654,7 +1654,7 @@ def render_full_pipeline_ui(df):
             </div>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """)
     
     if df is None or df.empty or len(df) < 10:
         st.warning("⚠️ Insufficient historical data to run full pipeline backtest. Need at least 10 draws.")
@@ -1719,7 +1719,7 @@ def render_full_pipeline_ui(df):
         bs_color = "#10b981" if prediction['bs_pred'] == 'Big' else "#ef4444"
         oe_color = "#8b5cf6" if prediction['oe_pred'] == 'Odd' else "#f97316"
         
-        st.markdown(f"""
+        render_html(f"""
         <div style="background: linear-gradient(135deg, rgba(17, 24, 39, 0.9), rgba(15, 23, 42, 0.95)); border: 2px solid #3b82f6; border-radius: 14px; padding: 22px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(59, 130, 246, 0.2);">
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px; margin-bottom: 16px;">
                 <div>
@@ -1766,14 +1766,14 @@ def render_full_pipeline_ui(df):
                 <span style="color: #60a5fa; font-weight: 800; font-size: 0.85rem;">Confidence Score: {prediction.get('bs_conf', 65.0):.1f}%</span>
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        """)
         
     with t2:
         if metrics:
             best_model_name = max(metrics.keys(), key=lambda m: metrics[m].get('any_binary_correct', 0))
             best_acc = metrics[best_model_name].get('any_binary_correct', 0) * 100.0
             
-            st.markdown(f"""
+            render_html(f"""
             <div style="background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; border-radius: 10px; padding: 12px 18px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
                 <div>
                     <span style="color: #34d399; font-weight: 900; font-size: 1.15rem;">🏆 CHAMPION MODEL: {best_model_name}</span>
@@ -1781,7 +1781,7 @@ def render_full_pipeline_ui(df):
                 </div>
                 <span style="background: #10b981; color: #000000; font-weight: 900; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem;">BEST PERFORMER</span>
             </div>
-            """, unsafe_allow_html=True)
+            """)
             
             matrix_rows = []
             for m_name, m_data in metrics.items():

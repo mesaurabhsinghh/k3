@@ -209,21 +209,14 @@ render_html("""
 # ==============================================================================
 # 1. DATA INGESTION & PIPELINE (DAMAN K3 LIVE API)
 # ==============================================================================
-@st.cache_resource
-def get_session():
-    s = requests.Session()
-    s.headers.update(HEADERS)
-    return s
-
-def fetch_k3_history(pages=5, page_size=10):
+def fetch_k3_history(pages=3, page_size=10):
     """Fetches live historical draw records from Daman K3 API."""
     rows = []
     seen = set()
-    sess = get_session()
     now_ms = int(datetime.now().timestamp() * 1000)
     for p in range(1, pages + 1):
         try:
-            r = sess.get(API_K3, params={'ts': now_ms, 'pageIndex': p, 'pageNo': p, 'pageSize': page_size}, timeout=3.5)
+            r = requests.get(API_K3, params={'ts': now_ms, 'pageIndex': p, 'pageNo': p, 'pageSize': page_size}, headers=HEADERS, timeout=4.0)
             if r.status_code == 200:
                 j = r.json()
                 d = j.get('data') or {}
@@ -1110,37 +1103,14 @@ def render_scorecard_and_tracker(agent_name):
 # ==============================================================================
 
 st.sidebar.markdown("## ⚡ Live Autonomous Polling")
-auto_refresh = st.sidebar.toggle("🔄 Auto-Refresh (Live Sync)", value=True, help="Automatically polls K3 API every 30 seconds.")
-refresh_sec = st.sidebar.slider("Interval (Seconds)", min_value=5, max_value=60, value=30, step=5)
+auto_refresh = st.sidebar.toggle("🔄 Auto-Refresh (Live Sync)", value=True, help="Automatically polls K3 API every 15-30 seconds.")
+refresh_sec = st.sidebar.slider("Interval (Seconds)", min_value=5, max_value=60, value=15, step=5)
 
 if auto_refresh:
-    st_autorefresh(interval=refresh_sec * 1000, key="k3_hive_mind_autorefresh")
+    refresh_tick = st_autorefresh(interval=refresh_sec * 1000, key="k3_live_autonomous_sync_ticker")
     st.sidebar.markdown(f'<div class="live-pulse"><div class="pulse-dot"></div>Live Polling Active ({refresh_sec}s)</div>', unsafe_allow_html=True)
 else:
     st.sidebar.info("⚪ Auto-Refresh Paused")
-
-if 'data_k3' not in st.session_state or st.session_state.data_k3 is None or st.session_state.data_k3.empty:
-    initial = load_k3()
-    if initial is None or initial.empty:
-        live = fetch_k3_history(pages=5)
-        if live is not None and not live.empty:
-            st.session_state.data_k3 = live
-            save_k3(live)
-        else:
-            st.session_state.data_k3 = generate_fallback_k3_df()
-    else:
-        st.session_state.data_k3 = initial
-
-df_active = st.session_state.data_k3
-if df_active is None or df_active.empty:
-    df_active = generate_fallback_k3_df()
-    st.session_state.data_k3 = df_active
-
-if 'last_sync' not in st.session_state:
-    st.session_state.last_sync = datetime.now().strftime('%H:%M:%S')
-
-if 'last_seen_issue' not in st.session_state:
-    st.session_state.last_seen_issue = str(df_active.iloc[0]['issueNumber']) if not df_active.empty else "20260818101010500"
 
 if 'agent_past_predictions' not in st.session_state:
     st.session_state.agent_past_predictions = {}
@@ -1148,26 +1118,21 @@ if 'agent_past_predictions' not in st.session_state:
 if 'evaluated_issues' not in st.session_state:
     st.session_state.evaluated_issues = set()
 
-init_scorecards_and_history(df_active)
-
 def do_sync_k3():
-    live_df = fetch_k3_history(pages=2)
-    if live_df.empty:
-        st.session_state.last_sync = datetime.now().strftime('%H:%M:%S')
-        return 0
-        
-    current_df = st.session_state.data_k3
-    current_issues = set(current_df['issueNumber'].astype(str)) if not current_df.empty else set()
-    new_rows = live_df[~live_df['issueNumber'].astype(str).isin(current_issues)]
-    new_count = len(new_rows)
+    """Fetches live API draws, merges with stored history, evaluates past predictions, and returns fresh DataFrame."""
+    live_df = fetch_k3_history(pages=3)
     
-    if new_count > 0 or current_df.empty:
+    current_df = st.session_state.get('data_k3', pd.DataFrame())
+    if current_df is None or current_df.empty:
+        current_df = load_k3()
+
+    if live_df is not None and not live_df.empty:
         merged = merge_k3(current_df, live_df)
         st.session_state.data_k3 = merged
         save_k3(merged)
         
         newest_issue = str(live_df.iloc[0]['issueNumber'])
-        if st.session_state.last_seen_issue != newest_issue:
+        if st.session_state.get('last_seen_issue') != newest_issue:
             st.session_state.last_seen_issue = newest_issue
             latest_row = live_df.iloc[0]
             
@@ -1245,16 +1210,28 @@ def do_sync_k3():
                 icon="🔔"
             )
             
-    st.session_state.last_sync = datetime.now().strftime('%H:%M:%S')
-    return new_count
+        st.session_state.last_sync = datetime.now().strftime('%H:%M:%S')
+        return merged
+    else:
+        if current_df is None or current_df.empty:
+            current_df = generate_fallback_k3_df()
+            st.session_state.data_k3 = current_df
+        st.session_state.last_sync = datetime.now().strftime('%H:%M:%S')
+        return current_df
 
-do_sync_k3()
+# Sync Data Live
+df_active = do_sync_k3()
+if df_active is None or df_active.empty:
+    df_active = generate_fallback_k3_df()
+    st.session_state.data_k3 = df_active
+
+init_scorecards_and_history(df_active)
 
 # Sidebar Data Controls
 st.sidebar.markdown("## ⚙️ Data Operations")
 col_s1, col_s2 = st.sidebar.columns(2)
 if col_s1.button("⚡ Fast Sync", use_container_width=True):
-    do_sync_k3()
+    df_active = do_sync_k3()
     st.rerun()
 if col_s2.button("📂 Reload CSV", use_container_width=True):
     st.session_state.data_k3 = load_k3()
@@ -1262,17 +1239,13 @@ if col_s2.button("📂 Reload CSV", use_container_width=True):
     st.rerun()
 
 if st.sidebar.button("🔄 Recalculate Backtest", use_container_width=True):
-    sc, vault, ev_set = compute_strict_historical_backtest(st.session_state.data_k3, max_eval=20)
+    sc, vault, ev_set = compute_strict_historical_backtest(df_active, max_eval=20)
     st.session_state.agent_scorecards = sc
     st.session_state.agent_lifetime_vault = vault
     st.session_state.evaluated_issues = ev_set
     save_persisted_performance()
     st.success("Re-evaluated with 100% mathematical equality!")
     st.rerun()
-
-if df_active is None or df_active.empty:
-    df_active = generate_fallback_k3_df()
-    st.session_state.data_k3 = df_active
 
 n_records = len(df_active)
 st.sidebar.metric("Database Stored Records", n_records)
@@ -1599,7 +1572,7 @@ tab1, tab2 = st.tabs(["📋 Live Draw History", "📊 Summary Statistics"])
 
 with tab1:
     cols = [c for c in ['issueNumber', 'premium', 'dice1', 'dice2', 'dice3', 'sum', 'big_small', 'odd_even'] if c in df_active]
-    st.dataframe(df_active[cols].head(50), use_container_width=True, hide_index=True)
+    st.dataframe(df_active[cols].astype(str).head(50), use_container_width=True, hide_index=True)
 
 with tab2:
     c1, c2, c3, c4 = st.columns(4)

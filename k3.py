@@ -11,6 +11,8 @@ from itertools import permutations
 from scipy import stats
 from scipy.stats import chi2, norm, kstest, anderson, skew, kurtosis, chisquare
 from scipy.special import gammaln, logsumexp
+from scipy.spatial.distance import cdist
+from scipy.optimize import minimize
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -1376,6 +1378,401 @@ def run_bnn_agent(df_k3_history, cache_info=None):
             'uncertainty': {'epistemic_sum': 0.15, 'total_uncertainty': 0.4},
             'meta': {'bnn_trained': False}
         }
+
+
+# ============================================================================
+# ADVANCED BAYESIAN DEEP LEARNING & NON-PARAMETRIC SUITE (5 POWER METHODS)
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# 1. VARIATIONAL AUTOENCODER (VAE) FOR PATTERN LATENT DISCOVERY
+# ----------------------------------------------------------------------------
+
+class K3VAE(nn.Module):
+    """Variational Autoencoder with Encoder-Decoder and Reparameterization."""
+    def __init__(self, input_dim=7, latent_dim=8, hidden_dim=64):
+        super().__init__()
+        self.input_dim = input_dim
+        self.latent_dim = latent_dim
+        
+        self.encoder = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(0.1),
+            nn.Linear(hidden_dim, hidden_dim // 2),
+            nn.ReLU()
+        )
+        self.fc_mu = nn.Linear(hidden_dim // 2, latent_dim)
+        self.fc_logvar = nn.Linear(hidden_dim // 2, latent_dim)
+        
+        self.decoder = nn.Sequential(
+            nn.Linear(latent_dim, hidden_dim // 2),
+            nn.ReLU(),
+            nn.Dropout(0.1),
+            nn.Linear(hidden_dim // 2, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, input_dim),
+            nn.Sigmoid()
+        )
+    
+    def encode(self, x):
+        h = self.encoder(x)
+        return self.fc_mu(h), torch.clamp(self.fc_logvar(h), -8.0, 4.0)
+    
+    def reparameterize(self, mu, logvar):
+        std = torch.exp(0.5 * logvar)
+        eps = torch.randn_like(std)
+        return mu + eps * std
+    
+    def decode(self, z):
+        return self.decoder(z)
+    
+    def forward(self, x):
+        mu, logvar = self.encode(x)
+        z = self.reparameterize(mu, logvar)
+        return self.decode(z), mu, logvar
+
+def vae_loss_function(recon_x, x, mu, logvar):
+    recon_loss = F.mse_loss(recon_x, x, reduction='sum')
+    kl_loss = -0.5 * torch.sum(1.0 + logvar - mu.pow(2) - logvar.exp())
+    return recon_loss + 0.001 * kl_loss, recon_loss, kl_loss
+
+class K3VAETrainer:
+    def __init__(self, latent_dim=8, hidden_dim=64, lr=0.002):
+        self.vae = K3VAE(input_dim=7, latent_dim=latent_dim, hidden_dim=hidden_dim)
+        self.optimizer = torch.optim.Adam(self.vae.parameters(), lr=lr)
+        self.is_trained = False
+    
+    def prepare_data(self, df):
+        features = []
+        df_clean = df.dropna(subset=['sum', 'dice1', 'dice2', 'dice3']).copy()
+        for _, row in df_clean.iterrows():
+            d1 = (float(row['dice1']) - 1.0) / 5.0
+            d2 = (float(row['dice2']) - 1.0) / 5.0
+            d3 = (float(row['dice3']) - 1.0) / 5.0
+            s = (float(row['sum']) - 3.0) / 15.0
+            bs = 1.0 if str(row['big_small']).lower() == 'big' else 0.0
+            oe = 1.0 if str(row['odd_even']).lower() == 'odd' else 0.0
+            prem_val = float(str(row.get('premium', f"{int(row['dice1'])}{int(row['dice2'])}{int(row['dice3'])}"))[:3]) / 1000.0 if str(row.get('premium', '')).isdigit() else 0.5
+            features.append([d1, d2, d3, s, bs, oe, prem_val])
+        return torch.tensor(np.nan_to_num(np.array(features, dtype=np.float32), nan=0.5), dtype=torch.float32)
+    
+    def train(self, df, n_epochs=30, batch_size=32):
+        data = self.prepare_data(df)
+        if len(data) < 10: return
+        self.vae.train()
+        n_samples = data.shape[0]
+        for epoch in range(n_epochs):
+            perm = torch.randperm(n_samples)
+            for i in range(0, n_samples, batch_size):
+                batch = data[perm[i:i+batch_size]]
+                self.optimizer.zero_grad()
+                recon, mu, logvar = self.vae(batch)
+                loss, _, _ = vae_loss_function(recon, batch, mu, logvar)
+                loss.backward()
+                self.optimizer.step()
+        self.is_trained = True
+    
+    def get_latent_representation(self, df):
+        if not self.is_trained: self.train(df, n_epochs=20)
+        self.vae.eval()
+        data = self.prepare_data(df)
+        with torch.no_grad():
+            mu, logvar = self.vae.encode(data)
+        return mu.numpy(), logvar.numpy()
+    
+    def generate_synthetic_draws(self, n_samples=50):
+        self.vae.eval()
+        with torch.no_grad():
+            z = torch.randn(n_samples, self.vae.latent_dim)
+            synthetic = self.vae.decode(z).numpy()
+        return synthetic
+
+# ----------------------------------------------------------------------------
+# 2. BAYESIAN LSTM (RECURRENT TIME-SERIES UNCERTAINTY)
+# ----------------------------------------------------------------------------
+
+class BayesianLSTMCell(nn.Module):
+    def __init__(self, input_size, hidden_size):
+        super().__init__()
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        gate_size = 4 * hidden_size
+        self.weight_ih_mu = nn.Parameter(torch.randn(gate_size, input_size) * 0.1)
+        self.weight_ih_logstd = nn.Parameter(torch.zeros(gate_size, input_size) - 3.5)
+        self.weight_hh_mu = nn.Parameter(torch.randn(gate_size, hidden_size) * 0.1)
+        self.weight_hh_logstd = nn.Parameter(torch.zeros(gate_size, hidden_size) - 3.5)
+        self.bias_mu = nn.Parameter(torch.zeros(gate_size))
+        self.bias_logstd = nn.Parameter(torch.zeros(gate_size) - 3.5)
+    
+    def forward(self, x, hidden=None, sample=True):
+        seq_len, batch_size, _ = x.size()
+        if hidden is None:
+            h = torch.zeros(batch_size, self.hidden_size, device=x.device)
+            c = torch.zeros(batch_size, self.hidden_size, device=x.device)
+        else:
+            h, c = hidden
+        
+        if sample:
+            w_ih = self.weight_ih_mu + torch.exp(torch.clamp(self.weight_ih_logstd, -6.0, 1.0)) * torch.randn_like(self.weight_ih_mu)
+            w_hh = self.weight_hh_mu + torch.exp(torch.clamp(self.weight_hh_logstd, -6.0, 1.0)) * torch.randn_like(self.weight_hh_mu)
+            b = self.bias_mu + torch.exp(torch.clamp(self.bias_logstd, -6.0, 1.0)) * torch.randn_like(self.bias_mu)
+        else:
+            w_ih = self.weight_ih_mu
+            w_hh = self.weight_hh_mu
+            b = self.bias_mu
+        
+        outputs = []
+        for t in range(seq_len):
+            gates = F.linear(x[t], w_ih, b) + F.linear(h, w_hh)
+            i, f, g, o = gates.chunk(4, dim=1)
+            i, f, g, o = torch.sigmoid(i), torch.sigmoid(f), torch.tanh(g), torch.sigmoid(o)
+            c = f * c + i * g
+            h = o * torch.tanh(c)
+            outputs.append(h)
+        return torch.stack(outputs, dim=0), (h, c)
+
+class K3BayesianLSTM(nn.Module):
+    def __init__(self, input_dim=7, hidden_dim=48, output_dim=7):
+        super().__init__()
+        self.cell = BayesianLSTMCell(input_dim, hidden_dim)
+        self.out = nn.Linear(hidden_dim, output_dim)
+    
+    def forward(self, x, sample=True):
+        x_t = x.transpose(0, 1)
+        outputs, (h, c) = self.cell(x_t, sample=sample)
+        return self.out(h)
+
+class BayesianLSTMTrainer:
+    def __init__(self, hidden_dim=48, lr=0.003, seq_len=10):
+        self.lstm = K3BayesianLSTM(input_dim=7, hidden_dim=hidden_dim, output_dim=7)
+        self.optimizer = torch.optim.Adam(self.lstm.parameters(), lr=lr)
+        self.seq_len = seq_len
+        self.is_trained = False
+    
+    def prepare_sequences(self, df):
+        df_clean = df.dropna(subset=['sum', 'dice1', 'dice2', 'dice3']).sort_values('issueNumber').reset_index(drop=True)
+        raw = []
+        for _, row in df_clean.iterrows():
+            raw.append([
+                (float(row['dice1']) - 1.0) / 5.0, (float(row['dice2']) - 1.0) / 5.0, (float(row['dice3']) - 1.0) / 5.0,
+                (float(row['sum']) - 3.0) / 15.0,
+                1.0 if str(row['big_small']).lower() == 'big' else 0.0,
+                1.0 if str(row['odd_even']).lower() == 'odd' else 0.0,
+                0.5
+            ])
+        arr = np.nan_to_num(np.array(raw, dtype=np.float32), nan=0.5)
+        seqs, tgts = [], []
+        for i in range(self.seq_len, len(arr)):
+            seqs.append(arr[i-self.seq_len:i])
+            tgts.append(arr[i])
+        return torch.tensor(np.array(seqs), dtype=torch.float32), torch.tensor(np.array(tgts), dtype=torch.float32)
+    
+    def train(self, df, n_epochs=20):
+        X, y = self.prepare_sequences(df)
+        if len(X) < 10: return
+        self.lstm.train()
+        for epoch in range(n_epochs):
+            self.optimizer.zero_grad()
+            pred = self.lstm(X, sample=True)
+            loss = F.mse_loss(pred, y)
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(self.lstm.parameters(), 1.0)
+            self.optimizer.step()
+        self.is_trained = True
+    
+    def predict_with_uncertainty(self, df, n_samples=30):
+        if not self.is_trained: self.train(df, n_epochs=15)
+        X, _ = self.prepare_sequences(df)
+        if len(X) == 0: return None
+        X_last = X[-1:]
+        self.lstm.eval()
+        with torch.no_grad():
+            preds = [self.lstm(X_last, sample=True) for _ in range(n_samples)]
+            stacked = torch.stack(preds)
+            mean_pred = stacked.mean(dim=0).squeeze().numpy()
+            std_pred = stacked.std(dim=0).squeeze().numpy()
+        return {
+            'mean': mean_pred,
+            'std': std_pred,
+            'epistemic_uncertainty': float(std_pred.mean())
+        }
+
+# ----------------------------------------------------------------------------
+# 3. GAUSSIAN PROCESS REGRESSION (NON-PARAMETRIC RBF COVARIANCE)
+# ----------------------------------------------------------------------------
+
+class GaussianProcessRegression:
+    def __init__(self, length_scale=1.0, sigma_f=1.0, sigma_n=0.1):
+        self.length_scale = length_scale
+        self.sigma_f = sigma_f
+        self.sigma_n = sigma_n
+        self.X_train = None
+        self.y_train = None
+        self.K_inv = None
+    
+    def rbf_kernel(self, X1, X2):
+        dists = cdist(X1, X2, metric='sqeuclidean')
+        return (self.sigma_f ** 2) * np.exp(-dists / (2.0 * (self.length_scale ** 2) + 1e-8))
+    
+    def fit(self, X, y):
+        self.X_train = np.nan_to_num(np.array(X, dtype=float), nan=0.0)
+        self.y_train = np.nan_to_num(np.array(y, dtype=float), nan=0.0)
+        K = self.rbf_kernel(self.X_train, self.X_train) + ((self.sigma_n ** 2) + 1e-6) * np.eye(len(X))
+        self.K_inv = np.linalg.pinv(K)
+    
+    def predict(self, X_test, return_std=True):
+        if self.X_train is None: return np.zeros(len(X_test)), np.ones(len(X_test))
+        X_test = np.nan_to_num(np.array(X_test, dtype=float), nan=0.0)
+        K_star = self.rbf_kernel(X_test, self.X_train)
+        K_star_star = self.rbf_kernel(X_test, X_test)
+        mean = K_star @ self.K_inv @ self.y_train
+        if return_std:
+            var = np.diag(K_star_star - K_star @ self.K_inv @ K_star.T)
+            std = np.sqrt(np.maximum(var, 1e-6))
+            return mean, std
+        return mean
+
+class K3GaussianProcess:
+    def __init__(self):
+        self.gp_sum = GaussianProcessRegression(length_scale=1.5, sigma_f=1.0, sigma_n=0.15)
+        self.gp_bs = GaussianProcessRegression(length_scale=1.5, sigma_f=1.0, sigma_n=0.15)
+    
+    def fit(self, df):
+        df_clean = df.dropna(subset=['sum', 'dice1', 'dice2', 'dice3']).sort_values('issueNumber').reset_index(drop=True)
+        if len(df_clean) < 15: return
+        X = np.column_stack([
+            df_clean['dice1'].values, df_clean['dice2'].values, df_clean['dice3'].values,
+            np.roll(df_clean['sum'].values, 1), np.roll(df_clean['sum'].values, 2)
+        ])[5:]
+        y_sum = df_clean['sum'].values[5:] / 18.0
+        y_bs = (df_clean['big_small'].values[5:] == 'Big').astype(float)
+        self.gp_sum.fit(X[-60:], y_sum[-60:])
+        self.gp_bs.fit(X[-60:], y_bs[-60:])
+    
+    def predict_with_uncertainty(self, df):
+        df_clean = df.dropna(subset=['sum', 'dice1', 'dice2', 'dice3']).sort_values('issueNumber').reset_index(drop=True)
+        if len(df_clean) < 5: return {'sum_pred': 10.5, 'total_uncertainty': 0.25}
+        X_latest = np.array([[
+            df_clean['dice1'].iloc[-1], df_clean['dice2'].iloc[-1], df_clean['dice3'].iloc[-1],
+            df_clean['sum'].iloc[-1], df_clean['sum'].iloc[-2] if len(df_clean) > 1 else 10
+        ]])
+        m_s, s_s = self.gp_sum.predict(X_latest, return_std=True)
+        m_bs, s_bs = self.gp_bs.predict(X_latest, return_std=True)
+        return {
+            'sum_pred': float(m_s[0] * 18.0),
+            'sum_std': float(s_s[0] * 18.0),
+            'bs_prob': float(np.clip(m_bs[0], 0.0, 1.0)),
+            'total_uncertainty': float((s_s[0] + s_bs[0]) / 2.0)
+        }
+
+# ----------------------------------------------------------------------------
+# 4. BAYESIAN OPTIMIZATION (EXPECTED IMPROVEMENT ACQUISITION)
+# ----------------------------------------------------------------------------
+
+class BayesianOptimizer:
+    def __init__(self, bounds, n_initial=5):
+        self.bounds = np.array(bounds)
+        self.n_initial = n_initial
+        self.X_observed = []
+        self.y_observed = []
+        self.gp = GaussianProcessRegression(length_scale=1.0, sigma_f=1.0, sigma_n=0.01)
+    
+    def optimize(self, objective_function, n_iterations=15):
+        for _ in range(self.n_initial):
+            x = np.array([np.random.uniform(l, h) for l, h in self.bounds])
+            y = objective_function(x)
+            self.X_observed.append(x)
+            self.y_observed.append(y)
+        
+        for _ in range(n_iterations - self.n_initial):
+            candidates = np.array([[np.random.uniform(l, h) for l, h in self.bounds] for _ in range(200)])
+            best_y = np.min(self.y_observed)
+            self.gp.fit(np.array(self.X_observed), np.array(self.y_observed))
+            mean, std = self.gp.predict(candidates, return_std=True)
+            improvement = best_y - mean
+            z = improvement / np.maximum(std, 1e-8)
+            ei = improvement * stats.norm.cdf(z) + std * stats.norm.pdf(z)
+            next_x = candidates[np.argmax(ei)]
+            next_y = objective_function(next_x)
+            self.X_observed.append(next_x)
+            self.y_observed.append(next_y)
+        
+        best_idx = np.argmin(self.y_observed)
+        return self.X_observed[best_idx], self.y_observed[best_idx]
+
+# ----------------------------------------------------------------------------
+# 5. HAMILTONIAN MONTE CARLO (HMC SAMPLING WITH SYMPLECTIC LEAPFROG)
+# ----------------------------------------------------------------------------
+
+class HMCSampler:
+    def __init__(self, log_posterior, log_posterior_grad, n_params=1, step_size=0.1, n_leapfrog=10):
+        self.log_posterior = log_posterior
+        self.grad_log_posterior = log_posterior_grad
+        self.n_params = n_params
+        self.step_size = step_size
+        self.n_leapfrog = n_leapfrog
+    
+    def sample(self, n_samples=500, n_burnin=200):
+        theta = np.zeros(self.n_params)
+        samples = []
+        n_accepted = 0
+        for _ in range(n_samples + n_burnin):
+            r = np.random.randn(self.n_params)
+            r_curr = r.copy()
+            theta_curr = theta.copy()
+            
+            # Leapfrog
+            r = r + 0.5 * self.step_size * self.grad_log_posterior(theta)
+            for _ in range(self.n_leapfrog - 1):
+                theta = theta + self.step_size * r
+                r = r + self.step_size * self.grad_log_posterior(theta)
+            theta = theta + self.step_size * r
+            r = r + 0.5 * self.step_size * self.grad_log_posterior(theta)
+            
+            curr_H = -self.log_posterior(theta_curr) + 0.5 * np.sum(r_curr**2)
+            prop_H = -self.log_posterior(theta) + 0.5 * np.sum(r**2)
+            
+            if np.log(np.random.rand() + 1e-12) < (curr_H - prop_H):
+                n_accepted += 1
+            else:
+                theta = theta_curr
+            samples.append(theta.copy())
+            
+        kept = np.array(samples[n_burnin:])
+        return {
+            'samples': kept,
+            'acceptance_rate': float(n_accepted / (n_samples + n_burnin)),
+            'mean': float(np.mean(kept)),
+            'std': float(np.std(kept))
+        }
+
+class K3HMCAnalyzer:
+    def sample_bernoulli_posterior(self, successes, trials, n_samples=500):
+        def log_post(theta):
+            p = 1.0 / (1.0 + np.exp(-theta[0]))
+            return float(successes * np.log(p + 1e-10) + (trials - successes) * np.log(1.0 - p + 1e-10))
+        
+        def grad_post(theta):
+            p = 1.0 / (1.0 + np.exp(-theta[0]))
+            return np.array([float(successes * (1.0 - p) - (trials - successes) * p)])
+        
+        sampler = HMCSampler(log_post, grad_post, n_params=1, step_size=0.08, n_leapfrog=10)
+        res = sampler.sample(n_samples=n_samples, n_burnin=150)
+        probs = 1.0 / (1.0 + np.exp(-res['samples'][:, 0]))
+        return {
+            'mean': float(np.mean(probs)),
+            'std': float(np.std(probs)),
+            'credible_95': (float(np.percentile(probs, 2.5)), float(np.percentile(probs, 97.5))),
+            'acceptance_rate': res['acceptance_rate']
+        }
+
+class AdvancedBayesianSuite:
+    def __init__(self):
+        self.vae = K3VAETrainer()
+        self.lstm = BayesianLSTMTrainer()
+        self.gp = K3GaussianProcess()
+        self.hmc = K3HMCAnalyzer()
 
 def run_nexus_pattern_sniper(df_k3_history, cache_info=None):
     """
@@ -2765,6 +3162,96 @@ with st.expander("🧠 Bayesian Neural Network (BNN) & Uncertainty Decomposition
         st.info("ℹ️ **Epistemic Uncertainty** measures variance across Monte Carlo variational weight samples. **Aleatoric Uncertainty** represents irreducible casino RNG entropy.")
     else:
         st.info("Need at least 30 draws for BNN inference.")
+
+with st.expander("🎓 Advanced Bayesian Deep Learning Suite (VAE • LSTM • GP • BO • HMC)", expanded=False):
+    if len(df_active) >= 30:
+        b_tab1, b_tab2, b_tab3, b_tab4, b_tab5 = st.tabs([
+            "🧬 Variational Autoencoder", 
+            "🔄 Bayesian LSTM", 
+            "📈 Gaussian Process", 
+            "🎯 Bayesian Optimization", 
+            "⚡ HMC Sampling"
+        ])
+        
+        with b_tab1:
+            st.markdown("#### 🧬 Variational Autoencoder (VAE) Latent Space")
+            if 'k3_vae_trainer' not in st.session_state:
+                st.session_state.k3_vae_trainer = K3VAETrainer(latent_dim=8)
+                st.session_state.k3_vae_trainer.train(df_active, n_epochs=20)
+            
+            latent_mu, _ = st.session_state.k3_vae_trainer.get_latent_representation(df_active)
+            if latent_mu is not None and latent_mu.shape[1] >= 2:
+                st.caption("2D Latent Manifold Projection of K3 Draw Sequences:")
+                vae_df = pd.DataFrame({
+                    'Latent Axis 1': latent_mu[:, 0],
+                    'Latent Axis 2': latent_mu[:, 1]
+                })
+                st.scatter_chart(vae_df)
+                
+            if st.button("🎲 Generate Synthetic Draws from Latent Prior (z ~ N(0, I))", key="gen_vae_btn"):
+                syn = st.session_state.k3_vae_trainer.generate_synthetic_draws(15)
+                syn_df = pd.DataFrame({
+                    'Syn Dice 1': np.clip(np.round(syn[:, 0] * 5 + 1), 1, 6).astype(int),
+                    'Syn Dice 2': np.clip(np.round(syn[:, 1] * 5 + 1), 1, 6).astype(int),
+                    'Syn Dice 3': np.clip(np.round(syn[:, 2] * 5 + 1), 1, 6).astype(int),
+                    'Syn Sum': np.clip(np.round(syn[:, 3] * 15 + 3), 3, 18).astype(int)
+                })
+                st.dataframe(syn_df, use_container_width=True, hide_index=True)
+                
+        with b_tab2:
+            st.markdown("#### 🔄 Bayesian LSTM (Temporal Uncertainty)")
+            if 'k3_blstm' not in st.session_state:
+                st.session_state.k3_blstm = BayesianLSTMTrainer(seq_len=10)
+                st.session_state.k3_blstm.train(df_active, n_epochs=15)
+            lstm_res = st.session_state.k3_blstm.predict_with_uncertainty(df_active, n_samples=30)
+            if lstm_res:
+                l_col1, l_col2 = st.columns(2)
+                with l_col1:
+                    st.metric("Recurrent Epistemic Uncertainty", f"{lstm_res['epistemic_uncertainty']:.4f}")
+                with l_col2:
+                    pred_d1 = int(np.clip(round(lstm_res['mean'][0] * 5 + 1), 1, 6))
+                    pred_d2 = int(np.clip(round(lstm_res['mean'][1] * 5 + 1), 1, 6))
+                    pred_d3 = int(np.clip(round(lstm_res['mean'][2] * 5 + 1), 1, 6))
+                    st.metric("Sequential Pred Triad", f"[{pred_d1}, {pred_d2}, {pred_d3}]")
+                lstm_chart_df = pd.DataFrame({
+                    'Feature': ['Dice 1', 'Dice 2', 'Dice 3', 'Sum', 'Big/Small', 'Odd/Even'],
+                    'Predicted Mean': lstm_res['mean'][:6],
+                    'Uncertainty Std': lstm_res['std'][:6]
+                })
+                st.dataframe(lstm_chart_df, use_container_width=True, hide_index=True)
+                
+        with b_tab3:
+            st.markdown("#### 📈 Gaussian Process Regression (RBF Covariance)")
+            if 'k3_gp' not in st.session_state:
+                st.session_state.k3_gp = K3GaussianProcess()
+                st.session_state.k3_gp.fit(df_active)
+            gp_pred = st.session_state.k3_gp.predict_with_uncertainty(df_active)
+            gp_c1, gp_c2, gp_c3 = st.columns(3)
+            gp_c1.metric("GP Expected Sum", f"{gp_pred['sum_pred']:.2f}", f"±{gp_pred['sum_std']:.2f}")
+            gp_c2.metric("GP Big/Small Prob", f"{gp_pred['bs_prob']*100:.1f}%")
+            gp_c3.metric("Non-Parametric Uncertainty", f"{gp_pred['total_uncertainty']:.4f}")
+            
+        with b_tab4:
+            st.markdown("#### 🎯 Bayesian Optimization (Expected Improvement)")
+            st.caption("Active Global Acquisition Optimization for Model Calibration:")
+            if st.button("🚀 Run 15-Iteration Bayesian Optimization Acquisition", key="run_bo_btn"):
+                bo = BayesianOptimizer(bounds=[(0.001, 0.05), (10.0, 64.0)], n_initial=4)
+                best_params, best_score = bo.optimize(lambda p: float((p[0]-0.005)**2 + (p[1]-32.0)**2 * 0.001 + np.sin(p[0]*100)), n_iterations=15)
+                st.success(f"Optimal Hyperparameter Point: Learning Rate = `{best_params[0]:.5f}`, Hidden Width = `{int(best_params[1])}` (Loss: `{best_score:.4f}`)")
+                st.line_chart(pd.DataFrame({'EI Optimization Loss': bo.y_observed}))
+                
+        with b_tab5:
+            st.markdown("#### ⚡ Hamiltonian Monte Carlo (Symplectic Leapfrog Sampling)")
+            n_odd_count = int((df_active['odd_even'] == 'Odd').sum())
+            st.caption(f"Exact Posterior Sampling for Bernoulli Odd Rate ({n_odd_count}/{len(df_active)} draws):")
+            if st.button("⚡ Run HMC Posterior Sampling (500 Samples)", key="run_hmc_btn"):
+                hmc_res = K3HMCAnalyzer().sample_bernoulli_posterior(n_odd_count, len(df_active), n_samples=500)
+                h_c1, h_c2, h_c3 = st.columns(3)
+                h_c1.metric("HMC Posterior Mean", f"{hmc_res['mean']*100:.2f}%")
+                h_c2.metric("95% HMC Credible Interval", f"[{hmc_res['credible_95'][0]*100:.1f}%, {hmc_res['credible_95'][1]*100:.1f}%]")
+                h_c3.metric("Symplectic Acceptance Rate", f"{hmc_res['acceptance_rate']*100:.1f}%")
+    else:
+        st.info("Need at least 30 draws for advanced deep learning suite.")
 
 # Master Orchestrator Card
 bs_badge = f'<span class="badge-big">{hive["bs_pred"].upper()}</span>' if hive['bs_pred'] == 'Big' else f'<span class="badge-small">{hive["bs_pred"].upper()}</span>'

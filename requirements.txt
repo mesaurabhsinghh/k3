@@ -1,0 +1,10 @@
+streamlit
+streamlit-autorefresh
+pandas
+numpy
+scipy
+torch
+xgboost
+scikit-learn
+ruptures
+requests

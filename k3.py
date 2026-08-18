@@ -3192,6 +3192,22 @@ def do_sync_k3():
 
                 save_persisted_performance()
 
+            # Automatic Real-Time Anomaly Surveillance Processing on New Draw
+            if 'anomaly_engine' not in st.session_state:
+                st.session_state.anomaly_engine = AnomalyDetectionEngine()
+            
+            anom_res = st.session_state.anomaly_engine.process_new_draw(
+                issue_number=newest_issue,
+                dice1=actual_d1, dice2=actual_d2, dice3=actual_d3,
+                sum_val=actual_sum, bs=actual_bs, oe=actual_oe, premium=actual_prem
+            )
+            
+            if anom_res['is_anomaly']:
+                if anom_res['severity'] == 'CRITICAL':
+                    st.toast(f"🚨 CRITICAL ANOMALY: Issue #{newest_issue} flagged!", icon="🔴")
+                elif anom_res['severity'] in ['HIGH', 'MEDIUM']:
+                    st.toast(f"⚠️ {anom_res['severity']} ANOMALY: Draw #{newest_issue}", icon="⚠️")
+
             st.toast(
                 f"🎲 **New Draw: #{newest_issue}** `[{actual_d1}, {actual_d2}, {actual_d3}]` | Sum: `{actual_sum}` ({actual_bs}, {actual_oe})",
                 icon="🔔"
@@ -3233,6 +3249,11 @@ if st.sidebar.button("🔄 Recalculate Backtest", use_container_width=True):
     save_persisted_performance()
     st.success("Re-evaluated with 100% mathematical equality!")
     st.rerun()
+
+st.sidebar.markdown("## 🛡️ Real-Time Surveillance")
+show_sidebar_anomaly = st.sidebar.checkbox("🔍 Anomaly Detection Dashboard", value=False, help="Display the real-time 6-dimensional anomaly detection dashboard.")
+if show_sidebar_anomaly:
+    render_anomaly_dashboard(df_active)
 
 st.sidebar.markdown("## 🎯 Probabilistic Priors")
 bias_mode = st.sidebar.toggle("🎯 Bias Compensation Mode (Bayesian Priors)", value=False, help="Injects empirical Dirichlet priors for observed Odd-Even bias and positional face deficits.")

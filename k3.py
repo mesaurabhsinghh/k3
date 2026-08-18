@@ -870,79 +870,335 @@ def render_anomaly_dashboard(df):
 # MODEL PERFORMANCE TRACKING & WALK-FORWARD AUDIT SYSTEM
 # ==============================================================================
 
-class PredictionLogger:
-    """Logs every prediction with full context and validates against actual outcomes upon draw ingestion."""
+class ModelPerformanceTracker:
+    """
+    Comprehensive performance tracking for all prediction models.
+    Tracks every prediction vs actual outcome.
+    Calculates accuracy, calibration, and trends.
+    """
+    
     def __init__(self, storage_path=None):
         self.storage_path = Path(storage_path) if storage_path else PRED_HISTORY_FILE
-        self.predictions = defaultdict(list)
-        self.load_from_disk()
+        self.predictions_log = defaultdict(list)
+        self.predictions = self.predictions_log
+        self.load_history()
     
-    def log_prediction(self, model_name: str, issue_number: str, prediction: Dict, confidence: float = None, metadata: Dict = None) -> str:
+    def log_prediction(self, model_name, issue_number, prediction, 
+                      actual=None, confidence=None, timestamp=None, metadata=None):
+        """
+        Log a prediction made by a model.
+        """
         log_entry = {
             'id': f"{model_name}_{issue_number}_{datetime.now().timestamp()}",
             'issue': str(issue_number),
             'prediction': prediction,
-            'actual': None,
+            'actual': actual,
             'confidence': float(confidence) if confidence is not None else 0.5,
             'metadata': metadata or {},
-            'timestamp': datetime.now().isoformat(),
-            'validated': False,
-            'validation_timestamp': None
+            'timestamp': timestamp or datetime.now().isoformat(),
+            'validated': actual is not None,
+            'validation_timestamp': datetime.now().isoformat() if actual is not None else None
         }
-        self.predictions[model_name].append(log_entry)
-        self.save_to_disk()
+        self.predictions_log[model_name].append(log_entry)
+        self.save_history()
         return log_entry['id']
     
-    def validate_prediction(self, model_name: str, issue_number: str, actual: Dict) -> bool:
-        entries = self.predictions.get(model_name, [])
+    def validate_prediction(self, model_name, issue_number, actual):
+        """
+        Update prediction with actual outcome.
+        """
         updated = False
-        for entry in entries:
-            if str(entry['issue']) == str(issue_number) and not entry['validated']:
+        for entry in self.predictions_log[model_name]:
+            if str(entry['issue']) == str(issue_number):
                 entry['actual'] = actual
                 entry['validated'] = True
                 entry['validation_timestamp'] = datetime.now().isoformat()
                 updated = True
-        if updated:
-            self.save_to_disk()
+        self.save_history()
         return updated
     
-    def get_pending_predictions(self, model_name: str = None) -> List[Dict]:
-        if model_name:
-            return [e for e in self.predictions.get(model_name, []) if not e['validated']]
-        all_pending = []
-        for model, entries in self.predictions.items():
-            all_pending.extend([e for e in entries if not e['validated']])
-        return all_pending
-    
-    def get_validated_predictions(self, model_name: str = None) -> List[Dict]:
-        if model_name:
-            return [e for e in self.predictions.get(model_name, []) if e['validated']]
-        all_validated = []
-        for model, entries in self.predictions.items():
-            all_validated.extend([e for e in entries if e['validated']])
-        return all_validated
-    
-    def get_model_history(self, model_name: str) -> List[Dict]:
-        return self.predictions.get(model_name, [])
-    
-    def get_all_models(self) -> List[str]:
-        return list(self.predictions.keys())
-    
-    def save_to_disk(self):
+    def calculate_metrics(self, model_name):
+        """
+        Calculate comprehensive performance metrics.
+        """
+        entries = self.predictions_log.get(model_name, [])
+        validated = [e for e in entries if e.get('validated') and e.get('actual')]
+        
+        if not validated:
+            return {'error': 'No validated predictions'}
+        
+        metrics = {
+            'total_predictions': len(entries),
+            'validated_predictions': len(validated),
+            'pending': len(entries) - len(validated)
+        }
+        
+        correct = {'dice1': 0, 'dice2': 0, 'dice3': 0, 'sum': 0, 'bs': 0, 'oe': 0}
+        total = len(validated)
+        
+        for entry in validated:
+            pred = entry.get('prediction', {})
+            actual = entry.get('actual', {})
+            for k in ['dice1', 'dice2', 'dice3']:
+                if pred.get(k) is not None and actual.get(k) is not None and int(float(pred[k])) == int(float(actual[k])):
+                    correct[k] += 1
+            if pred.get('sum') is not None and actual.get('sum') is not None and int(float(pred['sum'])) == int(float(actual['sum'])):
+                correct['sum'] += 1
+            p_bs = pred.get('bs_pred') or pred.get('bs')
+            a_bs = actual.get('bs') or actual.get('big_small')
+            if p_bs and a_bs and str(p_bs).lower() == str(a_bs).lower():
+                correct['bs'] += 1
+            p_oe = pred.get('oe_pred') or pred.get('oe')
+            a_oe = actual.get('oe') or actual.get('odd_even')
+            if p_oe and a_oe and str(p_oe).lower() == str(a_oe).lower():
+                correct['oe'] += 1
+                
+        for key in correct:
+            metrics[f'{key}_accuracy'] = correct[key] / total
+            
+        all_correct = 0
+        for entry in validated:
+            pred = entry.get('prediction', {})
+            actual = entry.get('actual', {})
+            p_d1 = pred.get('dice1')
+            a_d1 = actual.get('dice1')
+            p_d2 = pred.get('dice2')
+            a_d2 = actual.get('dice2')
+            p_d3 = pred.get('dice3')
+            a_d3 = actual.get('dice3')
+            if (p_d1 is not None and a_d1 is not None and int(float(p_d1)) == int(float(a_d1)) and
+                p_d2 is not None and a_d2 is not None and int(float(p_d2)) == int(float(a_d2)) and
+                p_d3 is not None and a_d3 is not None and int(float(p_d3)) == int(float(a_d3))):
+                all_correct += 1
+        metrics['exact_match_rate'] = all_correct / total
+        
+        # Calibration
+        if validated and validated[0].get('confidence') is not None:
+            bins = {'low': [], 'mid': [], 'high': []}
+            for entry in validated:
+                conf = float(entry.get('confidence', 0.5))
+                if conf < 0.6: bins['low'].append(entry)
+                elif conf < 0.8: bins['mid'].append(entry)
+                else: bins['high'].append(entry)
+            
+            calibration = {}
+            for bin_name, bin_entries in bins.items():
+                if bin_entries:
+                    correct_in_bin = sum(
+                        1 for e in bin_entries
+                        if (e.get('prediction', {}).get('bs_pred') or e.get('prediction', {}).get('bs')) == (e.get('actual', {}).get('bs') or e.get('actual', {}).get('big_small'))
+                    )
+                    calibration[bin_name] = {
+                        'count': len(bin_entries),
+                        'accuracy': correct_in_bin / len(bin_entries),
+                        'avg_confidence': float(np.mean([float(e.get('confidence', 0.5)) for e in bin_entries]))
+                    }
+            metrics['calibration'] = calibration
+            
+        recent = validated[-20:]
+        recent_correct = sum(
+            1 for e in recent
+            if (e.get('prediction', {}).get('bs_pred') or e.get('prediction', {}).get('bs')) == (e.get('actual', {}).get('bs') or e.get('actual', {}).get('big_small'))
+        )
+        metrics['recent_bs_accuracy'] = recent_correct / len(recent) if recent else 0.0
+        return metrics
+
+    def compare_models(self):
+        all_models = list(self.predictions_log.keys())
+        comparison = {}
+        for model in all_models:
+            metrics = self.calculate_metrics(model)
+            if 'error' not in metrics:
+                comparison[model] = {
+                    'exact_match': metrics.get('exact_match_rate', 0.0),
+                    'sum_accuracy': metrics.get('sum_accuracy', 0.0),
+                    'bs_accuracy': metrics.get('bs_accuracy', 0.0),
+                    'oe_accuracy': metrics.get('oe_accuracy', 0.0),
+                    'total_validated': metrics.get('validated_predictions', 0)
+                }
+        return comparison
+
+    def get_recent_predictions(self, model_name, n=10):
+        return self.predictions_log.get(model_name, [])[-n:]
+
+    def get_performance_trend(self, model_name):
+        entries = [e for e in self.predictions_log.get(model_name, []) if e.get('validated')]
+        window = min(10, len(entries))
+        if window == 0: return []
+        trend = []
+        for i in range(window, len(entries) + 1):
+            window_entries = entries[i-window:i]
+            correct = sum(
+                1 for e in window_entries
+                if (e.get('prediction', {}).get('bs_pred') or e.get('prediction', {}).get('bs')) == (e.get('actual', {}).get('bs') or e.get('actual', {}).get('big_small'))
+            )
+            trend.append(correct / window)
+        return trend
+
+    def save_history(self):
         try:
-            data = {k: v for k, v in self.predictions.items()}
+            data = {k: v for k, v in self.predictions_log.items()}
             self.storage_path.parent.mkdir(parents=True, exist_ok=True)
             self.storage_path.write_text(json.dumps(data, indent=2, default=str), encoding='utf-8')
         except Exception:
             pass
-    
-    def load_from_disk(self):
+
+    def load_history(self):
         if self.storage_path.exists():
             try:
                 data = json.loads(self.storage_path.read_text(encoding='utf-8'))
-                self.predictions = defaultdict(list, data)
+                self.predictions_log = defaultdict(list, data)
+                self.predictions = self.predictions_log
             except Exception:
-                self.predictions = defaultdict(list)
+                self.predictions_log = defaultdict(list)
+                self.predictions = self.predictions_log
+
+    def save_to_disk(self):
+        self.save_history()
+
+    def load_from_disk(self):
+        self.load_history()
+
+    def get_pending_predictions(self, model_name: str = None):
+        if model_name:
+            return [e for e in self.predictions_log.get(model_name, []) if not e.get('validated')]
+        all_p = []
+        for m, entries in self.predictions_log.items():
+            all_p.extend([e for e in entries if not e.get('validated')])
+        return all_p
+
+    def get_validated_predictions(self, model_name: str = None):
+        if model_name:
+            return [e for e in self.predictions_log.get(model_name, []) if e.get('validated')]
+        all_v = []
+        for m, entries in self.predictions_log.items():
+            all_v.extend([e for e in entries if e.get('validated')])
+        return all_v
+
+    def get_all_models(self):
+        return list(self.predictions_log.keys())
+
+    def generate_report(self, model_name):
+        metrics = self.calculate_metrics(model_name)
+        if 'error' in metrics:
+            return f"No validated records found for model: {model_name}"
+        
+        report = f"""
+╔══════════════════════════════════════════════════════════╗
+║         MODEL PERFORMANCE REPORT: {model_name:<20}   ║
+╠══════════════════════════════════════════════════════════╣
+║ Total Predictions: {metrics.get('total_predictions', 0):<37} ║
+║ Validated:         {metrics.get('validated_predictions', 0):<37} ║
+║ Pending:           {metrics.get('pending', 0):<37} ║
+╠══════════════════════════════════════════════════════════╣
+║ ACCURACY BY PARAMETER:                                   ║
+║   Dice 1:          {metrics.get('dice1_accuracy', 0)*100:>6.2f}%                       ║
+║   Dice 2:          {metrics.get('dice2_accuracy', 0)*100:>6.2f}%                       ║
+║   Dice 3:          {metrics.get('dice3_accuracy', 0)*100:>6.2f}%                       ║
+║   Sum:             {metrics.get('sum_accuracy', 0)*100:>6.2f}%                       ║
+║   Big/Small:       {metrics.get('bs_accuracy', 0)*100:>6.2f}%                       ║
+║   Odd/Even:        {metrics.get('oe_accuracy', 0)*100:>6.2f}%                       ║
+╠══════════════════════════════════════════════════════════╣
+║ EXACT MATCH (all correct): {metrics.get('exact_match_rate', 0)*100:>6.2f}%               ║
+║ RECENT (last 20) BS Accuracy: {metrics.get('recent_bs_accuracy', 0)*100:>6.2f}%            ║
+╚══════════════════════════════════════════════════════════╝
+"""
+        return report
+
+# Backward-compatibility alias
+PredictionLogger = ModelPerformanceTracker
+
+
+class BacktestingEngine:
+    """
+    Backtests all models on historical data.
+    Simulates predictions on past data without seeing future.
+    """
+    
+    def __init__(self, model_functions, data):
+        self.model_functions = model_functions
+        self.data = data
+        self.results = []
+    
+    def run_backtest(self, lookback=50, step=1):
+        results = []
+        data_sorted = self.data.sort_values('issueNumber').reset_index(drop=True)
+        
+        for i in range(lookback, len(data_sorted), step):
+            train_data = data_sorted.iloc[:i]
+            actual_row = data_sorted.iloc[i]
+            actual = {
+                'dice1': int(float(actual_row.get('dice1', 3))),
+                'dice2': int(float(actual_row.get('dice2', 3))),
+                'dice3': int(float(actual_row.get('dice3', 3))),
+                'sum': int(float(actual_row.get('sum', 9))),
+                'bs': str(actual_row.get('big_small', actual_row.get('bs', 'Small'))),
+                'oe': str(actual_row.get('odd_even', actual_row.get('oe', 'Even')))
+            }
+            
+            for model_name, model_func in self.model_functions.items():
+                try:
+                    prediction = model_func(train_data)
+                    p_bs = prediction.get('bs_pred') or prediction.get('bs')
+                    p_oe = prediction.get('oe_pred') or prediction.get('oe')
+                    correct = {
+                        'dice1': int(float(prediction.get('dice1', 0))) == actual['dice1'] if prediction.get('dice1') is not None else False,
+                        'dice2': int(float(prediction.get('dice2', 0))) == actual['dice2'] if prediction.get('dice2') is not None else False,
+                        'dice3': int(float(prediction.get('dice3', 0))) == actual['dice3'] if prediction.get('dice3') is not None else False,
+                        'sum': int(float(prediction.get('sum', 0))) == actual['sum'] if prediction.get('sum') is not None else False,
+                        'bs': str(p_bs).lower() == str(actual['bs']).lower() if p_bs else False,
+                        'oe': str(p_oe).lower() == str(actual['oe']).lower() if p_oe else False
+                    }
+                    results.append({
+                        'issue': str(actual_row['issueNumber']),
+                        'model': model_name,
+                        'prediction': prediction,
+                        'actual': actual,
+                        'correct': correct,
+                        'all_correct': all(correct.values()),
+                        'timestamp': datetime.now().isoformat()
+                    })
+                except Exception as e:
+                    results.append({
+                        'issue': str(actual_row['issueNumber']),
+                        'model': model_name,
+                        'error': str(e)
+                    })
+        self.results = results
+        return results
+
+    def calculate_backtest_metrics(self):
+        if not self.results: return {}
+        df = pd.DataFrame(self.results)
+        metrics = {}
+        for model_name in df['model'].unique():
+            model_df = df[df['model'] == model_name]
+            if 'all_correct' in model_df.columns:
+                metrics[model_name] = {
+                    'total_predictions': len(model_df),
+                    'exact_matches': int(model_df['all_correct'].sum()),
+                    'exact_match_rate': float(model_df['all_correct'].mean()),
+                    'dice1_accuracy': float(sum(1 for r in model_df['correct'] if isinstance(r, dict) and r.get('dice1')) / max(1, len(model_df))),
+                    'sum_accuracy': float(sum(1 for r in model_df['correct'] if isinstance(r, dict) and r.get('sum')) / max(1, len(model_df))),
+                    'bs_accuracy': float(sum(1 for r in model_df['correct'] if isinstance(r, dict) and r.get('bs')) / max(1, len(model_df))),
+                    'oe_accuracy': float(sum(1 for r in model_df['correct'] if isinstance(r, dict) and r.get('oe')) / max(1, len(model_df))),
+                }
+        return metrics
+
+    def plot_backtest_results(self):
+        if not self.results: return None
+        df = pd.DataFrame(self.results)
+        fig_data = []
+        for model_name in df['model'].unique():
+            model_df = df[df['model'] == model_name]
+            if 'all_correct' in model_df.columns:
+                rolling_acc = model_df['all_correct'].rolling(20).mean()
+                fig_data.append({
+                    'model': model_name,
+                    'issue': model_df['issue'].values,
+                    'rolling_accuracy': rolling_acc.values
+                })
+        return fig_data
 
 
 class PerformanceMetrics:

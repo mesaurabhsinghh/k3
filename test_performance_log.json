@@ -1,0 +1,156 @@
+{
+  "BNN": [
+    {
+      "id": "BNN_20260818101010656_1787078547.741294",
+      "issue": "20260818101010656",
+      "prediction": {
+        "dice1": 3,
+        "dice2": 4,
+        "dice3": 4,
+        "sum": 11,
+        "bs_pred": "Big",
+        "oe_pred": "Odd"
+      },
+      "actual": {
+        "dice1": 3,
+        "dice2": 4,
+        "dice3": 4,
+        "sum": 11,
+        "bs": "Big",
+        "oe": "Odd"
+      },
+      "confidence": 0.75,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:12:27.741294",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:13:35.947120"
+    },
+    {
+      "id": "BNN_20260818101010657_1787078547.744423",
+      "issue": "20260818101010657",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd"
+      },
+      "confidence": 0.82,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:12:27.744423",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:13:35.966948"
+    },
+    {
+      "id": "BNN_20260818101010656_1787078615.926778",
+      "issue": "20260818101010656",
+      "prediction": {
+        "dice1": 3,
+        "dice2": 4,
+        "dice3": 4,
+        "sum": 11,
+        "bs_pred": "Big",
+        "oe_pred": "Odd"
+      },
+      "actual": {
+        "dice1": 3,
+        "dice2": 4,
+        "dice3": 4,
+        "sum": 11,
+        "bs": "Big",
+        "oe": "Odd"
+      },
+      "confidence": 0.75,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:13:35.926778",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:13:35.947120"
+    },
+    {
+      "id": "BNN_20260818101010657_1787078615.939957",
+      "issue": "20260818101010657",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd"
+      },
+      "confidence": 0.82,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:13:35.939957",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:13:35.966948"
+    }
+  ],
+  "Bayesian": [
+    {
+      "id": "Bayesian_20260818101010656_1787078547.742098",
+      "issue": "20260818101010656",
+      "prediction": {
+        "dice1": 1,
+        "dice2": 2,
+        "dice3": 3,
+        "sum": 6,
+        "bs_pred": "Small",
+        "oe_pred": "Even"
+      },
+      "actual": {
+        "dice1": 3,
+        "dice2": 4,
+        "dice3": 4,
+        "sum": 11,
+        "bs": "Big",
+        "oe": "Odd"
+      },
+      "confidence": 0.6,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:12:27.742098",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:13:35.961194"
+    },
+    {
+      "id": "Bayesian_20260818101010656_1787078615.931408",
+      "issue": "20260818101010656",
+      "prediction": {
+        "dice1": 1,
+        "dice2": 2,
+        "dice3": 3,
+        "sum": 6,
+        "bs_pred": "Small",
+        "oe_pred": "Even"
+      },
+      "actual": {
+        "dice1": 3,
+        "dice2": 4,
+        "dice3": 4,
+        "sum": 11,
+        "bs": "Big",
+        "oe": "Odd"
+      },
+      "confidence": 0.6,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:13:35.931408",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:13:35.961194"
+    }
+  ]
+}

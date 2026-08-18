@@ -5,7 +5,7 @@ import requests
 import json
 from pathlib import Path
 from datetime import datetime
-from collections import deque, defaultdict
+from collections import deque, defaultdict, Counter
 from typing import Dict, List, Optional, Any, Tuple
 import math
 from itertools import permutations
@@ -23,7 +23,13 @@ import torch.optim as optim
 import xgboost as xgb
 from sklearn.preprocessing import LabelEncoder
 from sklearn.linear_model import LogisticRegression, SGDClassifier
-from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier, GradientBoostingClassifier, HistGradientBoostingClassifier
+from sklearn.ensemble import (
+    RandomForestClassifier,
+    ExtraTreesClassifier,
+    GradientBoostingClassifier,
+    HistGradientBoostingClassifier,
+    RandomForestRegressor
+)
 from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.feature_selection import mutual_info_classif
@@ -1480,92 +1486,183 @@ def create_baseline_models():
     }
 
 
-class EnsemblePredictor:
+# ============================================================================
+# PART 1: BASE ENSEMBLE METHODS
+# ============================================================================
+
+class BaseEnsemble:
     """
-    Combines predictions from multiple models.
-    Methods: Majority, Weighted, Confidence-Weighted.
+    Base ensemble combining multiple predictions.
+    Methods: Majority Voting, Weighted Voting, Confidence-Weighted, Bayesian Model Averaging (BMA).
     """
     
-    def __init__(self, model_functions, weights=None):
+    def __init__(self, model_functions: Dict, weights: Dict = None):
+        """
+        Args:
+            model_functions: {model_name: callable(df) -> prediction_dict}
+        """
         self.model_functions = model_functions
         self.model_names = list(model_functions.keys())
-        
+        self.n_models = len(model_functions)
         if weights is None:
-            self.weights = {name: 1.0/len(model_functions) for name in self.model_names}
+            self.weights = {name: 1.0/max(1, len(model_functions)) for name in self.model_names}
         else:
             self.weights = weights
     
-    def majority_vote(self, df):
-        predictions = []
+    def get_all_predictions(self, df) -> Dict[str, Dict]:
+        """Get predictions from all models."""
+        predictions = {}
         for name, func in self.model_functions.items():
-            pred = func(df)
-            predictions.append(pred)
+            try:
+                predictions[name] = func(df)
+            except Exception as e:
+                predictions[name] = {'error': str(e)}
+        return predictions
+    
+    # Method 1: Majority Voting
+    def majority_vote(self, df) -> Dict:
+        """
+        Simple majority voting.
+        Each model gets one vote.
+        """
+        predictions = self.get_all_predictions(df)
+        valid_preds = [p for p in predictions.values() if 'error' not in p]
         
-        bs_votes = [p['bs_pred'] for p in predictions]
-        oe_votes = [p['oe_pred'] for p in predictions]
+        if not valid_preds:
+            return self._fallback_prediction()
         
-        d1_vals = [p['dice1'] for p in predictions]
-        d2_vals = [p['dice2'] for p in predictions]
-        d3_vals = [p['dice3'] for p in predictions]
+        # Vote on Big/Small
+        bs_votes = [p.get('bs_pred', 'Big') for p in valid_preds]
+        bs_winner = Counter(bs_votes).most_common(1)[0][0]
         
-        med_d1 = int(np.median(d1_vals))
-        med_d2 = int(np.median(d2_vals))
-        med_d3 = int(np.median(d3_vals))
+        # Vote on Odd/Even
+        oe_votes = [p.get('oe_pred', 'Odd') for p in valid_preds]
+        oe_winner = Counter(oe_votes).most_common(1)[0][0]
+        
+        # Dice: median
+        d1_vals = [p.get('dice1', 3) for p in valid_preds]
+        d2_vals = [p.get('dice2', 3) for p in valid_preds]
+        d3_vals = [p.get('dice3', 3) for p in valid_preds]
+        
+        d1, d2, d3 = int(np.median(d1_vals)), int(np.median(d2_vals)), int(np.median(d3_vals))
+        d1, d2, d3 = int(np.clip(d1, 1, 6)), int(np.clip(d2, 1, 6)), int(np.clip(d3, 1, 6))
+        
+        # Ensure consistency
+        s = d1 + d2 + d3
+        actual_bs = 'Big' if s >= 11 else 'Small'
+        actual_oe = 'Odd' if s % 2 else 'Even'
+        
+        # Calculate confidence based on agreement
+        bs_agreement = bs_votes.count(bs_winner) / len(bs_votes) if bs_votes else 0.5
+        oe_agreement = oe_votes.count(oe_winner) / len(oe_votes) if oe_votes else 0.5
         
         return {
-            'dice1': med_d1,
-            'dice2': med_d2,
-            'dice3': med_d3,
-            'sum': int(np.median([p['sum'] for p in predictions])),
-            'bs_pred': max(set(bs_votes), key=bs_votes.count),
-            'oe_pred': max(set(oe_votes), key=oe_votes.count),
-            'premium': f"{med_d1}{med_d2}{med_d3}",
-            'bs_conf': 60.0,
-            'oe_conf': 60.0,
+            'dice1': d1, 'dice2': d2, 'dice3': d3,
+            'sum': s,
+            'bs_pred': bs_winner,
+            'oe_pred': oe_winner,
+            'premium': f"{d1}{d2}{d3}",
+            'bs_conf': 50 + bs_agreement * 40,
+            'oe_conf': 50 + oe_agreement * 40,
             'method': 'Majority Vote',
-            'n_models': len(predictions)
+            'agreement_bs': bs_agreement,
+            'agreement_oe': oe_agreement,
+            'n_models': len(valid_preds)
         }
     
-    def weighted_vote(self, df):
-        predictions = []
-        for name, func in self.model_functions.items():
-            pred = func(df)
-            pred['weight'] = self.weights.get(name, 1.0/max(1, len(self.model_functions)))
-            predictions.append(pred)
+    # Method 2: Weighted Voting (Performance-based)
+    def weighted_vote(self, df, weights: Dict = None) -> Dict:
+        """
+        Weighted voting using model performance.
         
-        d1 = sum(p['dice1'] * p['weight'] for p in predictions)
-        d2 = sum(p['dice2'] * p['weight'] for p in predictions)
-        d3 = sum(p['dice3'] * p['weight'] for p in predictions)
+        Args:
+            weights: {model_name: weight}. If None, uses self.weights or equal weights.
+        """
+        predictions = self.get_all_predictions(df)
+        valid_preds = {name: p for name, p in predictions.items() 
+                      if 'error' not in p}
         
-        d1, d2, d3 = int(np.clip(round(d1), 1, 6)), int(np.clip(round(d2), 1, 6)), int(np.clip(round(d3), 1, 6))
-        s = d1 + d2 + d3
+        if not valid_preds:
+            return self._fallback_prediction()
         
-        return {
-            'dice1': d1, 'dice2': d2, 'dice3': d3,
-            'sum': s,
-            'bs_pred': 'Big' if s >= 11 else 'Small',
-            'oe_pred': 'Odd' if s % 2 else 'Even',
-            'premium': f"{d1}{d2}{d3}",
-            'bs_conf': 65.0,
-            'oe_conf': 65.0,
-            'method': 'Weighted Vote',
-            'n_models': len(predictions)
-        }
-    
-    def confidence_weighted(self, df):
-        predictions = []
-        for name, func in self.model_functions.items():
-            pred = func(df)
-            predictions.append(pred)
+        if weights is None:
+            weights = self.weights if self.weights else {name: 1.0 for name in valid_preds}
         
-        total_weight = sum(p.get('bs_conf', 50.0) for p in predictions)
+        # Normalize weights
+        total_weight = sum(weights.get(k, 1.0) for k in valid_preds)
         if total_weight <= 0: total_weight = 1.0
+        norm_weights = {k: weights.get(k, 1.0)/total_weight for k in valid_preds}
         
-        d1 = sum(p['dice1'] * p.get('bs_conf', 50.0) for p in predictions) / total_weight
-        d2 = sum(p['dice2'] * p.get('bs_conf', 50.0) for p in predictions) / total_weight
-        d3 = sum(p['dice3'] * p.get('bs_conf', 50.0) for p in predictions) / total_weight
+        # Weighted dice values
+        d1_weighted = sum(valid_preds[name].get('dice1', 3) * norm_weights[name]
+                          for name in valid_preds)
+        d2_weighted = sum(valid_preds[name].get('dice2', 3) * norm_weights[name]
+                          for name in valid_preds)
+        d3_weighted = sum(valid_preds[name].get('dice3', 3) * norm_weights[name]
+                          for name in valid_preds)
         
-        d1, d2, d3 = int(np.clip(round(d1), 1, 6)), int(np.clip(round(d2), 1, 6)), int(np.clip(round(d3), 1, 6))
+        d1, d2, d3 = int(round(d1_weighted)), int(round(d2_weighted)), int(round(d3_weighted))
+        d1, d2, d3 = int(np.clip(d1, 1, 6)), int(np.clip(d2, 1, 6)), int(np.clip(d3, 1, 6))
+        s = d1 + d2 + d3
+        
+        # Weighted voting for BS and OE
+        bs_score = {'Big': 0.0, 'Small': 0.0}
+        oe_score = {'Odd': 0.0, 'Even': 0.0}
+        
+        for name, pred in valid_preds.items():
+            w = norm_weights[name]
+            p_bs = pred.get('bs_pred', 'Big')
+            p_oe = pred.get('oe_pred', 'Odd')
+            if p_bs in bs_score: bs_score[p_bs] += w
+            if p_oe in oe_score: oe_score[p_oe] += w
+        
+        bs_winner = max(bs_score, key=bs_score.get) if bs_score else ('Big' if s >= 11 else 'Small')
+        oe_winner = max(oe_score, key=oe_score.get) if oe_score else ('Odd' if s % 2 else 'Even')
+        
+        actual_bs = 'Big' if s >= 11 else 'Small'
+        actual_oe = 'Odd' if s % 2 else 'Even'
+        
+        return {
+            'dice1': d1, 'dice2': d2, 'dice3': d3,
+            'sum': s,
+            'bs_pred': actual_bs,
+            'oe_pred': actual_oe,
+            'premium': f"{d1}{d2}{d3}",
+            'bs_conf': float(np.clip(60 + (bs_score.get(actual_bs, 0.5) - 0.5) * 60, 50, 95)),
+            'oe_conf': float(np.clip(60 + (oe_score.get(actual_oe, 0.5) - 0.5) * 60, 50, 95)),
+            'method': 'Weighted Vote',
+            'weights_used': norm_weights,
+            'n_models': len(valid_preds)
+        }
+    
+    # Method 3: Confidence-Weighted Voting
+    def confidence_weighted(self, df) -> Dict:
+        """
+        Each model's vote weighted by its own confidence.
+        """
+        predictions = self.get_all_predictions(df)
+        valid_preds = {name: p for name, p in predictions.items() 
+                      if 'error' not in p}
+        
+        if not valid_preds:
+            return self._fallback_prediction()
+        
+        # Total confidence weight
+        total_conf = sum(p.get('bs_conf', 50.0) for p in valid_preds.values())
+        
+        if total_conf <= 0:
+            return self._fallback_prediction()
+        
+        # Confidence-weighted dice
+        d1 = sum(valid_preds[name].get('dice1', 3) * valid_preds[name].get('bs_conf', 50.0)
+                  for name in valid_preds) / total_conf
+        d2 = sum(valid_preds[name].get('dice2', 3) * valid_preds[name].get('bs_conf', 50.0)
+                  for name in valid_preds) / total_conf
+        d3 = sum(valid_preds[name].get('dice3', 3) * valid_preds[name].get('bs_conf', 50.0)
+                  for name in valid_preds) / total_conf
+        
+        d1, d2, d3 = int(round(d1)), int(round(d2)), int(round(d3))
+        d1, d2, d3 = int(np.clip(d1, 1, 6)), int(np.clip(d2, 1, 6)), int(np.clip(d3, 1, 6))
         s = d1 + d2 + d3
         
         return {
@@ -1574,10 +1671,58 @@ class EnsemblePredictor:
             'bs_pred': 'Big' if s >= 11 else 'Small',
             'oe_pred': 'Odd' if s % 2 else 'Even',
             'premium': f"{d1}{d2}{d3}",
-            'bs_conf': float(max(p.get('bs_conf', 50.0) for p in predictions)),
-            'oe_conf': float(max(p.get('oe_conf', 50.0) for p in predictions)),
+            'bs_conf': float(np.mean([p.get('bs_conf', 50.0) for p in valid_preds.values()])),
+            'oe_conf': float(np.mean([p.get('oe_conf', 50.0) for p in valid_preds.values()])),
             'method': 'Confidence Weighted',
-            'n_models': len(predictions)
+            'n_models': len(valid_preds)
+        }
+    
+    # Method 4: Bayesian Model Averaging
+    def bayesian_model_averaging(self, df, model_accuracies: Dict = None) -> Dict:
+        """
+        Bayesian Model Averaging (BMA).
+        P(M_i | data) ∝ P(data | M_i) × P(M_i)
+        """
+        predictions = self.get_all_predictions(df)
+        valid_preds = {name: p for name, p in predictions.items() 
+                      if 'error' not in p}
+        
+        if not valid_preds:
+            return self._fallback_prediction()
+        
+        if model_accuracies is None:
+            model_accuracies = {name: 0.5 for name in valid_preds}
+        
+        # Posterior weights (proportional to accuracy)
+        total = sum(model_accuracies.get(name, 0.5) for name in valid_preds)
+        if total <= 0: total = 1.0
+        
+        weights = {}
+        for name in valid_preds:
+            weights[name] = model_accuracies.get(name, 0.5) / total
+        
+        # Weighted combination
+        d1 = sum(valid_preds[name].get('dice1', 3) * weights[name] for name in valid_preds)
+        d2 = sum(valid_preds[name].get('dice2', 3) * weights[name] for name in valid_preds)
+        d3 = sum(valid_preds[name].get('dice3', 3) * weights[name] for name in valid_preds)
+        
+        d1, d2, d3 = int(round(d1)), int(round(d2)), int(round(d3))
+        d1, d2, d3 = int(np.clip(d1, 1, 6)), int(np.clip(d2, 1, 6)), int(np.clip(d3, 1, 6))
+        s = d1 + d2 + d3
+        
+        bma_conf = sum(valid_preds[name].get('bs_conf', 50.0) * weights[name] for name in valid_preds)
+        
+        return {
+            'dice1': d1, 'dice2': d2, 'dice3': d3,
+            'sum': s,
+            'bs_pred': 'Big' if s >= 11 else 'Small',
+            'oe_pred': 'Odd' if s % 2 else 'Even',
+            'premium': f"{d1}{d2}{d3}",
+            'bs_conf': float(bma_conf),
+            'oe_conf': float(bma_conf),
+            'method': 'Bayesian Model Averaging',
+            'posterior_weights': weights,
+            'n_models': len(valid_preds)
         }
     
     def predict(self, df, method='weighted'):
@@ -1587,8 +1732,530 @@ class EnsemblePredictor:
             return self.weighted_vote(df)
         elif method == 'confidence':
             return self.confidence_weighted(df)
+        elif method == 'bma':
+            return self.bayesian_model_averaging(df)
         else:
             return self.weighted_vote(df)
+
+    def _fallback_prediction(self):
+        """Fallback when no models work."""
+        return {
+            'dice1': 3, 'dice2': 3, 'dice3': 3,
+            'sum': 9, 'bs_pred': 'Small', 'oe_pred': 'Odd',
+            'premium': '333', 'bs_conf': 50.0, 'oe_conf': 50.0,
+            'method': 'Fallback', 'n_models': 0
+        }
+
+# Alias for backwards compatibility
+EnsemblePredictor = BaseEnsemble
+
+
+# ============================================================================
+# PART 2: STACKING (META-LEARNER)
+# ============================================================================
+
+class StackingEnsemble(BaseEnsemble):
+    """
+    Stacking: Use a meta-learner to combine base models.
+    Level 0: Base models
+    Level 1: Meta-learner (combines base predictions)
+    """
+    
+    def __init__(self, model_functions: Dict):
+        super().__init__(model_functions)
+        self.meta_model = None
+        self.is_trained = False
+    
+    def train_meta_learner(self, df: pd.DataFrame, actual_results: List[Dict]):
+        """Train meta-learner on historical predictions."""
+        X_meta = []
+        y_meta = []
+        
+        for result in actual_results:
+            train_subset = df[df['issueNumber'] < result['issue']]
+            if len(train_subset) < 20:
+                continue
+            
+            base_preds = self.get_all_predictions(train_subset)
+            features = []
+            for name in self.model_names:
+                pred = base_preds.get(name, {})
+                features.extend([
+                    pred.get('dice1', 3) / 6.0,
+                    pred.get('dice2', 3) / 6.0,
+                    pred.get('dice3', 3) / 6.0,
+                    pred.get('sum', 10) / 18.0,
+                    1 if pred.get('bs_pred') == 'Big' else 0,
+                    1 if pred.get('oe_pred') == 'Odd' else 0,
+                    pred.get('bs_conf', 50) / 100.0
+                ])
+            
+            X_meta.append(features)
+            actual = result['actual']
+            y_meta.append([
+                actual['dice1'] / 6.0,
+                actual['dice2'] / 6.0,
+                actual['dice3'] / 6.0,
+                actual['sum'] / 18.0,
+                1 if actual.get('bs', 'Big') == 'Big' else 0,
+                1 if actual.get('oe', 'Odd') == 'Odd' else 0
+            ])
+        
+        X_meta = np.array(X_meta)
+        y_meta = np.array(y_meta)
+        
+        if len(X_meta) < 10:
+            return
+        
+        self.meta_model = RandomForestRegressor(
+            n_estimators=50,
+            max_depth=5,
+            random_state=42
+        )
+        self.meta_model.fit(X_meta, y_meta)
+        self.is_trained = True
+    
+    def stacking_predict(self, df) -> Dict:
+        """Make prediction using stacking."""
+        if not self.is_trained:
+            if len(df) >= 30:
+                try:
+                    mock_results = []
+                    cols_to_clean = [c for c in ['dice1', 'dice2', 'dice3', 'sum'] if c in df.columns]
+                    df_c = df.dropna(subset=cols_to_clean).sort_values('issueNumber').reset_index(drop=True)
+                    for i in range(20, min(60, len(df_c))):
+                        row = df_c.iloc[i]
+                        mock_results.append({
+                            'issue': row.get('issueNumber', f"draw_{i}"),
+                            'actual': {
+                                'dice1': int(float(row.get('dice1', 3))),
+                                'dice2': int(float(row.get('dice2', 3))),
+                                'dice3': int(float(row.get('dice3', 3))),
+                                'sum': int(float(row.get('sum', 9))),
+                                'bs': str(row.get('big_small', 'Big')),
+                                'oe': str(row.get('odd_even', 'Odd'))
+                            }
+                        })
+                    self.train_meta_learner(df_c, mock_results)
+                except Exception:
+                    pass
+            if not self.is_trained:
+                return self.weighted_vote(df)
+        
+        base_preds = self.get_all_predictions(df)
+        features = []
+        for name in self.model_names:
+            pred = base_preds.get(name, {})
+            features.extend([
+                pred.get('dice1', 3) / 6.0,
+                pred.get('dice2', 3) / 6.0,
+                pred.get('dice3', 3) / 6.0,
+                pred.get('sum', 10) / 18.0,
+                1 if pred.get('bs_pred') == 'Big' else 0,
+                1 if pred.get('oe_pred') == 'Odd' else 0,
+                pred.get('bs_conf', 50) / 100.0
+            ])
+        
+        features = np.array(features).reshape(1, -1)
+        meta_pred = self.meta_model.predict(features)[0]
+        
+        d1 = int(round(meta_pred[0] * 6))
+        d2 = int(round(meta_pred[1] * 6))
+        d3 = int(round(meta_pred[2] * 6))
+        s = int(round(meta_pred[3] * 18))
+        
+        d1, d2, d3 = int(np.clip(d1, 1, 6)), int(np.clip(d2, 1, 6)), int(np.clip(d3, 1, 6))
+        s = int(np.clip(s, 3, 18))
+        
+        while d1 + d2 + d3 != s:
+            diff = s - (d1 + d2 + d3)
+            if diff > 0 and d3 < 6: d3 += 1
+            elif diff < 0 and d3 > 1: d3 -= 1
+            elif diff > 0 and d2 < 6: d2 += 1
+            elif diff < 0 and d2 > 1: d2 -= 1
+            else: break
+        
+        tot = d1 + d2 + d3
+        return {
+            'dice1': d1, 'dice2': d2, 'dice3': d3,
+            'sum': tot,
+            'bs_pred': 'Big' if tot >= 11 else 'Small',
+            'oe_pred': 'Odd' if tot % 2 else 'Even',
+            'premium': f"{d1}{d2}{d3}",
+            'bs_conf': 70.0,
+            'oe_conf': 70.0,
+            'method': 'Stacking (Meta-Learner)',
+            'n_models': len(base_preds)
+        }
+
+
+# ============================================================================
+# PART 3: DYNAMIC MODEL SELECTION
+# ============================================================================
+
+def stats_linregress(x, y):
+    """Wrapper for scipy.stats.linregress."""
+    from scipy import stats
+    return stats.linregress(x, y)
+
+class DynamicEnsembleSelector(BaseEnsemble):
+    """
+    Dynamically selects which model to use based on current conditions:
+    - High volatility: Use simple models (Random/Median)
+    - Trending: Use momentum/last value models
+    - Mean-reverting: Use frequency models
+    - Stable: Use mean model
+    """
+    
+    def __init__(self, model_functions: Dict):
+        super().__init__(model_functions)
+        self.regime_history = []
+    
+    def detect_regime(self, df) -> str:
+        """
+        Detect current market regime.
+        Returns: 'trending', 'mean_reverting', 'volatile', 'stable'
+        """
+        if len(df) < 15:
+            return 'stable'
+        
+        recent = df.head(30)
+        sums = pd.to_numeric(recent['sum'], errors='coerce').dropna().values
+        if len(sums) < 10:
+            return 'stable'
+        
+        # Trend strength
+        x = np.arange(len(sums))
+        slope, _, r_value, _, _ = stats_linregress(x, sums)
+        trend_strength = abs(r_value)
+        volatility = np.std(sums)
+        
+        if len(sums) > 5:
+            autocorr = np.corrcoef(sums[:-1], sums[1:])[0, 1]
+            if np.isnan(autocorr): autocorr = 0.0
+        else:
+            autocorr = 0.0
+        
+        if trend_strength > 0.45 and abs(slope) > 0.2:
+            return 'trending'
+        elif volatility > 4.5:
+            return 'volatile'
+        elif autocorr < -0.25:
+            return 'mean_reverting'
+        else:
+            return 'stable'
+    
+    def predict_with_selection(self, df, regime_models: Dict = None) -> Dict:
+        """Select model based on detected regime."""
+        regime = self.detect_regime(df)
+        
+        if regime_models is None:
+            regime_models = {
+                'trending': 'Last_Value',
+                'mean_reverting': 'Frequency_Bias',
+                'volatile': 'Median',
+                'stable': 'Mean'
+            }
+        
+        selected_model_name = regime_models.get(regime, list(self.model_functions.keys())[0])
+        if selected_model_name not in self.model_functions:
+            selected_model_name = list(self.model_functions.keys())[0]
+            
+        prediction = self.model_functions[selected_model_name](df)
+        prediction['regime'] = regime
+        prediction['selected_model'] = selected_model_name
+        prediction['method'] = f"Dynamic Selection ({regime.capitalize()})"
+        return prediction
+
+
+# ============================================================================
+# PART 4: ADAPTIVE ENSEMBLE (LEARNING WEIGHTS)
+# ============================================================================
+
+class AdaptiveEnsemble(BaseEnsemble):
+    """
+    Ensemble that learns optimal weights from historical performance.
+    Uses online learning to update weights based on recent accuracy with softmax temperature scaling.
+    """
+    
+    def __init__(self, model_functions: Dict, learning_rate=0.1):
+        super().__init__(model_functions)
+        self.learning_rate = learning_rate
+        self.model_scores = {name: 0.5 for name in model_functions}
+        self.recent_performance = defaultdict(lambda: deque(maxlen=20))
+    
+    def update_scores(self, predictions: Dict, actual: Dict):
+        """Update model scores based on actual outcome."""
+        for name, pred in predictions.items():
+            if 'error' in pred:
+                continue
+            
+            score = 0.0
+            if str(pred.get('bs_pred', '')).lower() == str(actual.get('bs', '')).lower():
+                score += 0.4
+            if str(pred.get('oe_pred', '')).lower() == str(actual.get('oe', '')).lower():
+                score += 0.3
+            if int(pred.get('sum', -1)) == int(actual.get('sum', -2)):
+                score += 0.2
+            if int(pred.get('dice1', -1)) == int(actual.get('dice1', -2)):
+                score += 0.1
+            
+            self.recent_performance[name].append(score)
+            recent_avg = np.mean(list(self.recent_performance[name])) if self.recent_performance[name] else 0.5
+            self.model_scores[name] = (1 - self.learning_rate) * self.model_scores[name] + \
+                                      self.learning_rate * recent_avg
+    
+    def get_adaptive_weights(self) -> Dict:
+        """Get current adaptive weights."""
+        total = sum(self.model_scores.values())
+        if total <= 0:
+            return {name: 1.0/len(self.model_scores) for name in self.model_scores}
+        
+        scores = np.array(list(self.model_scores.values()))
+        temperature = 0.2
+        exp_scores = np.exp(np.clip(scores / temperature, -50, 50))
+        softmax_weights = exp_scores / np.sum(exp_scores)
+        
+        return {name: float(softmax_weights[i]) for i, name in enumerate(self.model_scores.keys())}
+    
+    def adaptive_predict(self, df) -> Dict:
+        """Predict using adaptive weights."""
+        weights = self.get_adaptive_weights()
+        pred = self.weighted_vote(df, weights)
+        pred['method'] = 'Adaptive Ensemble (Learned Weights)'
+        return pred
+
+
+# ============================================================================
+# PART 5: UNIFIED ENSEMBLE SYSTEM
+# ============================================================================
+
+class UnifiedEnsembleSystem:
+    """
+    Combines all ensemble methods in one unified system:
+    1. Majority Voting
+    2. Weighted Voting
+    3. Confidence-Weighted
+    4. Bayesian Model Averaging (BMA)
+    5. Stacking (Meta-Learner)
+    6. Dynamic Selection
+    7. Adaptive Learning
+    """
+    
+    def __init__(self, model_functions: Dict):
+        self.model_functions = model_functions
+        self.base = BaseEnsemble(model_functions)
+        self.stacking = StackingEnsemble(model_functions)
+        self.dynamic = DynamicEnsembleSelector(model_functions)
+        self.adaptive = AdaptiveEnsemble(model_functions)
+        self.method_performance = defaultdict(lambda: {'correct': 0, 'total': 0})
+    
+    def predict_all_methods(self, df) -> Dict[str, Dict]:
+        """Get predictions from all 7 ensemble methods."""
+        return {
+            'majority': self.base.majority_vote(df),
+            'weighted': self.base.weighted_vote(df),
+            'confidence': self.base.confidence_weighted(df),
+            'bma': self.base.bayesian_model_averaging(df),
+            'stacking': self.stacking.stacking_predict(df),
+            'dynamic': self.dynamic.predict_with_selection(df),
+            'adaptive': self.adaptive.adaptive_predict(df)
+        }
+    
+    def predict_best(self, df, method: str = 'adaptive') -> Dict:
+        """Predict using specified method."""
+        if method == 'majority':
+            return self.base.majority_vote(df)
+        elif method == 'weighted':
+            return self.base.weighted_vote(df)
+        elif method == 'confidence':
+            return self.base.confidence_weighted(df)
+        elif method == 'bma':
+            return self.base.bayesian_model_averaging(df)
+        elif method == 'stacking':
+            return self.stacking.stacking_predict(df)
+        elif method == 'dynamic':
+            return self.dynamic.predict_with_selection(df)
+        elif method == 'adaptive':
+            return self.adaptive.adaptive_predict(df)
+        else:
+            return self.base.weighted_vote(df)
+    
+    def update_with_actual(self, df, actual: Dict):
+        """Update adaptive ensemble with actual outcome."""
+        predictions = self.base.get_all_predictions(df)
+        self.adaptive.update_scores(predictions, actual)
+    
+    def get_method_ranking(self) -> List[Tuple[str, float]]:
+        """Get methods ranked by performance."""
+        rankings = []
+        for method, stats in self.method_performance.items():
+            acc = stats['correct'] / stats['total'] if stats['total'] > 0 else 0.0
+            rankings.append((method, acc))
+        rankings.sort(key=lambda x: x[1], reverse=True)
+        return rankings
+
+
+# ============================================================================
+# PART 6: STREAMLIT UI FOR ADVANCED ENSEMBLE
+# ============================================================================
+
+def render_ensemble_ui(df):
+    """Complete ensemble system dashboard."""
+    render_html("""
+    <div style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95)); border: 1px solid rgba(139, 92, 246, 0.35); border-radius: 12px; padding: 18px; margin-bottom: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.4);">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <span style="color: #a78bfa; font-size: 0.8rem; font-weight: 800; letter-spacing: 1.2px;">MULTI-MODEL CONSENSUS ORCHESTRATOR</span>
+                <h2 style="color: #ffffff; margin: 2px 0 0 0; font-size: 1.6rem; font-weight: 900;">🎼 ADVANCED ENSEMBLE PREDICTION SYSTEM</h2>
+                <p style="color: #94a3b8; font-size: 0.85rem; margin: 4px 0 0 0;">Combines multiple models intelligently: Majority, Weighted, Confidence, BMA, Stacking, Dynamic, and Adaptive Learning.</p>
+            </div>
+            <div style="text-align: right;">
+                <span style="background: rgba(139, 92, 246, 0.15); color: #c084fc; border: 1px solid #8b5cf6; padding: 4px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 800;">7 Advanced Ensemble Methods</span>
+            </div>
+        </div>
+    </div>
+    """)
+    
+    if df is None or df.empty or len(df) < 10:
+        st.warning("⚠️ Insufficient historical data to run ensemble system.")
+        return
+        
+    if 'ensemble_system' not in st.session_state:
+        baseline_models = create_baseline_models()
+        st.session_state.ensemble_system = UnifiedEnsembleSystem(baseline_models)
+        st.session_state.base_models = baseline_models
+    
+    ensemble = st.session_state.ensemble_system
+    
+    st.markdown("### ⚙️ Configuration & Weights")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        method = st.selectbox("Ensemble Aggregation Strategy", [
+            'adaptive', 'majority', 'weighted', 'confidence', 
+            'bma', 'stacking', 'dynamic'
+        ], key="sb_ensemble_main_strategy")
+    
+    with col2:
+        with st.expander("🎚️ Adjust Custom Model Weights", expanded=False):
+            weights = {}
+            for name in st.session_state.base_models.keys():
+                weights[name] = st.slider(f"{name} Weight", 0.0, 1.0, 0.5, 0.05, key=f"sld_wt_{name}")
+            ensemble.base.weights = weights
+    
+    st.markdown("### 🎯 Multi-Method Ensemble Forecasts")
+    if st.button("🚀 Generate All 7 Ensemble Predictions", key="btn_run_all_ensembles", use_container_width=True):
+        with st.spinner("Running all 7 ensemble methods (Majority, Weighted, Confidence, BMA, Stacking, Dynamic, Adaptive)..."):
+            all_preds = ensemble.predict_all_methods(df)
+            st.session_state.all_ensemble_preds = all_preds
+    
+    if 'all_ensemble_preds' not in st.session_state:
+        st.session_state.all_ensemble_preds = ensemble.predict_all_methods(df)
+        
+    all_preds = st.session_state.all_ensemble_preds
+    
+    # Display comparison table
+    comparison_data = []
+    for method_name, pred in all_preds.items():
+        comparison_data.append({
+            'Method': method_name.upper(),
+            'Dice': f"[{pred['dice1']}, {pred['dice2']}, {pred['dice3']}]",
+            'Sum': pred['sum'],
+            'Premium': f"#{pred['premium']}",
+            'B/S': pred['bs_pred'],
+            'O/E': pred['oe_pred'],
+            'BS Conf': f"{pred.get('bs_conf', 50.0):.1f}%",
+            'OE Conf': f"{pred.get('oe_conf', 50.0):.1f}%"
+        })
+    
+    comp_df = pd.DataFrame(comparison_data)
+    st.dataframe(comp_df, use_container_width=True, hide_index=True)
+    
+    # Agreement Analysis
+    st.markdown("### 🤝 Model Agreement Analysis")
+    methods = list(all_preds.keys())
+    bs_preds = [all_preds[m]['bs_pred'] for m in methods]
+    oe_preds = [all_preds[m]['oe_pred'] for m in methods]
+    
+    col1, col2, col3 = st.columns(3)
+    bs_counts = Counter(bs_preds)
+    oe_counts = Counter(oe_preds)
+    
+    with col1:
+        st.metric("B/S Consensus Rate", 
+                 f"{max(bs_counts.values())}/{len(methods)}",
+                 f"{(max(bs_counts.values())/len(methods)*100):.0f}% Agreement")
+    with col2:
+        bs_winner = bs_counts.most_common(1)[0][0]
+        st.metric("Consensus B/S Winner", bs_winner)
+    with col3:
+        oe_winner = oe_counts.most_common(1)[0][0]
+        st.metric("Consensus O/E Winner", oe_winner)
+    
+    # Visual Comparison Bar Chart
+    st.markdown("### 📊 Visual Multi-Method Sum Comparison")
+    fig = go.Figure()
+    methods_short = [m.upper() for m in methods]
+    sums = [all_preds[m]['sum'] for m in methods]
+    
+    fig.add_trace(go.Bar(
+        x=methods_short,
+        y=sums,
+        marker_color=['#10b981' if s >= 11 else '#3b82f6' for s in sums],
+        text=[f"Sum: {s}" for s in sums],
+        textposition='auto',
+        name='Predicted Sum'
+    ))
+    
+    fig.add_hline(
+        y=float(np.mean(sums)),
+        line=dict(color='#fbbf24', width=2, dash='dash'),
+        annotation_text=f"Ensemble Mean: {np.mean(sums):.1f}"
+    )
+    
+    fig.update_layout(
+        title="Sum Predictions Across 7 Ensemble Strategies",
+        yaxis_title="Predicted Sum Total",
+        template="plotly_dark",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0.2)",
+        height=360
+    )
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Active Selected Method Card
+    st.markdown(f"### 🎯 Active Forecast Strategy: **{method.upper()}**")
+    selected_prediction = ensemble.predict_best(df, method=method)
+    
+    bs_c = "#10b981" if selected_prediction['bs_pred'] == 'Big' else "#ef4444"
+    oe_c = "#8b5cf6" if selected_prediction['oe_pred'] == 'Odd' else "#f97316"
+    
+    render_html(f"""
+    <div style="background: rgba(17, 24, 39, 0.9); border: 2px solid #8b5cf6; border-radius: 12px; padding: 18px; margin-bottom: 15px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; text-align: center;">
+            <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px;">
+                <div style="color: #94a3b8; font-size: 0.72rem; text-transform: uppercase;">Triad & Premium</div>
+                <div style="font-weight: 900; font-size: 1.25rem; color: #ffffff;">[{selected_prediction['dice1']}, {selected_prediction['dice2']}, {selected_prediction['dice3']}]</div>
+                <div style="color: #fbbf24; font-weight: 800; font-size: 0.95rem;">#{selected_prediction['premium']}</div>
+            </div>
+            <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px;">
+                <div style="color: #94a3b8; font-size: 0.72rem; text-transform: uppercase;">Sum Total</div>
+                <div style="font-weight: 900; font-size: 1.6rem; color: #fbbf24;">{selected_prediction['sum']}</div>
+            </div>
+            <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px;">
+                <div style="color: #94a3b8; font-size: 0.72rem; text-transform: uppercase;">Big / Small</div>
+                <div style="font-weight: 900; font-size: 1.3rem; color: {bs_c};">{selected_prediction['bs_pred'].upper()}</div>
+                <div style="color: #38bdf8; font-size: 0.75rem; font-weight: 700;">{selected_prediction.get('bs_conf', 50.0):.1f}% Conf</div>
+            </div>
+            <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px;">
+                <div style="color: #94a3b8; font-size: 0.72rem; text-transform: uppercase;">Odd / Even</div>
+                <div style="font-weight: 900; font-size: 1.3rem; color: {oe_c};">{selected_prediction['oe_pred'].upper()}</div>
+                <div style="color: #c084fc; font-size: 0.75rem; font-weight: 700;">{selected_prediction.get('oe_conf', 50.0):.1f}% Conf</div>
+            </div>
+        </div>
+    </div>
+    """)
 
 
 def run_backtest_and_ensemble(df):
@@ -6116,6 +6783,10 @@ def run_app():
     if show_sidebar_pipeline:
         render_full_pipeline_ui(df_active)
 
+    show_sidebar_ensemble = st.sidebar.checkbox("🎼 Advanced Ensemble Prediction System", value=False, help="Explore all 7 multi-model consensus ensemble algorithms (Majority, Weighted, Confidence, BMA, Stacking, Dynamic, and Adaptive).")
+    if show_sidebar_ensemble:
+        render_ensemble_ui(df_active)
+
     st.sidebar.markdown("## 🎯 Probabilistic Priors")
     bias_mode = st.sidebar.toggle("🎯 Bias Compensation Mode (Bayesian Priors)", value=False, help="Injects empirical Dirichlet priors for observed Odd-Even bias and positional face deficits.")
     if bias_mode:
@@ -6606,6 +7277,12 @@ def run_app():
             render_full_pipeline_ui(df_active)
         else:
             st.info("Need at least 10 draws to execute full pipeline.")
+
+    with st.expander("🎼 ADVANCED ENSEMBLE PREDICTION SYSTEM (7 Multi-Model Consensus Algorithms)", expanded=False):
+        if len(df_active) >= 10:
+            render_ensemble_ui(df_active)
+        else:
+            st.info("Need at least 10 draws to execute ensemble system.")
 
     # Master Orchestrator Card
     bs_badge = f'<span class="badge-big">{hive["bs_pred"].upper()}</span>' if hive['bs_pred'] == 'Big' else f'<span class="badge-small">{hive["bs_pred"].upper()}</span>'

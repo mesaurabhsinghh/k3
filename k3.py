@@ -1427,6 +1427,25 @@ def render_performance_tracker_ui(df):
                 st.code(txt_report, language="text")
                 st.download_button("📥 Download Official Audit Report", txt_report, file_name=f"k3_audit_{rep_m.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.txt", mime="text/plain")
 
+def log_all_agent_predictions(agents, issue):
+    """Auto-logs predictions from all AI agents for an upcoming draw issue."""
+    if 'pred_logger' not in st.session_state:
+        st.session_state.pred_logger = PredictionLogger()
+    for agent in agents:
+        st.session_state.pred_logger.log_prediction(
+            agent['name'], str(issue),
+            agent, confidence=float(agent.get('bs_conf', 50.0)) / 100.0
+        )
+
+def on_new_draw(actual):
+    """Auto-validates pending predictions across all registered models upon new draw arrival."""
+    if 'pred_logger' not in st.session_state:
+        st.session_state.pred_logger = PredictionLogger()
+    for model in st.session_state.pred_logger.get_all_models():
+        st.session_state.pred_logger.validate_prediction(
+            model, str(actual.get('issue', actual.get('issueNumber', ''))), actual
+        )
+
 def run_bias_aware_prediction(df):
     """Generates prediction weighted by observed historical biases."""
     if df is None or len(df) < 5:
@@ -3758,17 +3777,13 @@ def do_sync_k3():
 
                 save_persisted_performance()
 
-            # Automatic Ground-Truth Validation in PredictionLogger
-            if 'pred_logger' not in st.session_state:
-                st.session_state.pred_logger = PredictionLogger()
-            
-            actual_dict = {
+            # Auto-Validate Ground-Truth Outcomes in Performance Tracker
+            on_new_draw({
+                'issue': newest_issue,
                 'dice1': actual_d1, 'dice2': actual_d2, 'dice3': actual_d3,
                 'sum': actual_sum, 'bs': actual_bs, 'oe': actual_oe,
                 'premium': actual_prem
-            }
-            for model_k in DEFAULT_SCORECARDS.keys():
-                st.session_state.pred_logger.validate_prediction(model_k, newest_issue, actual_dict)
+            })
 
             # Automatic Real-Time Anomaly Surveillance Processing on New Draw
             if 'anomaly_engine' not in st.session_state:
@@ -3886,24 +3901,7 @@ st.session_state.agent_past_predictions[next_issue_str] = {
 }
 
 # Synchronize Out-of-Sample Predictions to Performance Tracker Logger
-if 'pred_logger' not in st.session_state:
-    st.session_state.pred_logger = PredictionLogger()
-
-for ag_obj in all_agents + [hive]:
-    st.session_state.pred_logger.log_prediction(
-        model_name=ag_obj['name'],
-        issue_number=next_issue_str,
-        prediction={
-            'dice1': int(float(ag_obj['dice1'])),
-            'dice2': int(float(ag_obj['dice2'])),
-            'dice3': int(float(ag_obj['dice3'])),
-            'sum': int(float(ag_obj['sum'])),
-            'bs_pred': str(ag_obj['bs_pred']),
-            'oe_pred': str(ag_obj['oe_pred']),
-            'premium': str(ag_obj['premium'])
-        },
-        confidence=float(ag_obj.get('bs_conf', 65.0)) / 100.0
-    )
+log_all_agent_predictions(all_agents + [hive], next_issue_str)
 
 
 # ==============================================================================

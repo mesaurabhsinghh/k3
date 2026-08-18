@@ -12,3 +12,5 @@ plotly
 shap
 lime
 matplotlib
+statsmodels
+pywavelets

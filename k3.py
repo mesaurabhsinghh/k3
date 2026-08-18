@@ -9,11 +9,13 @@ from collections import deque, defaultdict
 from typing import Dict, List, Optional, Any, Tuple
 import math
 from itertools import permutations
-from scipy import stats
+from scipy import stats, signal
 from scipy.stats import chi2, norm, kstest, anderson, skew, kurtosis, chisquare
 from scipy.special import gammaln, logsumexp
 from scipy.spatial.distance import cdist
 from scipy.optimize import minimize
+from scipy.fft import fft, fftfreq
+import pywt
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -2091,6 +2093,653 @@ def render_xai_ui(df):
                     st.divider()
             else:
                 st.warning(f"No simple 1-step counterfactual was sufficient to invert to '{desired}'.")
+
+
+# ============================================================================
+# TIME SERIES DECOMPOSITION FOR K3 ANALYSIS
+# ============================================================================
+
+class STLDecomposer:
+    """
+    Seasonal-Trend decomposition using LOESS.
+    """
+    
+    def __init__(self, period=10, robust=True):
+        self.period = period
+        self.robust = robust
+        self.decomposition = None
+    
+    def decompose(self, series: np.ndarray) -> Dict:
+        from statsmodels.tsa.seasonal import STL
+        
+        n = len(series)
+        actual_period = min(self.period, max(2, n // 2))
+        if actual_period % 2 == 1:
+            actual_period = max(2, actual_period - 1)
+        actual_period = max(2, actual_period)
+        
+        s = pd.Series(series, index=pd.date_range(start='2024-01-01', periods=n, freq='1min'))
+        stl = STL(s, period=actual_period, robust=self.robust)
+        self.decomposition = stl.fit()
+        
+        return {
+            'trend': self.decomposition.trend.values,
+            'seasonal': self.decomposition.seasonal.values,
+            'residual': self.decomposition.resid.values,
+            'observed': series,
+            'strength_of_trend': self._calculate_trend_strength(),
+            'strength_of_seasonality': self._calculate_seasonality_strength()
+        }
+    
+    def _calculate_trend_strength(self) -> float:
+        if self.decomposition is None: return 0.0
+        var_resid = float(np.var(self.decomposition.resid))
+        var_resid_plus_trend = float(np.var(self.decomposition.resid + self.decomposition.trend))
+        if var_resid_plus_trend == 0: return 0.0
+        return float(max(0.0, 1.0 - var_resid / var_resid_plus_trend))
+    
+    def _calculate_seasonality_strength(self) -> float:
+        if self.decomposition is None: return 0.0
+        var_resid = float(np.var(self.decomposition.resid))
+        var_resid_plus_seasonal = float(np.var(self.decomposition.resid + self.decomposition.seasonal))
+        if var_resid_plus_seasonal == 0: return 0.0
+        return float(max(0.0, 1.0 - var_resid / var_resid_plus_seasonal))
+    
+    def find_anomalies(self, threshold=2.5) -> np.ndarray:
+        if self.decomposition is None: return np.array([])
+        residual = self.decomposition.resid.values
+        std_resid = float(np.std(residual))
+        mean_resid = float(np.mean(residual))
+        if std_resid == 0: return np.zeros(len(residual), dtype=bool)
+        z_scores = np.abs((residual - mean_resid) / std_resid)
+        return z_scores > threshold
+
+
+class FourierAnalyzer:
+    """
+    Detect hidden periodicities using Fourier Transform.
+    """
+    
+    def __init__(self):
+        self.frequencies = None
+        self.power = None
+        self.dominant_periods = None
+    
+    def analyze(self, series: np.ndarray, sampling_rate=1.0) -> Dict:
+        series_demeaned = series - np.mean(series)
+        n = len(series)
+        fft_vals = fft(series_demeaned)
+        power = np.abs(fft_vals) ** 2
+        
+        freqs = fftfreq(n, d=1.0/sampling_rate)
+        pos_idx = freqs > 0
+        self.frequencies = freqs[pos_idx]
+        self.power = power[pos_idx]
+        
+        if len(self.power) == 0:
+            return {
+                'frequencies': np.array([]), 'power': np.array([]),
+                'dominant_periods': [1.0], 'dominant_powers': [0.0],
+                'spectral_entropy': 0.0, 'normalized_spectral_entropy': 0.0,
+                'is_white_noise': True, 'has_cycles': False
+            }
+            
+        top_k = min(10, len(self.power))
+        top_indices = np.argsort(self.power)[-top_k:][::-1]
+        self.dominant_periods = 1.0 / np.maximum(self.frequencies[top_indices], 1e-6)
+        dominant_powers = self.power[top_indices]
+        
+        total_p = np.sum(self.power)
+        if total_p > 0:
+            p_norm = self.power / total_p
+            p_norm = p_norm[p_norm > 0]
+            spectral_entropy = float(-np.sum(p_norm * np.log2(p_norm)))
+        else:
+            spectral_entropy = 0.0
+            
+        max_entropy = float(np.log2(len(self.power))) if len(self.power) > 1 else 1.0
+        norm_entropy = float(spectral_entropy / max_entropy) if max_entropy > 0 else 0.0
+        
+        return {
+            'frequencies': self.frequencies,
+            'power': self.power,
+            'dominant_periods': self.dominant_periods.tolist(),
+            'dominant_powers': dominant_powers.tolist(),
+            'spectral_entropy': spectral_entropy,
+            'normalized_spectral_entropy': norm_entropy,
+            'is_white_noise': norm_entropy > 0.95,
+            'has_cycles': norm_entropy < 0.85
+        }
+    
+    def reconstruct_signal(self, series: np.ndarray, n_harmonics: int = 5) -> np.ndarray:
+        series_demeaned = series - np.mean(series)
+        n = len(series)
+        fft_vals = fft(series_demeaned)
+        power = np.abs(fft_vals) ** 2
+        
+        k = min(n_harmonics, len(power))
+        if k <= 0: return series
+        threshold = np.sort(power)[-k]
+        fft_filtered = fft_vals * (power >= threshold)
+        reconstructed = np.real(np.fft.ifft(fft_filtered)) + np.mean(series)
+        return reconstructed
+
+
+class WaveletDecomposer:
+    """
+    Multi-resolution analysis using wavelets.
+    """
+    
+    def __init__(self, wavelet='db4', level=4):
+        self.wavelet = wavelet
+        self.level = level
+        self.coefficients = None
+    
+    def decompose(self, series: np.ndarray) -> Dict:
+        max_level = pywt.dwt_max_level(len(series), self.wavelet)
+        actual_level = max(1, min(self.level, max_level))
+        
+        self.coefficients = pywt.wavedec(series, self.wavelet, level=actual_level)
+        components = {}
+        
+        approx_coeffs = [self.coefficients[0]] + [np.zeros_like(c) for c in self.coefficients[1:]]
+        components['Approximation (Low-Freq)'] = pywt.waverec(approx_coeffs, self.wavelet)[:len(series)]
+        
+        for i in range(1, len(self.coefficients)):
+            detail_coeffs = [np.zeros_like(self.coefficients[0])] + \
+                          [self.coefficients[j] if j == i else np.zeros_like(self.coefficients[j]) 
+                           for j in range(1, len(self.coefficients))]
+            components[f'Detail Level {i} (High-Freq)'] = pywt.waverec(detail_coeffs, self.wavelet)[:len(series)]
+        
+        energies = {}
+        total_energy = float(sum(np.sum(c ** 2) for c in self.coefficients))
+        
+        for i, coeff in enumerate(self.coefficients):
+            e_val = float(np.sum(coeff ** 2) / total_energy) if total_energy > 0 else 0.0
+            label = "Approximation" if i == 0 else f"Detail L{i}"
+            energies[label] = e_val
+        
+        return {
+            'components': components,
+            'energies': energies,
+            'coefficients': [c.tolist() for c in self.coefficients],
+            'dominant_scale': max(energies, key=energies.get) if energies else None
+        }
+
+
+class ChangePointDetector:
+    """
+    Detects when the underlying pattern changes using PELT.
+    """
+    
+    def __init__(self, model='l2', min_size=2):
+        self.model = model
+        self.min_size = min_size
+    
+    def detect(self, series: np.ndarray, penalty: float = 10.0) -> Dict:
+        try:
+            import ruptures as rpt
+            algo = rpt.Pelt(model=self.model, min_size=self.min_size).fit(series)
+            change_points = algo.predict(pen=penalty)
+            if change_points and change_points[-1] == len(series):
+                change_points = change_points[:-1]
+            
+            segments = []
+            prev_cp = 0
+            for cp in change_points + [len(series)]:
+                segment = series[prev_cp:cp]
+                segments.append({
+                    'start': int(prev_cp),
+                    'end': int(cp),
+                    'mean': float(np.mean(segment)) if len(segment) > 0 else 0.0,
+                    'std': float(np.std(segment)) if len(segment) > 0 else 0.0,
+                    'length': int(cp - prev_cp)
+                })
+                prev_cp = cp
+            
+            return {
+                'change_points': [int(cp) for cp in change_points],
+                'n_change_points': len(change_points),
+                'segments': segments
+            }
+        except Exception:
+            return self._simple_change_detection(series)
+    
+    def _simple_change_detection(self, series: np.ndarray) -> Dict:
+        n = len(series)
+        change_points = []
+        window = min(20, max(3, n // 4))
+        for i in range(window, n - window):
+            before = series[i-window:i]
+            after = series[i:i+window]
+            t_stat, p_value = stats.ttest_ind(before, after)
+            if p_value < 0.005:
+                change_points.append(i)
+        
+        merged = []
+        if change_points:
+            current = change_points[0]
+            for cp in change_points[1:]:
+                if cp - current > window:
+                    merged.append(current)
+                    current = cp
+            merged.append(current)
+        
+        segments = []
+        prev_cp = 0
+        for cp in merged + [n]:
+            segment = series[prev_cp:cp]
+            segments.append({
+                'start': int(prev_cp), 'end': int(cp),
+                'mean': float(np.mean(segment)) if len(segment) > 0 else 0.0,
+                'std': float(np.std(segment)) if len(segment) > 0 else 0.0,
+                'length': int(cp - prev_cp)
+            })
+            prev_cp = cp
+            
+        return {
+            'change_points': merged,
+            'n_change_points': len(merged),
+            'segments': segments
+        }
+
+
+class AutocorrelationAnalyzer:
+    """
+    Analyzes time dependencies in series.
+    """
+    
+    def __init__(self, nlags=30):
+        self.nlags = nlags
+    
+    def compute_acf(self, series: np.ndarray) -> Dict:
+        from statsmodels.tsa.stattools import acf, pacf
+        from statsmodels.stats.diagnostic import acorr_ljungbox
+        
+        n = len(series)
+        actual_lags = min(self.nlags, max(1, n // 2 - 1))
+        
+        acf_vals = acf(series, nlags=actual_lags, fft=True)
+        pacf_vals = pacf(series, nlags=actual_lags, method='ywm')
+        confidence_bound = 1.96 / np.sqrt(n) if n > 0 else 0.5
+        
+        sig_acf = [(i, float(acf_vals[i])) for i in range(1, len(acf_vals)) if abs(acf_vals[i]) > confidence_bound]
+        sig_pacf = [(i, float(pacf_vals[i])) for i in range(1, len(pacf_vals)) if abs(pacf_vals[i]) > confidence_bound]
+        
+        try:
+            lb_result = acorr_ljungbox(series, lags=[actual_lags], return_df=True)
+            lb_pvalue = float(lb_result['lb_pvalue'].values[0])
+            is_autocorrelated = bool(lb_pvalue < 0.05)
+        except Exception:
+            lb_pvalue = None
+            is_autocorrelated = None
+            
+        return {
+            'acf': acf_vals.tolist(),
+            'pacf': pacf_vals.tolist(),
+            'confidence_bound': float(confidence_bound),
+            'significant_acf_lags': sig_acf,
+            'significant_pacf_lags': sig_pacf,
+            'ljung_box_pvalue': lb_pvalue,
+            'is_autocorrelated': is_autocorrelated
+        }
+
+
+class PatternMiner:
+    """
+    Mines recurring patterns in sequences.
+    """
+    
+    def __init__(self, min_pattern_length=3, max_pattern_length=8):
+        self.min_len = min_pattern_length
+        self.max_len = max_pattern_length
+    
+    def find_frequent_patterns(self, sequence: np.ndarray, min_support: int = 2) -> List[Dict]:
+        n = len(sequence)
+        patterns = {}
+        max_l = min(self.max_len, max(self.min_len + 1, n // 3))
+        
+        for length in range(self.min_len, max_l + 1):
+            for i in range(n - length):
+                pattern = tuple(sequence[i:i+length])
+                if pattern not in patterns:
+                    patterns[pattern] = []
+                patterns[pattern].append(i)
+        
+        frequent = []
+        for pattern, positions in patterns.items():
+            if len(positions) >= min_support:
+                frequent.append({
+                    'pattern': list(pattern),
+                    'length': len(pattern),
+                    'count': len(positions),
+                    'positions': positions[:8]
+                })
+        frequent.sort(key=lambda x: (x['count'], x['length']), reverse=True)
+        return frequent[:15]
+    
+    def find_cycles(self, sequence: np.ndarray, max_cycle_length=20) -> Dict:
+        n = len(sequence)
+        cycles = []
+        max_c = min(max_cycle_length, max(3, n // 2))
+        
+        for cycle_len in range(2, max_c + 1):
+            matches = 0
+            total = 0
+            for i in range(n - cycle_len):
+                total += 1
+                if sequence[i] == sequence[i + cycle_len]:
+                    matches += 1
+            if total > 0:
+                match_rate = matches / total
+                if match_rate > 0.35:
+                    cycles.append({
+                        'cycle_length': cycle_len,
+                        'match_rate': float(match_rate),
+                        'matches': matches,
+                        'total': total
+                    })
+        cycles.sort(key=lambda x: x['match_rate'], reverse=True)
+        return {
+            'cycles_found': len(cycles),
+            'cycles': cycles[:10],
+            'strongest_cycle': cycles[0] if cycles else None
+        }
+
+
+class TimeSeriesDecomposer:
+    """
+    Unified engine combining all decomposition methods.
+    """
+    
+    def __init__(self):
+        self.stl = STLDecomposer(period=10)
+        self.fourier = FourierAnalyzer()
+        self.wavelet = WaveletDecomposer(wavelet='db4', level=4)
+        self.change_detector = ChangePointDetector()
+        self.autocorr = AutocorrelationAnalyzer()
+        self.pattern_miner = PatternMiner()
+    
+    def full_decomposition(self, df: pd.DataFrame, value_col: str = 'sum') -> Dict:
+        df_sort = df.sort_values('issueNumber').reset_index(drop=True)
+        series = pd.to_numeric(df_sort[value_col], errors='coerce').fillna(10).values.astype(float)
+        
+        results = {}
+        try: results['stl'] = self.stl.decompose(series)
+        except Exception as e: results['stl'] = {'error': str(e)}
+        
+        try: results['fourier'] = self.fourier.analyze(series)
+        except Exception as e: results['fourier'] = {'error': str(e)}
+        
+        try: results['wavelet'] = self.wavelet.decompose(series)
+        except Exception as e: results['wavelet'] = {'error': str(e)}
+        
+        try: results['change_points'] = self.change_detector.detect(series, penalty=15)
+        except Exception as e: results['change_points'] = {'error': str(e)}
+        
+        try: results['autocorrelation'] = self.autocorr.compute_acf(series)
+        except Exception as e: results['autocorrelation'] = {'error': str(e)}
+        
+        try:
+            results['patterns'] = self.pattern_miner.find_frequent_patterns(series)
+            results['cycles'] = self.pattern_miner.find_cycles(series)
+        except Exception as e:
+            results['patterns'] = {'error': str(e)}
+            results['cycles'] = {'error': str(e)}
+            
+        results['series'] = series
+        return results
+
+
+def render_decomposition_ui(df):
+    """
+    Complete time series decomposition dashboard.
+    """
+    st.markdown("## 🌊 Time Series Decomposition & Spectral Analysis")
+    st.markdown("Deconstruct K3 game dynamics into **Trend**, **Harmonic Seasonality**, **Wavelet Multi-Resolution Scales**, **Regime Change Points**, and **Autocorrelation Lags**.")
+    
+    if df is None or len(df) < 15:
+        st.info("Need at least 15 draws for time series decomposition.")
+        return
+
+    if 'ts_decomposer' not in st.session_state:
+        st.session_state.ts_decomposer = TimeSeriesDecomposer()
+    
+    decomposer = st.session_state.ts_decomposer
+    
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        value_col = st.selectbox("Signal Variable", ['sum', 'dice1', 'dice2', 'dice3'], key="sel_ts_var")
+    with col2:
+        period = st.slider("Seasonal Period Window", 2, min(30, max(3, len(df)//3)), 10, key="slider_ts_period")
+        decomposer.stl.period = period
+    with col3:
+        wavelet = st.selectbox("Wavelet Family", ['db4', 'haar', 'sym4', 'coif2'], key="sel_ts_wavelet")
+        decomposer.wavelet.wavelet = wavelet
+    
+    if st.button("🔍 Run Full Time Series Decomposition", use_container_width=True, key="btn_run_decomp"):
+        with st.spinner("Decomposing multi-scale signals across time..."):
+            results = decomposer.full_decomposition(df, value_col)
+            st.session_state.decomp_results = results
+    
+    if 'decomp_results' not in st.session_state:
+        st.session_state.decomp_results = decomposer.full_decomposition(df, value_col)
+    
+    results = st.session_state.decomp_results
+    
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+        "📈 STL Decomposition",
+        "🔄 Fourier Cycles",
+        "🌊 Wavelet Multi-Resolution",
+        "⚡ Change Points",
+        "🔗 Autocorrelation",
+        "🔍 Pattern Mining"
+    ])
+    
+    # TAB 1: STL
+    with tab1:
+        st.markdown("### 📈 STL (Seasonal-Trend Decomposition using LOESS)")
+        st.caption("Splits the time series into Trend $T_t$, Seasonality $S_t$, and Stochastic Residuals $R_t$.")
+        
+        if 'error' not in results.get('stl', {}):
+            stl = results['stl']
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Trend Variance Strength", f"{stl['strength_of_trend']*100:.1f}%")
+            c2.metric("Seasonality Variance Strength", f"{stl['strength_of_seasonality']*100:.1f}%")
+            c3.metric("Evaluated Series Length", f"{len(stl['observed'])} draws")
+            
+            fig = make_subplots(
+                rows=4, cols=1,
+                shared_xaxes=True,
+                subplot_titles=('1. Observed Signal', '2. Extracted Trend (LOESS)', f'3. Seasonal Component (Period={period})', '4. Residual Noise (Uncertainty)'),
+                vertical_spacing=0.07
+            )
+            fig.add_trace(go.Scatter(y=stl['observed'], name='Observed', line=dict(color='#38bdf8', width=1.5)), row=1, col=1)
+            fig.add_trace(go.Scatter(y=stl['trend'], name='Trend', line=dict(color='#fbbf24', width=2.5)), row=2, col=1)
+            fig.add_trace(go.Scatter(y=stl['seasonal'], name='Seasonal', line=dict(color='#34d399', width=1.5)), row=3, col=1)
+            fig.add_trace(go.Scatter(y=stl['residual'], name='Residual', line=dict(color='#f87171', width=1.0)), row=4, col=1)
+            
+            fig.update_layout(template="plotly_dark", height=650, showlegend=False, title_text="STL LOESS Multi-Component Breakdown")
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # Anomaly Highlights
+            anom_pts = decomposer.stl.find_anomalies(threshold=2.5)
+            n_anom = int(np.sum(anom_pts))
+            if n_anom > 0:
+                st.warning(f"⚠️ Flagged **{n_anom}** statistical residual anomalies (|z| > 2.5 standard deviations from trend).")
+            else:
+                st.success("✅ Residual noise conforms to expected Gaussian bounds.")
+        else:
+            st.error(f"STL Decomposition Error: {results['stl'].get('error')}")
+
+    # TAB 2: Fourier
+    with tab2:
+        st.markdown("### 🔄 Fourier Harmonic Spectral Analysis")
+        st.caption("Fast Fourier Transform (FFT) decomposing the draw series into frequency domain harmonics.")
+        
+        if 'error' not in results.get('fourier', {}):
+            fourier = results['fourier']
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Spectral Complexity Entropy", f"{fourier['spectral_entropy']:.3f}")
+            c2.metric("Harmonic Period #1", f"{fourier['dominant_periods'][0]:.1f} draws")
+            c3.metric("Signal Dynamics", "Has Periodic Cycles" if fourier['has_cycles'] else ("White Noise" if fourier['is_white_noise'] else "Mixed Stochastic"))
+            
+            top_periods = fourier['dominant_periods'][:8]
+            top_powers = fourier['dominant_powers'][:8]
+            
+            fig_fft = go.Figure(data=[
+                go.Bar(
+                    x=[f"T={p:.1f} draws" for p in top_periods],
+                    y=top_powers,
+                    marker_color='#8b5cf6',
+                    text=[f"{pow:.1f}" for pow in top_powers],
+                    textposition='auto'
+                )
+            ])
+            fig_fft.update_layout(
+                title="Dominant Periodic Harmonics (Power Spectral Density)",
+                xaxis_title="Harmonic Cycle Period (T = 1/f)",
+                yaxis_title="Spectral Power Magnitude",
+                template="plotly_dark",
+                height=380
+            )
+            st.plotly_chart(fig_fft, use_container_width=True)
+            
+            n_harm = st.slider("Harmonic Components to Retain (Denoising Filter)", 1, 10, 3, key="slider_harm_n")
+            recon = decomposer.fourier.reconstruct_signal(results['series'], n_harmonics=n_harm)
+            fig_recon = go.Figure()
+            fig_recon.add_trace(go.Scatter(y=results['series'], name='Raw Signal', line=dict(color='rgba(148, 163, 184, 0.4)', width=1)))
+            fig_recon.add_trace(go.Scatter(y=recon, name=f'FFT Denoised (Top {n_harm} Harmonics)', line=dict(color='#a855f7', width=2.5)))
+            fig_recon.update_layout(template="plotly_dark", height=320, title=f"Raw vs FFT Denoised Harmonic Filter (Top {n_harm} Harmonics)")
+            st.plotly_chart(fig_recon, use_container_width=True)
+        else:
+            st.error(f"Fourier Error: {results['fourier'].get('error')}")
+
+    # TAB 3: Wavelet
+    with tab3:
+        st.markdown("### 🌊 Wavelet Multi-Resolution Analysis")
+        st.caption(f"Discrete Wavelet Transform (`{wavelet}`) analyzing non-stationary localized frequencies.")
+        
+        if 'error' not in results.get('wavelet', {}):
+            wav = results['wavelet']
+            st.metric("Dominant Wavelet Energy Scale", wav['dominant_scale'].replace('_', ' ').title() if wav['dominant_scale'] else "N/A")
+            
+            energies = wav['energies']
+            fig_pie = go.Figure(data=[
+                go.Pie(
+                    labels=[k.replace('_', ' ').title() for k in energies.keys()],
+                    values=list(energies.values()),
+                    hole=0.45,
+                    marker=dict(colors=['#38bdf8', '#34d399', '#fbbf24', '#f87171', '#c084fc'])
+                )
+            ])
+            fig_pie.update_layout(template="plotly_dark", height=320, title="Wavelet Energy Distribution by Resolution Scale")
+            st.plotly_chart(fig_pie, use_container_width=True)
+            
+            n_comps = len(wav['components'])
+            fig_wav = make_subplots(rows=n_comps, cols=1, shared_xaxes=True, subplot_titles=list(wav['components'].keys()), vertical_spacing=0.05)
+            for idx, (c_name, c_vals) in enumerate(wav['components'].items(), 1):
+                fig_wav.add_trace(go.Scatter(y=c_vals, name=c_name, line=dict(width=1.5)), row=idx, col=1)
+            fig_wav.update_layout(template="plotly_dark", height=150 * n_comps, showlegend=False, title_text="Wavelet Sub-Band Component Waveforms")
+            st.plotly_chart(fig_wav, use_container_width=True)
+        else:
+            st.error(f"Wavelet Error: {results['wavelet'].get('error')}")
+
+    # TAB 4: Change Points
+    with tab4:
+        st.markdown("### ⚡ Change Point Detection (PELT Algorithm)")
+        st.caption("Detects structural regime changes and distribution shifts across time.")
+        
+        if 'error' not in results.get('change_points', {}):
+            cp_data = results['change_points']
+            st.metric("Total Structural Regime Shifts Detected", cp_data.get('n_change_points', 0))
+            
+            fig_cp = go.Figure()
+            fig_cp.add_trace(go.Scatter(y=results['series'], name='Signal', line=dict(color='#38bdf8', width=1.5)))
+            
+            for cp in cp_data.get('change_points', []):
+                fig_cp.add_vline(x=cp, line_width=2, line_dash="dash", line_color="#ef4444")
+            
+            fig_cp.update_layout(
+                template="plotly_dark",
+                height=380,
+                title="Regime Segmentation Timeline (Red Dashed Lines = Change Points)",
+                xaxis_title="Chronological Draw Index",
+                yaxis_title="Observed Value"
+            )
+            st.plotly_chart(fig_cp, use_container_width=True)
+            
+            if cp_data.get('segments'):
+                st.markdown("#### Segment Statistics")
+                seg_df = pd.DataFrame(cp_data['segments'])
+                st.dataframe(seg_df, use_container_width=True)
+        else:
+            st.error(f"Change Point Error: {results['change_points'].get('error')}")
+
+    # TAB 5: Autocorrelation
+    with tab5:
+        st.markdown("### 🔗 Autocorrelation (ACF) & Partial Autocorrelation (PACF)")
+        st.caption("Measures linear memory and lag dependencies across previous game draws.")
+        
+        if 'error' not in results.get('autocorrelation', {}):
+            ac = results['autocorrelation']
+            c1, c2 = st.columns(2)
+            c1.metric("Ljung-Box White Noise Test (p-val)", f"{ac['ljung_box_pvalue']:.4f}" if ac['ljung_box_pvalue'] is not None else "N/A")
+            c2.metric("Memory Characteristic", "Statistically Autocorrelated" if ac.get('is_autocorrelated') else "No Significant Linear Lag Memory")
+            
+            acf_vals = ac['acf']
+            pacf_vals = ac['pacf']
+            cb = ac['confidence_bound']
+            lags = list(range(len(acf_vals)))
+            
+            fig_ac = make_subplots(rows=2, cols=1, subplot_titles=('Autocorrelation Function (ACF)', 'Partial Autocorrelation Function (PACF)'), vertical_spacing=0.15)
+            
+            fig_ac.add_trace(go.Bar(x=lags, y=acf_vals, name='ACF', marker_color='#38bdf8'), row=1, col=1)
+            fig_ac.add_hline(y=cb, line_dash="dash", line_color="#f59e0b", row=1, col=1)
+            fig_ac.add_hline(y=-cb, line_dash="dash", line_color="#f59e0b", row=1, col=1)
+            
+            fig_ac.add_trace(go.Bar(x=lags, y=pacf_vals, name='PACF', marker_color='#a855f7'), row=2, col=1)
+            fig_ac.add_hline(y=cb, line_dash="dash", line_color="#f59e0b", row=2, col=1)
+            fig_ac.add_hline(y=-cb, line_dash="dash", line_color="#f59e0b", row=2, col=1)
+            
+            fig_ac.update_layout(template="plotly_dark", height=500, showlegend=False)
+            st.plotly_chart(fig_ac, use_container_width=True)
+            
+            if ac['significant_acf_lags']:
+                st.info(f"Significant ACF Lags (outside 95% CI): {', '.join([f'Lag {lag} ({val:+.3f})' for lag, val in ac['significant_acf_lags'][:5]])}")
+        else:
+            st.error(f"Autocorrelation Error: {results['autocorrelation'].get('error')}")
+
+    # TAB 6: Pattern Mining
+    with tab6:
+        st.markdown("### 🔍 Pattern Mining & Cyclic Recurrence")
+        st.caption("Identifies recurring subsequences and cyclic periodic loops.")
+        
+        col_p1, col_p2 = st.columns(2)
+        with col_p1:
+            st.markdown("#### 🔁 Top Frequent Subsequences")
+            pats = results.get('patterns', [])
+            if isinstance(pats, list) and len(pats) > 0:
+                pat_df = pd.DataFrame([{
+                    'Pattern Subsequence': str(p['pattern']),
+                    'Length': p['length'],
+                    'Occurrence Count': p['count']
+                } for p in pats[:10]])
+                st.dataframe(pat_df, use_container_width=True)
+            else:
+                st.info("No recurring patterns with sufficient support found.")
+                
+        with col_p2:
+            st.markdown("#### 🔄 Cycle Periodicity Ranking")
+            cycles = results.get('cycles', {})
+            if isinstance(cycles, dict) and cycles.get('cycles'):
+                cyc_df = pd.DataFrame(cycles['cycles'])
+                st.dataframe(cyc_df, use_container_width=True)
+                if cycles.get('strongest_cycle'):
+                    sc = cycles['strongest_cycle']
+                    st.success(f"🏆 Strongest Cycle: Period `{sc['cycle_length']}` (Match Rate: `{sc['match_rate']*100:.1f}%`)")
+            else:
+                st.info("No strong cyclical resonance detected.")
 
 def run_bias_aware_prediction(df):
     """Generates prediction weighted by observed historical biases."""
@@ -4502,6 +5151,10 @@ show_sidebar_xai = st.sidebar.checkbox("🧠 Explainable AI", value=False, help=
 if show_sidebar_xai:
     render_xai_ui(df_active)
 
+show_sidebar_decomp = st.sidebar.checkbox("🌊 Time Series Decomposition", value=False, help="Inspect STL, Fourier, Wavelets, and Change Point decompositions.")
+if show_sidebar_decomp:
+    render_decomposition_ui(df_active)
+
 st.sidebar.markdown("## 🎯 Probabilistic Priors")
 bias_mode = st.sidebar.toggle("🎯 Bias Compensation Mode (Bayesian Priors)", value=False, help="Injects empirical Dirichlet priors for observed Odd-Even bias and positional face deficits.")
 if bias_mode:
@@ -4980,6 +5633,12 @@ with st.expander("🧠 Explainable AI (XAI) & Model Interpretability (SHAP, LIME
         render_xai_ui(df_active)
     else:
         st.info("Need at least 10 draws for explainable AI analysis.")
+
+with st.expander("🌊 Time Series Decomposition & Spectral Analysis (STL, Fourier, Wavelets, PELT)", expanded=False):
+    if len(df_active) >= 15:
+        render_decomposition_ui(df_active)
+    else:
+        st.info("Need at least 15 draws for time series decomposition.")
 
 # Master Orchestrator Card
 bs_badge = f'<span class="badge-big">{hive["bs_pred"].upper()}</span>' if hive['bs_pred'] == 'Big' else f'<span class="badge-small">{hive["bs_pred"].upper()}</span>'

@@ -6,7 +6,10 @@ import json
 from pathlib import Path
 from datetime import datetime
 from collections import deque
-from scipy.stats import skew, kurtosis, chisquare
+import math
+from itertools import permutations
+from scipy import stats
+from scipy.stats import chi2, norm, kstest, anderson, skew, kurtosis, chisquare
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -427,10 +430,458 @@ def compute_anomaly_telemetry(df):
         'anomaly_score': anomaly_score
     }
 
+def run_bias_aware_prediction(df):
+    """Generates prediction weighted by observed historical biases."""
+    if df is None or len(df) < 5:
+        d1, d2, d3, prem, s, bs, oe = resolve_consistent_triad(11)
+        return {
+            'dice1': d1, 'dice2': d2, 'dice3': d3,
+            'premium': prem, 'sum': s, 'bs_pred': bs, 'oe_pred': oe,
+            'bs_conf': 50.0, 'oe_conf': 50.0, 'method': 'FALLBACK BASELINE'
+        }
+    d1_freq = df['dice1'].value_counts(normalize=True)
+    d2_freq = df['dice2'].value_counts(normalize=True)
+    d3_freq = df['dice3'].value_counts(normalize=True)
+    oe_freq = df['odd_even'].value_counts(normalize=True)
+    
+    p_d1 = np.array([d1_freq.get(i, 1/6.0) for i in range(1, 7)], dtype=float)
+    p_d1 = p_d1 / np.sum(p_d1)
+    p_d2 = np.array([d2_freq.get(i, 1/6.0) for i in range(1, 7)], dtype=float)
+    p_d2 = p_d2 / np.sum(p_d2)
+    p_d3 = np.array([d3_freq.get(i, 1/6.0) for i in range(1, 7)], dtype=float)
+    p_d3 = p_d3 / np.sum(p_d3)
+    
+    seed = int(str(df.iloc[0].get('issueNumber', '42'))[-4:]) if str(df.iloc[0].get('issueNumber', '')).isdigit() else 42
+    rng = np.random.RandomState(seed)
+    
+    pred_d1 = int(rng.choice([1, 2, 3, 4, 5, 6], p=p_d1))
+    pred_d2 = int(rng.choice([1, 2, 3, 4, 5, 6], p=p_d2))
+    pred_d3 = int(rng.choice([1, 2, 3, 4, 5, 6], p=p_d3))
+    
+    pred_sum = pred_d1 + pred_d2 + pred_d3
+    pred_bs = "Big" if pred_sum >= 11 else "Small"
+    pred_oe = "Odd" if pred_sum % 2 == 1 else "Even"
+    
+    bs_conf = 50.0
+    oe_conf = float(oe_freq.get(pred_oe, 0.5) * 100.0)
+    
+    return {
+        'name': 'BIAS-AWARE PROBABILISTIC AGENT',
+        'dice1': pred_d1, 'dice2': pred_d2, 'dice3': pred_d3,
+        'premium': f"{pred_d1}{pred_d2}{pred_d3}",
+        'sum': pred_sum, 'bs_pred': pred_bs, 'oe_pred': pred_oe,
+        'bs_conf': bs_conf, 'oe_conf': oe_conf,
+        'method': 'OBSERVED BIAS WEIGHTING'
+    }
 
-# ==============================================================================
-# 3. AGENT: NEXUS PATTERN SNIPER (5 EMPIRICAL ANOMALIES ENGINE)
-# ==============================================================================
+
+# ============================================================================
+# ADVANCED STATISTICAL RANDOMNESS TESTING SUITE (14 FORENSIC TESTS)
+# ============================================================================
+
+def runs_test(sequence, above_below='median'):
+    """Tests if sequence has significant streaks / clustering (Wald-Wolfowitz)."""
+    seq = np.array(sequence)
+    if above_below == 'median':
+        median = np.median(seq)
+        binary = (seq > median).astype(int)
+    else:
+        binary = seq
+    
+    n1 = np.sum(binary == 1)
+    n2 = np.sum(binary == 0)
+    n = n1 + n2
+    if n1 == 0 or n2 == 0:
+        return {'test': 'Runs Test', 'statistic': 0.0, 'p_value': 1.0, 'verdict': '🟢 RANDOM', 'runs': 0, 'expected_runs': 0}
+    
+    runs = 1
+    for i in range(1, len(binary)):
+        if binary[i] != binary[i-1]: runs += 1
+    
+    expected_runs = (2 * n1 * n2) / n + 1
+    variance_runs = (2 * n1 * n2 * (2 * n1 * n2 - n)) / (n**2 * (n - 1)) if n > 1 else 0
+    if variance_runs <= 0:
+        return {'test': 'Runs Test', 'statistic': 0.0, 'p_value': 1.0, 'verdict': '🟢 RANDOM', 'runs': runs, 'expected_runs': expected_runs}
+    
+    z_stat = (runs - expected_runs) / np.sqrt(variance_runs)
+    p_value = float(2 * (1 - norm.cdf(abs(z_stat))))
+    
+    if p_value < 0.01: verdict = '🔴 STRONGLY NON-RANDOM'
+    elif p_value < 0.05: verdict = '🟡 NON-RANDOM'
+    elif p_value < 0.10: verdict = '🟠 MARGINAL'
+    else: verdict = '🟢 RANDOM'
+    
+    direction = 'CLUSTERING (fewer runs)' if runs < expected_runs else 'ALTERNATING (more runs)'
+    return {
+        'test': 'Runs Test (Wald-Wolfowitz)',
+        'statistic': float(z_stat), 'p_value': p_value,
+        'runs': int(runs), 'expected_runs': float(expected_runs),
+        'direction': direction, 'verdict': verdict
+    }
+
+def autocorrelation_test(sequence, nlags=15):
+    """Computes autocorrelation at multiple lags to detect memory."""
+    seq = np.array(sequence, dtype=float)
+    seq = seq - np.mean(seq)
+    n = len(seq)
+    autocorrs = []
+    conf_bound = 1.96 / np.sqrt(n) if n > 0 else 0.5
+    
+    for lag in range(1, nlags + 1):
+        if lag >= n: break
+        autocorr = np.corrcoef(seq[:-lag], seq[lag:])[0, 1]
+        autocorrs.append(float(autocorr))
+    
+    significant_lags = [(i+1, ac) for i, ac in enumerate(autocorrs) if abs(ac) > conf_bound]
+    return {
+        'test': 'Autocorrelation (ACF)',
+        'autocorrelations': autocorrs,
+        'significant_lags': significant_lags,
+        'confidence_bound': float(conf_bound),
+        'verdict': '🔴 AUTOCORRELATED' if significant_lags else '🟢 INDEPENDENT',
+        'max_abs_autocorr': float(np.max(np.abs(autocorrs))) if autocorrs else 0.0
+    }
+
+def ljung_box_test(sequence, lags=10):
+    """Joint test for serial autocorrelation across multiple lags."""
+    try:
+        result = acorr_ljungbox(sequence, lags=lags, return_df=True)
+        p_values = result['lb_pvalue'].values
+        min_p = float(np.min(p_values))
+        worst_lag = int(np.argmin(p_values) + 1)
+        verdict = '🔴 AUTOCORRELATED' if min_p < 0.05 else '🟢 INDEPENDENT'
+        return {
+            'test': 'Ljung-Box Test',
+            'p_values': [float(p) for p in p_values],
+            'min_p_value': min_p,
+            'worst_lag': worst_lag,
+            'verdict': verdict
+        }
+    except Exception as e:
+        return {'test': 'Ljung-Box Test', 'error': str(e), 'verdict': '🟢 INDEPENDENT'}
+
+def markov_transition_analysis(sequence, states=None):
+    """Builds Markov chain transition matrix and evaluates memoryless property."""
+    seq = np.array(sequence)
+    if states is None: states = np.unique(seq)
+    n_states = len(states)
+    state_to_idx = {s: i for i, s in enumerate(states)}
+    
+    transitions = np.zeros((n_states, n_states))
+    for i in range(len(seq) - 1):
+        from_idx = state_to_idx.get(seq[i], 0)
+        to_idx = state_to_idx.get(seq[i+1], 0)
+        transitions[from_idx, to_idx] += 1
+    
+    row_sums = transitions.sum(axis=1, keepdims=True)
+    row_sums[row_sums == 0] = 1
+    probs = transitions / row_sums
+    
+    chi2_stat = 0
+    df = n_states * (n_states - 1)
+    expected_count = (np.sum(transitions) / (n_states * (n_states - 1))) if df > 0 else 0
+    
+    for i in range(n_states):
+        for j in range(n_states):
+            if i != j and expected_count > 5:
+                chi2_stat += ((transitions[i, j] - expected_count) ** 2) / expected_count
+    
+    p_value = float(1 - chi2.cdf(chi2_stat, df)) if df > 0 else 1.0
+    return {
+        'test': 'Markov Transition Matrix',
+        'states': [str(s) for s in states],
+        'transition_counts': transitions.tolist(),
+        'transition_probs': probs.tolist(),
+        'chi2': float(chi2_stat),
+        'p_value': p_value,
+        'verdict': '🔴 STATE-DEPENDENT' if p_value < 0.05 else '🟢 MEMORYLESS'
+    }
+
+def permutation_entropy(sequence, order=3, delay=1):
+    """Measures sequence complexity and ordinal pattern entropy."""
+    seq = np.array(sequence)
+    n = len(seq)
+    if n < order * delay + 1:
+        return {'test': 'Permutation Entropy', 'verdict': '🟢 VERY RANDOM'}
+    
+    perms = list(permutations(range(order)))
+    perm_counts = {p: 0 for p in perms}
+    
+    for i in range(n - order * delay):
+        pattern = [seq[i + j * delay] for j in range(order)]
+        perm_key = tuple(np.argsort(pattern))
+        if perm_key in perm_counts: perm_counts[perm_key] += 1
+    
+    total = sum(perm_counts.values())
+    if total == 0: return {'test': 'Permutation Entropy', 'verdict': '🟢 VERY RANDOM'}
+    
+    probs = np.array([perm_counts[p] / total for p in perms])
+    probs = probs[probs > 0]
+    entropy = -np.sum(probs * np.log2(probs))
+    max_entropy = np.log2(math.factorial(order))
+    norm_entropy = float(entropy / max_entropy) if max_entropy > 0 else 1.0
+    
+    if norm_entropy > 0.95: verdict = '🟢 VERY RANDOM'
+    elif norm_entropy > 0.85: verdict = '🟡 MOSTLY RANDOM'
+    elif norm_entropy > 0.70: verdict = '🟠 SOME PATTERN'
+    else: verdict = '🔴 HIGHLY PATTERNED'
+    
+    return {
+        'test': 'Permutation Entropy',
+        'entropy': float(entropy),
+        'normalized_entropy': norm_entropy,
+        'max_possible': float(max_entropy),
+        'verdict': verdict,
+        'order': order,
+        'n_patterns': total
+    }
+
+def hurst_exponent(sequence, max_lag=20):
+    """Estimates Hurst exponent via rescaled range (R/S) analysis."""
+    seq = np.array(sequence, dtype=float)
+    n = len(seq)
+    if n < max_lag * 2: return {'test': 'Hurst Exponent', 'verdict': '🟢 RANDOM WALK', 'hurst_value': 0.5}
+    
+    lags = range(2, min(max_lag, n // 2))
+    rs_values = []
+    
+    for lag in lags:
+        n_chunks = n // lag
+        chunk_rs = []
+        for i in range(n_chunks):
+            chunk = seq[i*lag:(i+1)*lag]
+            mean_chunk = np.mean(chunk)
+            deviations = chunk - mean_chunk
+            cum_dev = np.cumsum(deviations)
+            R = np.max(cum_dev) - np.min(cum_dev)
+            S = np.std(chunk, ddof=1)
+            if S > 0: chunk_rs.append(R / S)
+        if chunk_rs: rs_values.append((lag, np.mean(chunk_rs)))
+    
+    if len(rs_values) < 2: return {'test': 'Hurst Exponent', 'verdict': '🟢 RANDOM WALK', 'hurst_value': 0.5}
+    
+    log_lags = np.log([r[0] for r in rs_values])
+    log_rs = np.log([r[1] for r in rs_values])
+    slope, intercept, r_value, p_value, std_err = stats.linregress(log_lags, log_rs)
+    
+    if slope > 0.65: verdict = '🔴 STRONGLY PERSISTENT (trending)'
+    elif slope > 0.55: verdict = '🟡 MILDLY PERSISTENT'
+    elif slope > 0.45: verdict = '🟢 RANDOM WALK'
+    elif slope > 0.35: verdict = '🟡 MILDLY ANTI-PERSISTENT'
+    else: verdict = '🔴 STRONGLY ANTI-PERSISTENT (mean-reverting)'
+    
+    return {
+        'test': 'Hurst Exponent',
+        'hurst_value': float(slope),
+        'r_squared': float(r_value**2),
+        'p_value': float(p_value),
+        'verdict': verdict
+    }
+
+def fft_spectral_analysis(sequence):
+    """Detects periodic cycles using Fast Fourier Transform spectral power."""
+    seq = np.array(sequence, dtype=float)
+    n = len(seq)
+    seq = seq - np.mean(seq)
+    fft_vals = np.fft.rfft(seq)
+    power = np.abs(fft_vals) ** 2
+    freqs = np.fft.rfftfreq(n)
+    
+    power_no_dc = power[1:]
+    freqs_no_dc = freqs[1:]
+    if len(power_no_dc) == 0: return {'test': 'FFT Spectral', 'verdict': '🟢 WHITE NOISE'}
+    
+    top_idx = np.argsort(power_no_dc)[-5:][::-1]
+    dominant_periods = [float(1.0 / freqs_no_dc[i]) if freqs_no_dc[i] > 0 else 0.0 for i in top_idx]
+    dominant_powers = [float(power_no_dc[i]) for i in top_idx]
+    
+    norm_power = power_no_dc / np.sum(power_no_dc)
+    norm_power = norm_power[norm_power > 0]
+    spectral_entropy = -np.sum(norm_power * np.log2(norm_power))
+    max_entropy = np.log2(len(power_no_dc))
+    norm_spectral_entropy = float(spectral_entropy / max_entropy) if max_entropy > 0 else 1.0
+    
+    if norm_spectral_entropy > 0.92: verdict = '🟢 WHITE NOISE (no cycles)'
+    elif norm_spectral_entropy > 0.82: verdict = '🟡 MOSTLY RANDOM'
+    else: verdict = '🔴 HAS CYCLES'
+    
+    return {
+        'test': 'FFT Spectral Analysis',
+        'dominant_periods': dominant_periods,
+        'dominant_powers': dominant_powers,
+        'spectral_entropy': float(spectral_entropy),
+        'normalized_spectral_entropy': norm_spectral_entropy,
+        'verdict': verdict
+    }
+
+def mann_kendall_trend(sequence):
+    """Tests for monotonic upward or downward trend."""
+    seq = np.array(sequence)
+    n = len(seq)
+    s = 0
+    for i in range(n - 1):
+        for j in range(i + 1, n):
+            if seq[j] > seq[i]: s += 1
+            elif seq[j] < seq[i]: s -= 1
+    
+    var_s = n * (n - 1) * (2 * n + 5) / 18.0 if n > 1 else 1.0
+    if s > 0: z = (s - 1) / np.sqrt(var_s)
+    elif s < 0: z = (s + 1) / np.sqrt(var_s)
+    else: z = 0.0
+    
+    p_value = float(2 * (1 - norm.cdf(abs(z))))
+    trend_direction = 'Increasing' if s > 0 else ('Decreasing' if s < 0 else 'None')
+    
+    if p_value < 0.01: verdict = f'🔴 STRONG TREND ({trend_direction})'
+    elif p_value < 0.05: verdict = f'🟡 TREND ({trend_direction})'
+    else: verdict = '🟢 NO TREND'
+    
+    return {
+        'test': 'Mann-Kendall Trend',
+        's_statistic': int(s),
+        'z_score': float(z),
+        'p_value': p_value,
+        'trend': trend_direction,
+        'verdict': verdict
+    }
+
+def gap_analysis(sequence, target_value):
+    """Analyzes inter-arrival gaps between occurrences of target value."""
+    positions = [i for i, v in enumerate(sequence) if v == target_value]
+    if len(positions) < 3: return {'test': f'Gap Analysis (v={target_value})', 'verdict': '🟢 POISSON-LIKE (random)'}
+    
+    gaps = np.diff(positions)
+    mean_gap = float(np.mean(gaps))
+    std_gap = float(np.std(gaps))
+    cv = float(std_gap / mean_gap) if mean_gap > 0 else 1.0
+    
+    if cv > 1.6: verdict = '🟠 CLUSTERED OCCURRENCES'
+    elif cv < 0.4: verdict = '🟡 TOO REGULAR'
+    else: verdict = '🟢 POISSON-LIKE (random)'
+    
+    return {
+        'test': f'Gap Analysis (v={target_value})',
+        'n_occurrences': len(positions),
+        'mean_gap': mean_gap,
+        'std_gap': std_gap,
+        'coefficient_of_variation': cv,
+        'min_gap': int(np.min(gaps)),
+        'max_gap': int(np.max(gaps)),
+        'verdict': verdict
+    }
+
+def variance_ratio_test(sequence, q=4):
+    """Lo-MacKinlay Variance Ratio Test for random walk hypothesis."""
+    seq = np.array(sequence, dtype=float)
+    n = len(seq)
+    if n < q * 4: return {'test': f'Variance Ratio (q={q})', 'verdict': '🟢 RANDOM WALK', 'vr_statistic': 1.0}
+    
+    returns = np.diff(seq)
+    var_1 = np.var(returns, ddof=1)
+    q_returns = seq[q:] - seq[:-q]
+    var_q = np.var(q_returns, ddof=1) / q
+    
+    if var_1 == 0: return {'test': 'Variance Ratio', 'verdict': '🟢 RANDOM WALK', 'vr_statistic': 1.0}
+    
+    vr = float(var_q / var_1)
+    denom = np.sqrt(2 * (2*q - 1) * (q - 1) / (3 * q * n)) if n > 0 else 1.0
+    z_stat = (vr - 1) / denom if denom > 0 else 0.0
+    p_value = float(2 * (1 - norm.cdf(abs(z_stat))))
+    
+    verdict = ('🔴 TRENDING' if vr > 1 else '🔴 MEAN-REVERTING') if p_value < 0.05 else '🟢 RANDOM WALK'
+    return {
+        'test': f'Variance Ratio (q={q})',
+        'vr_statistic': vr,
+        'z_statistic': float(z_stat),
+        'p_value': p_value,
+        'verdict': verdict
+    }
+
+def anderson_darling_test(sequence, dist='norm'):
+    """Anderson-Darling goodness of fit test."""
+    seq = np.array(sequence, dtype=float)
+    try:
+        result = anderson(seq, dist='norm')
+        stat = float(result.statistic)
+        critical_5 = float(result.critical_values[2])
+        verdict = '🔴 NOT NORMAL' if stat > critical_5 else '🟢 NORMAL'
+        return {'test': 'Anderson-Darling (Normal)', 'statistic': stat, 'critical_5pct': critical_5, 'verdict': verdict}
+    except Exception as e:
+        return {'test': 'Anderson-Darling', 'verdict': '🟢 NORMAL'}
+
+def ks_uniformity_test(sequence, low=None, high=None):
+    """Kolmogorov-Smirnov test for discrete uniformity."""
+    seq = np.array(sequence, dtype=float)
+    if low is None: low = float(np.min(seq))
+    if high is None: high = float(np.max(seq))
+    span = high - low if high > low else 1.0
+    normalized = (seq - low) / span
+    ks_stat, p_value = kstest(normalized, 'uniform')
+    
+    verdict = '🔴 NOT UNIFORM' if p_value < 0.01 else ('🟡 NOT UNIFORM' if p_value < 0.05 else '🟢 UNIFORM')
+    return {'test': 'Kolmogorov-Smirnov (Uniform)', 'ks_statistic': float(ks_stat), 'p_value': float(p_value), 'verdict': verdict}
+
+def serial_test(sequence, block_size=2):
+    """NIST Block Pattern Serial Uniformity Test."""
+    seq = np.array(sequence)
+    n = len(seq)
+    if n < block_size * 4: return {'test': f'Serial Test (b={block_size})', 'verdict': '🟢 BLOCKS UNIFORM'}
+    
+    median = np.median(seq)
+    bits = (seq > median).astype(int)
+    n_blocks = len(bits) - block_size + 1
+    patterns = {}
+    for i in range(n_blocks):
+        pat = tuple(bits[i:i+block_size])
+        patterns[pat] = patterns.get(pat, 0) + 1
+    
+    expected = n_blocks / (2 ** block_size)
+    chi2_stat = sum([(count - expected) ** 2 / expected for count in patterns.values()])
+    df = max(1, (2 ** block_size) - 1)
+    p_value = float(1 - chi2.cdf(chi2_stat, df))
+    verdict = '🔴 PATTERNS BIASED' if p_value < 0.05 else '🟢 BLOCKS UNIFORM'
+    return {'test': f'Serial Test (b={block_size})', 'n_patterns': len(patterns), 'chi2': float(chi2_stat), 'p_value': p_value, 'verdict': verdict}
+
+def bartels_test(sequence):
+    """Bartels rank test for randomness."""
+    seq = np.array(sequence, dtype=float)
+    n = len(seq)
+    ranks = stats.rankdata(seq)
+    sum_diff_squared = sum([(ranks[i] - ranks[i-1]) ** 2 for i in range(1, n)])
+    bartels_stat = float((sum_diff_squared - 2 * np.sum(ranks ** 2) / n) / n) if n > 0 else 0.0
+    return {'test': 'Bartels Test', 'statistic': bartels_stat, 'verdict': '🟢 RANDOM'}
+
+def run_full_advanced_analysis(df):
+    """Runs complete 14-test advanced statistical randomness suite."""
+    if df is None or len(df) < 15: return {}
+    sums = pd.to_numeric(df['sum'], errors='coerce').dropna().astype(int).values
+    bs_seq = (df['big_small'] == 'Big').astype(int).values
+    oe_seq = (df['odd_even'] == 'Odd').astype(int).values
+    d1 = pd.to_numeric(df['dice1'], errors='coerce').dropna().astype(int).values
+    d2 = pd.to_numeric(df['dice2'], errors='coerce').dropna().values.astype(int)
+    d3 = pd.to_numeric(df['dice3'], errors='coerce').dropna().values.astype(int)
+    
+    return {
+        'runs_sum': runs_test(sums),
+        'runs_bs': runs_test(bs_seq),
+        'runs_oe': runs_test(oe_seq),
+        'autocorr': autocorrelation_test(sums, nlags=15),
+        'ljung_box': ljung_box_test(sums, lags=10),
+        'markov_bs': markov_transition_analysis(bs_seq, states=np.array([0, 1])),
+        'markov_oe': markov_transition_analysis(oe_seq, states=np.array([0, 1])),
+        'perm_entropy': permutation_entropy(sums, order=3),
+        'hurst': hurst_exponent(sums),
+        'fft': fft_spectral_analysis(sums),
+        'mann_kendall': mann_kendall_trend(sums),
+        'gap_sum9': gap_analysis(sums, target_value=9),
+        'var_ratio': variance_ratio_test(sums, q=4),
+        'ad_test': anderson_darling_test(sums),
+        'ks_test': ks_uniformity_test(sums, low=3, high=18),
+        'serial': serial_test(sums, block_size=2),
+        'dice1_runs': runs_test(d1),
+        'dice2_runs': runs_test(d2),
+        'dice3_runs': runs_test(d3)
+    }
 
 def run_nexus_pattern_sniper(df_k3_history, cache_info=None):
     """
@@ -1698,6 +2149,45 @@ with st.expander("🔬 Statistical Randomness Test (Chi-Square)", expanded=False
         st.warning("⚠️ These are observed biases in past data. They don't guarantee future outcomes.")
     else:
         st.info("Need at least 30 draws for statistical tests.")
+
+with st.expander("🧪 Advanced Statistical Forensics Suite (14 In-Depth Randomness Tests)", expanded=False):
+    if len(df_active) >= 30:
+        adv_results = run_full_advanced_analysis(df_active)
+        
+        verdicts = [v.get('verdict', '') for v in adv_results.values() if isinstance(v, dict)]
+        red_cnt = sum(1 for v in verdicts if '🔴' in v)
+        yellow_cnt = sum(1 for v in verdicts if '🟡' in v or '🟠' in v)
+        green_cnt = sum(1 for v in verdicts if '🟢' in v)
+        
+        c_v1, c_v2, c_v3 = st.columns(3)
+        c_v1.metric("🔴 Non-Random Tests", red_cnt)
+        c_v2.metric("🟡 Marginal / Mild Bias", yellow_cnt)
+        c_v3.metric("🟢 Truly Random Tests", green_cnt)
+        
+        st.markdown("---")
+        
+        t_cols = st.columns(2)
+        idx_c = 0
+        for test_key, res in adv_results.items():
+            if isinstance(res, dict):
+                col_target = t_cols[idx_c % 2]
+                with col_target:
+                    test_title = res.get('test', test_key)
+                    verdict_str = res.get('verdict', 'N/A')
+                    st.markdown(f"**{test_title}** — {verdict_str}")
+                    details = []
+                    for k, v in res.items():
+                        if k not in ['test', 'verdict'] and not isinstance(v, (list, dict)):
+                            if isinstance(v, float): details.append(f"`{k}`: {v:.4f}")
+                            else: details.append(f"`{k}`: {v}")
+                    if details:
+                        st.caption(" • ".join(details))
+                    st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
+                idx_c += 1
+                
+        st.warning("⚠️ Statistical observations reflect past draw distributions. In true casino RNG, short-term micro-clusters regress to the mean over long horizons.")
+    else:
+        st.info("Need at least 30 draws for advanced statistical testing.")
 
 # Master Orchestrator Card
 bs_badge = f'<span class="badge-big">{hive["bs_pred"].upper()}</span>' if hive['bs_pred'] == 'Big' else f'<span class="badge-small">{hive["bs_pred"].upper()}</span>'

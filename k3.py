@@ -25,6 +25,8 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.feature_selection import mutual_info_classif
 import ruptures as rpt
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 from streamlit_autorefresh import st_autorefresh
 
 # --- CONFIG & PATHS (CROSS-PLATFORM LINUX/WINDOWS) ---
@@ -437,6 +439,427 @@ def compute_anomaly_telemetry(df):
         'odd_pct': odd_pct,
         'anomaly_score': anomaly_score
     }
+
+
+# ==============================================================================
+# REAL-TIME STATISTICAL ANOMALY DETECTION ENGINE (6 TELEMETRY DIMENSIONS)
+# ==============================================================================
+
+class SumAnomalyDetector:
+    """Detects sum distribution anomalies via Z-score, percentile rare scoring, and Chi-Square contribution."""
+    def __init__(self, window_size=100, z_threshold=2.5):
+        self.window_size = window_size
+        self.z_threshold = z_threshold
+        self.history = deque(maxlen=window_size)
+    
+    def update(self, sum_value):
+        try: self.history.append(float(sum_value))
+        except: pass
+    
+    def check(self, sum_value):
+        if len(self.history) < 20: return None
+        history_array = np.array(self.history, dtype=float)
+        s_val = float(sum_value)
+        mean = float(history_array.mean())
+        std = float(history_array.std())
+        z_score = (s_val - mean) / std if std > 0 else 0.0
+        
+        percentile = float(stats.percentileofscore(history_array, s_val))
+        is_rare = percentile < 5.0 or percentile > 95.0
+        expected_freq = len(history_array) / 16.0
+        actual_freq = float(np.sum(history_array == s_val))
+        chi2_contrib = ((actual_freq - expected_freq) ** 2) / expected_freq if expected_freq > 0 else 0.0
+        
+        if abs(z_score) > 4.0 or percentile < 1.0 or percentile > 99.0: severity = 'CRITICAL'
+        elif abs(z_score) > 3.0 or percentile < 2.0 or percentile > 98.0: severity = 'HIGH'
+        elif abs(z_score) > 2.5 or is_rare: severity = 'MEDIUM'
+        else: severity = 'NORMAL'
+        
+        return {
+            'is_anomaly': severity != 'NORMAL',
+            'severity': severity,
+            'sum_value': int(s_val),
+            'z_score': float(z_score),
+            'percentile': float(percentile),
+            'is_rare': is_rare,
+            'mean': float(mean),
+            'std': float(std),
+            'chi2_contribution': float(chi2_contrib),
+            'explanation': f"Sum {int(s_val)} is within normal bounds (z={z_score:.2f})" if severity == 'NORMAL' else f"Sum {int(s_val)} is {severity} anomaly: significantly {'higher' if z_score > 0 else 'lower'} than expected (z={z_score:.2f}, p={percentile:.1f}%)"
+        }
+
+class DiceBiasDetector:
+    """Tracks position-wise dice distributions (1-6) and alerts on non-uniformity."""
+    def __init__(self, window_size=100, chi2_threshold=15.0):
+        self.window_size = window_size
+        self.chi2_threshold = chi2_threshold
+        self.dice_history = {
+            'dice1': deque(maxlen=window_size),
+            'dice2': deque(maxlen=window_size),
+            'dice3': deque(maxlen=window_size)
+        }
+    
+    def update(self, dice1, dice2, dice3):
+        try:
+            self.dice_history['dice1'].append(int(float(dice1)))
+            self.dice_history['dice2'].append(int(float(dice2)))
+            self.dice_history['dice3'].append(int(float(dice3)))
+        except: pass
+    
+    def check_all(self):
+        anomalies = []
+        for position, history in self.dice_history.items():
+            if len(history) < 20: continue
+            history_array = np.clip(np.array(history, dtype=int), 1, 6)
+            observed = np.bincount(history_array, minlength=7)[1:7]
+            expected = np.full(6, len(history_array) / 6.0)
+            chi2_stat = float(np.sum((observed - expected) ** 2 / expected))
+            deviations = ((observed - expected) / expected) * 100.0
+            
+            if chi2_stat > 30.0: severity = 'CRITICAL'
+            elif chi2_stat > 20.0: severity = 'HIGH'
+            elif chi2_stat > 15.0: severity = 'MEDIUM'
+            else: severity = 'NORMAL'
+            
+            most_biased = int(np.argmax(np.abs(deviations)) + 1)
+            mag = float(deviations[most_biased - 1])
+            bias_dir = "over" if mag > 0 else "under"
+            
+            anomalies.append({
+                'position': position,
+                'is_anomaly': severity != 'NORMAL',
+                'severity': severity,
+                'chi2_statistic': float(chi2_stat),
+                'observed_freq': observed.tolist(),
+                'expected_freq': expected.tolist(),
+                'deviations_pct': [float(x) for x in deviations],
+                'most_biased_value': most_biased,
+                'bias_magnitude': mag,
+                'bias_direction': bias_dir,
+                'explanation': f"{position.upper()}: Value {most_biased} is {abs(mag):.1f}% {bias_dir}-represented ({severity})" if severity != 'NORMAL' else f"{position.upper()} distribution is uniform."
+            })
+        return anomalies
+
+class StreakDetector:
+    """Detects consecutive repetition runs in outcomes."""
+    def __init__(self, expected_streak_length=2.5):
+        self.expected_streak_length = expected_streak_length
+    
+    def check(self, sequence, min_streak=3):
+        if len(sequence) < min_streak: return []
+        streaks = []
+        curr_streak = 1
+        curr_val = sequence[0]
+        
+        for i in range(1, len(sequence)):
+            if sequence[i] == curr_val:
+                curr_streak += 1
+            else:
+                if curr_streak >= min_streak:
+                    streaks.append({'value': curr_val, 'length': curr_streak, 'start_index': i - curr_streak, 'end_index': i - 1})
+                curr_val = sequence[i]
+                curr_streak = 1
+        if curr_streak >= min_streak:
+            streaks.append({'value': curr_val, 'length': curr_streak, 'start_index': len(sequence) - curr_streak, 'end_index': len(sequence) - 1})
+            
+        for s in streaks:
+            if s['length'] >= 6: s['severity'] = 'CRITICAL'
+            elif s['length'] >= 5: s['severity'] = 'HIGH'
+            elif s['length'] >= 4: s['severity'] = 'MEDIUM'
+            else: s['severity'] = 'LOW'
+        return streaks
+
+class PatternBreakDetector:
+    """Detects regime shifts via rolling difference-in-means z-test."""
+    def __init__(self, window_size=30, threshold=2.0):
+        self.window_size = window_size
+        self.threshold = threshold
+    
+    def check(self, sequence):
+        if len(sequence) < self.window_size * 2: return []
+        seq = np.array(sequence, dtype=float)
+        mean_before = float(seq[:self.window_size].mean())
+        change_points = []
+        
+        for i in range(self.window_size, len(seq) - self.window_size):
+            window_after = seq[i:i+self.window_size]
+            mean_after = float(window_after.mean())
+            pooled_std = float(np.sqrt((seq[:self.window_size].var() + window_after.var()) / 2.0))
+            if pooled_std > 0:
+                z_diff = abs(mean_after - mean_before) / pooled_std
+                if z_diff > self.threshold:
+                    change_points.append({
+                        'index': int(i),
+                        'mean_before': float(mean_before),
+                        'mean_after': float(mean_after),
+                        'z_score': float(z_diff),
+                        'severity': 'HIGH' if z_diff > 3.0 else 'MEDIUM'
+                    })
+                    mean_before = mean_after
+        return change_points
+
+class FrequencyAnomalyDetector:
+    """Tracks frequency and rare emission rates for 3-digit combinations (000-999)."""
+    def __init__(self, window_size=1000):
+        self.window_size = window_size
+        self.frequency = {}
+        self.total = 0
+    
+    def update(self, premium):
+        p_str = str(premium).strip()
+        self.frequency[p_str] = self.frequency.get(p_str, 0) + 1
+        self.total += 1
+    
+    def check(self, premium):
+        if self.total < 30: return None
+        p_str = str(premium).strip()
+        obs = self.frequency.get(p_str, 0)
+        expected = self.total / 1000.0
+        ratio = obs / expected if expected > 0 else 0.0
+        std_exp = np.sqrt(max(1e-6, self.total * (1/1000.0) * (999/1000.0)))
+        z_score = (obs - expected) / std_exp
+        
+        if obs == 0 and self.total > 150: severity = 'CRITICAL'
+        elif ratio < 0.3: severity = 'HIGH'
+        elif ratio < 0.5: severity = 'MEDIUM'
+        else: severity = 'NORMAL'
+        
+        return {
+            'premium': p_str,
+            'observed_count': obs,
+            'expected_count': float(expected),
+            'frequency_ratio': float(ratio),
+            'z_score': float(z_score),
+            'severity': severity,
+            'is_anomaly': severity != 'NORMAL',
+            'explanation': f"Premium #{p_str} frequency ratio is {ratio:.2f}x of expected ({severity})" if severity != 'NORMAL' else f"Premium #{p_str} frequency is within expected bounds."
+        }
+
+class CorrelationAnomalyDetector:
+    """Detects abnormal inter-variable correlations between dice and sums."""
+    def __init__(self, window_size=50, correlation_threshold=0.5):
+        self.window_size = window_size
+        self.correlation_threshold = correlation_threshold
+        self.history = deque(maxlen=window_size)
+    
+    def update(self, dice1, dice2, dice3, sum_val, bs, oe):
+        try:
+            self.history.append({
+                'dice1': float(dice1), 'dice2': float(dice2), 'dice3': float(dice3),
+                'sum': float(sum_val),
+                'bs': 1.0 if str(bs).lower() == 'big' else 0.0,
+                'oe': 1.0 if str(oe).lower() == 'odd' else 0.0
+            })
+        except: pass
+    
+    def check_correlations(self):
+        if len(self.history) < 20: return []
+        df_hist = pd.DataFrame(list(self.history))
+        anomalies = []
+        pairs = [('dice1', 'dice2'), ('dice1', 'dice3'), ('dice2', 'dice3')]
+        for var1, var2 in pairs:
+            if var1 in df_hist.columns and var2 in df_hist.columns:
+                try:
+                    corr = float(df_hist[var1].corr(df_hist[var2]))
+                    if not np.isnan(corr) and abs(corr) > self.correlation_threshold:
+                        sev = 'HIGH' if abs(corr) > 0.7 else 'MEDIUM'
+                        anomalies.append({
+                            'pair': f"{var1} ↔ {var2}",
+                            'correlation': corr,
+                            'severity': sev,
+                            'explanation': f"Unusual {'positive' if corr > 0 else 'negative'} correlation between {var1} and {var2} (r={corr:.3f})"
+                        })
+                except: pass
+        return anomalies
+
+class AnomalyDetectionEngine:
+    """Unified engine aggregating 6 anomaly dimensions."""
+    def __init__(self, window_size=100):
+        self.sum_detector = SumAnomalyDetector(window_size)
+        self.dice_detector = DiceBiasDetector(window_size)
+        self.streak_detector = StreakDetector()
+        self.pattern_detector = PatternBreakDetector()
+        self.frequency_detector = FrequencyAnomalyDetector(window_size * 10)
+        self.correlation_detector = CorrelationAnomalyDetector()
+        self.alerts_log = []
+        self.stats = {'total_checks': 0, 'anomalies_detected': 0, 'critical_alerts': 0}
+    
+    def process_new_draw(self, issue_number, dice1, dice2, dice3, sum_val, bs, oe, premium):
+        self.stats['total_checks'] += 1
+        d1 = float(dice1)
+        d2 = float(dice2)
+        d3 = float(dice3)
+        s = float(sum_val)
+        
+        self.sum_detector.update(s)
+        self.dice_detector.update(d1, d2, d3)
+        self.frequency_detector.update(premium)
+        self.correlation_detector.update(d1, d2, d3, s, bs, oe)
+        
+        sum_anom = self.sum_detector.check(s)
+        dice_anom = self.dice_detector.check_all()
+        freq_anom = self.frequency_detector.check(premium)
+        
+        results = {
+            'issue_number': str(issue_number),
+            'timestamp': datetime.now().isoformat(),
+            'sum_anomaly': sum_anom,
+            'dice_anomalies': dice_anom,
+            'frequency_anomaly': freq_anom,
+            'is_anomaly': False,
+            'severity': 'NORMAL',
+            'all_alerts': []
+        }
+        
+        max_severity = 'NORMAL'
+        severity_order = ['NORMAL', 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
+        
+        if sum_anom and sum_anom['is_anomaly']:
+            sev = sum_anom['severity']
+            if severity_order.index(sev) > severity_order.index(max_severity): max_severity = sev
+            results['all_alerts'].append(sum_anom)
+            
+        for da in dice_anom:
+            if da['is_anomaly']:
+                sev = da['severity']
+                if severity_order.index(sev) > severity_order.index(max_severity): max_severity = sev
+                results['all_alerts'].append(da)
+                
+        if freq_anom and freq_anom['is_anomaly']:
+            sev = freq_anom['severity']
+            if severity_order.index(sev) > severity_order.index(max_severity): max_severity = sev
+            results['all_alerts'].append(freq_anom)
+            
+        results['severity'] = max_severity
+        results['is_anomaly'] = max_severity in ['MEDIUM', 'HIGH', 'CRITICAL']
+        
+        if results['is_anomaly']:
+            self.stats['anomalies_detected'] += 1
+            if max_severity == 'CRITICAL': self.stats['critical_alerts'] += 1
+            self.alerts_log.append(results)
+            
+        return results
+    
+    def get_streak_analysis(self, sequence): return self.streak_detector.check(sequence)
+    def get_pattern_breaks(self, sequence): return self.pattern_detector.check(sequence)
+    def get_correlation_anomalies(self): return self.correlation_detector.check_correlations()
+    def get_recent_alerts(self, n=20): return self.alerts_log[-n:]
+    def get_statistics(self): return self.stats
+
+def render_anomaly_dashboard(df):
+    """Renders 4-tab Anomaly Detection Dashboard in Streamlit."""
+    if 'anomaly_engine' not in st.session_state:
+        st.session_state.anomaly_engine = AnomalyDetectionEngine()
+    engine = st.session_state.anomaly_engine
+    stats_data = engine.get_statistics()
+    
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("🔍 Total Audited", stats_data['total_checks'])
+    m2.metric("⚠️ Anomalies Flagged", stats_data['anomalies_detected'])
+    m3.metric("🔴 Critical Alerts", stats_data['critical_alerts'])
+    m4.metric("📊 Anomaly Rate", f"{(stats_data['anomalies_detected']/max(1, stats_data['total_checks'])*100):.1f}%")
+    
+    tab_live, tab_vis, tab_log, tab_backtest = st.tabs([
+        "🎯 Live Detection", "📊 Visual Analysis", "🔥 Alerts Log", "🧪 Backtest Analysis"
+    ])
+    
+    with tab_live:
+        st.markdown("#### 🎯 Real-Time Surveillance & Manual Ingestion")
+        if st.button("🚀 Batch Process All History Draws", key="proc_hist_anom_btn"):
+            df_s = df.dropna(subset=['sum', 'dice1', 'dice2', 'dice3']).sort_values('issueNumber').reset_index(drop=True)
+            for _, r in df_s.iterrows():
+                engine.process_new_draw(
+                    issue_number=str(r['issueNumber']),
+                    dice1=float(r['dice1']), dice2=float(r['dice2']), dice3=float(r['dice3']),
+                    sum_val=float(r['sum']), bs=str(r['big_small']), oe=str(r['odd_even']),
+                    premium=str(r.get('premium', f"{int(float(r['dice1']))}{int(float(r['dice2']))}{int(float(r['dice3']))}"))
+                )
+            st.success(f"✅ Processed {len(df_s)} historical draws into Surveillance Engine!")
+            st.rerun()
+            
+        c_in1, c_in2, c_in3 = st.columns(3)
+        with c_in1:
+            test_d1 = st.number_input("Dice 1 Face", 1, 6, 3, key="anom_d1")
+            test_d2 = st.number_input("Dice 2 Face", 1, 6, 3, key="anom_d2")
+            test_d3 = st.number_input("Dice 3 Face", 1, 6, 3, key="anom_d3")
+        with c_in2:
+            t_sum = int(test_d1 + test_d2 + test_d3)
+            t_bs = "Big" if t_sum >= 11 else "Small"
+            t_oe = "Odd" if t_sum % 2 == 1 else "Even"
+            st.info(f"Sum: **{t_sum}** | B/S: **{t_bs}** | O/E: **{t_oe}**")
+        with c_in3:
+            if st.button("🔍 Check Draw for Anomalies", key="check_single_draw_btn"):
+                res = engine.process_new_draw("MANUAL_TEST", test_d1, test_d2, test_d3, t_sum, t_bs, t_oe, f"{test_d1}{test_d2}{test_d3}")
+                if res['is_anomaly']:
+                    st.error(f"🚨 **{res['severity']} ANOMALY DETECTED!**")
+                    for alt in res['all_alerts']:
+                        st.markdown(f"• `{alt.get('explanation', alt)}`")
+                else:
+                    st.success("🟢 **No Anomaly Detected** — Normal draw behavior.")
+
+    with tab_vis:
+        st.markdown("#### 📊 Statistical Telemetry Visualizations")
+        alerts = engine.get_recent_alerts(50)
+        df_clean = df.dropna(subset=['sum', 'dice1', 'dice2', 'dice3']).sort_values('issueNumber').reset_index(drop=True)
+        
+        # Plot 1: Sum Trajectory with Anomaly Scatter
+        fig_sum = go.Figure()
+        fig_sum.add_trace(go.Scatter(y=df_clean['sum'].astype(float).values, mode='lines+markers', name='Draw Sum', line=dict(color='#38bdf8', width=1.5)))
+        fig_sum.add_hline(y=float(df_clean['sum'].astype(float).mean()), line=dict(color='#10b981', dash='dash'), annotation_text="Empirical Mean")
+        fig_sum.update_layout(title="K3 Historical Sums & Anomaly Bounds", template="plotly_dark", height=320, margin=dict(l=20, r=20, t=40, b=20))
+        st.plotly_chart(fig_sum, use_container_width=True)
+        
+        # Plot 2: Position-wise Frequency Heatmap
+        positions = ['dice1', 'dice2', 'dice3']
+        bias_matrix = []
+        for pos in positions:
+            p_counts = pd.to_numeric(df_clean[pos], errors='coerce').fillna(3).astype(int).value_counts()
+            bias_matrix.append([(p_counts.get(i, 0) / len(df_clean)) * 100.0 for i in range(1, 7)])
+        fig_heat = go.Figure(data=go.Heatmap(
+            z=bias_matrix, x=['Face 1', 'Face 2', 'Face 3', 'Face 4', 'Face 5', 'Face 6'],
+            y=['Dice 1', 'Dice 2', 'Dice 3'], colorscale='Plasma', zmid=16.67,
+            text=[[f"{v:.1f}%" for v in r] for r in bias_matrix], texttemplate="%{text}"
+        ))
+        fig_heat.update_layout(title="Dice Face Frequency Heatmap (Benchmark = 16.7%)", template="plotly_dark", height=280, margin=dict(l=20, r=20, t=40, b=20))
+        st.plotly_chart(fig_heat, use_container_width=True)
+
+    with tab_log:
+        st.markdown("#### 🔥 Anomaly Alerts Historical Log")
+        rec_alerts = engine.get_recent_alerts(50)
+        if rec_alerts:
+            log_rows = []
+            for a in rec_alerts:
+                log_rows.append({
+                    'Issue': a['issue_number'],
+                    'Severity': a['severity'],
+                    'Timestamp': a['timestamp'][:19],
+                    'Alert Details': "; ".join([x.get('explanation', '') for x in a.get('all_alerts', [])])
+                })
+            st.dataframe(pd.DataFrame(log_rows), use_container_width=True, hide_index=True)
+        else:
+            st.info("No anomalies logged yet. Run 'Batch Process All History Draws' above to populate.")
+
+    with tab_backtest:
+        st.markdown("#### 🧪 Multi-Window Anomaly Sensitivity Backtest")
+        df_clean = df.dropna(subset=['sum', 'dice1', 'dice2', 'dice3']).sort_values('issueNumber').reset_index(drop=True)
+        w_results = []
+        for w in [20, 50, 100]:
+            t_engine = AnomalyDetectionEngine(window_size=w)
+            for _, r in df_clean.iterrows():
+                t_engine.process_new_draw(
+                    str(r['issueNumber']), float(r['dice1']), float(r['dice2']), float(r['dice3']),
+                    float(r['sum']), str(r['big_small']), str(r['odd_even']),
+                    str(r.get('premium', f"{int(float(r['dice1']))}{int(float(r['dice2']))}{int(float(r['dice3']))}"))
+                )
+            w_stats = t_engine.get_statistics()
+            w_results.append({
+                'Window Size': f"{w} Draws",
+                'Total Audited': w_stats['total_checks'],
+                'Anomalies': w_stats['anomalies_detected'],
+                'Critical': w_stats['critical_alerts'],
+                'Anomaly Rate': f"{(w_stats['anomalies_detected'] / max(1, w_stats['total_checks']) * 100):.1f}%"
+            })
+        st.dataframe(pd.DataFrame(w_results), use_container_width=True, hide_index=True)
 
 def run_bias_aware_prediction(df):
     """Generates prediction weighted by observed historical biases."""
@@ -3268,6 +3691,12 @@ with st.expander("🎓 Advanced Bayesian Deep Learning Suite (VAE • LSTM • G
                 h_c3.metric("Symplectic Acceptance Rate", f"{hmc_res['acceptance_rate']*100:.1f}%")
     else:
         st.info("Need at least 30 draws for advanced deep learning suite.")
+
+with st.expander("🚨 Real-Time Anomaly Detection & Statistical Surveillance Engine (6-Dimensional Telemetry)", expanded=False):
+    if len(df_active) >= 15:
+        render_anomaly_dashboard(df_active)
+    else:
+        st.info("Need at least 15 draws for real-time anomaly surveillance.")
 
 # Master Orchestrator Card
 bs_badge = f'<span class="badge-big">{hive["bs_pred"].upper()}</span>' if hive['bs_pred'] == 'Big' else f'<span class="badge-small">{hive["bs_pred"].upper()}</span>'

@@ -1111,94 +1111,486 @@ PredictionLogger = ModelPerformanceTracker
 
 class BacktestingEngine:
     """
-    Backtests all models on historical data.
-    Simulates predictions on past data without seeing future.
+    Comprehensive backtesting with walk-forward validation (no future leakage).
     """
     
-    def __init__(self, model_functions, data):
-        self.model_functions = model_functions
+    def __init__(self, model_functions=None, data=None):
+        self.model_functions = model_functions or {}
         self.data = data
-        self.results = []
+        self.results = defaultdict(list)
+        self.raw_results_list = []
+        self.metrics = {}
     
-    def run_backtest(self, lookback=50, step=1):
-        results = []
-        data_sorted = self.data.sort_values('issueNumber').reset_index(drop=True)
+    def run_backtest(self, df=None, model_functions=None, 
+                     initial_window=50, step=1, 
+                     confidence_threshold=None, lookback=None):
+        """
+        Run walk-forward backtest on multiple models.
+        """
+        if df is None:
+            df = self.data
+        if model_functions is None:
+            model_functions = self.model_functions
+        if lookback is not None:
+            initial_window = lookback
+            
+        if df is None or model_functions is None:
+            return {'error': 'Missing DataFrame or model_functions for backtesting'}
+            
+        df_sorted = df.sort_values('issueNumber').reset_index(drop=True)
+        n_total = len(df_sorted)
         
-        for i in range(lookback, len(data_sorted), step):
-            train_data = data_sorted.iloc[:i]
-            actual_row = data_sorted.iloc[i]
+        self.results = defaultdict(list)
+        self.raw_results_list = []
+        
+        progress_data = {
+            'total_draws': max(0, n_total - initial_window),
+            'models': list(model_functions.keys()),
+            'predictions': defaultdict(int),
+            'errors': []
+        }
+        
+        for idx in range(initial_window, n_total, step):
+            train_data = df_sorted.iloc[:idx]
+            current = df_sorted.iloc[idx]
+            d1_act = int(float(current.get('dice1', 3)))
+            d2_act = int(float(current.get('dice2', 3)))
+            d3_act = int(float(current.get('dice3', 3)))
             actual = {
-                'dice1': int(float(actual_row.get('dice1', 3))),
-                'dice2': int(float(actual_row.get('dice2', 3))),
-                'dice3': int(float(actual_row.get('dice3', 3))),
-                'sum': int(float(actual_row.get('sum', 9))),
-                'bs': str(actual_row.get('big_small', actual_row.get('bs', 'Small'))),
-                'oe': str(actual_row.get('odd_even', actual_row.get('oe', 'Even')))
+                'dice1': d1_act,
+                'dice2': d2_act,
+                'dice3': d3_act,
+                'sum': int(float(current.get('sum', d1_act + d2_act + d3_act))),
+                'bs': str(current.get('big_small', current.get('bs', 'Small'))),
+                'oe': str(current.get('odd_even', current.get('oe', 'Even'))),
+                'premium': str(current.get('premium', f"{d1_act}{d2_act}{d3_act}"))
             }
             
-            for model_name, model_func in self.model_functions.items():
+            for model_name, model_func in model_functions.items():
                 try:
                     prediction = model_func(train_data)
-                    p_bs = prediction.get('bs_pred') or prediction.get('bs')
-                    p_oe = prediction.get('oe_pred') or prediction.get('oe')
-                    correct = {
-                        'dice1': int(float(prediction.get('dice1', 0))) == actual['dice1'] if prediction.get('dice1') is not None else False,
-                        'dice2': int(float(prediction.get('dice2', 0))) == actual['dice2'] if prediction.get('dice2') is not None else False,
-                        'dice3': int(float(prediction.get('dice3', 0))) == actual['dice3'] if prediction.get('dice3') is not None else False,
-                        'sum': int(float(prediction.get('sum', 0))) == actual['sum'] if prediction.get('sum') is not None else False,
-                        'bs': str(p_bs).lower() == str(actual['bs']).lower() if p_bs else False,
-                        'oe': str(p_oe).lower() == str(actual['oe']).lower() if p_oe else False
-                    }
-                    results.append({
-                        'issue': str(actual_row['issueNumber']),
-                        'model': model_name,
-                        'prediction': prediction,
-                        'actual': actual,
-                        'correct': correct,
-                        'all_correct': all(correct.values()),
-                        'timestamp': datetime.now().isoformat()
-                    })
+                    
+                    if confidence_threshold:
+                        conf = prediction.get('bs_conf', 50)
+                        if conf < confidence_threshold:
+                            continue
+                            
+                    eval_res = self._evaluate_prediction(
+                        model_name, prediction, actual, str(current.get('issueNumber', f"draw_{idx}"))
+                    )
+                    self.results[model_name].append(eval_res)
+                    self.raw_results_list.append(eval_res)
+                    progress_data['predictions'][model_name] += 1
                 except Exception as e:
-                    results.append({
-                        'issue': str(actual_row['issueNumber']),
+                    progress_data['errors'].append({
                         'model': model_name,
+                        'issue': str(current.get('issueNumber', f"draw_{idx}")),
                         'error': str(e)
                     })
-        self.results = results
-        return results
+                    
+        self.metrics = self._calculate_all_metrics()
+        return {
+            'progress': progress_data,
+            'metrics': self.metrics,
+            'total_tested': max(0, n_total - initial_window)
+        }
+        
+    def _evaluate_prediction(self, model_name, prediction, actual, issue):
+        p_bs = prediction.get('bs_pred') or prediction.get('bs')
+        p_oe = prediction.get('oe_pred') or prediction.get('oe')
+        
+        p_d1 = prediction.get('dice1')
+        p_d2 = prediction.get('dice2')
+        p_d3 = prediction.get('dice3')
+        p_sum = prediction.get('sum')
+        
+        c_d1 = (int(float(p_d1)) == actual['dice1']) if p_d1 is not None else False
+        c_d2 = (int(float(p_d2)) == actual['dice2']) if p_d2 is not None else False
+        c_d3 = (int(float(p_d3)) == actual['dice3']) if p_d3 is not None else False
+        c_sum = (int(float(p_sum)) == actual['sum']) if p_sum is not None else False
+        c_bs = (str(p_bs).lower() == str(actual['bs']).lower()) if p_bs else False
+        c_oe = (str(p_oe).lower() == str(actual['oe']).lower()) if p_oe else False
+        
+        return {
+            'model': model_name,
+            'issue': issue,
+            'timestamp': datetime.now().isoformat(),
+            'prediction': prediction,
+            'actual': actual,
+            'correct': {
+                'dice1': c_d1,
+                'dice2': c_d2,
+                'dice3': c_d3,
+                'sum': c_sum,
+                'bs': c_bs,
+                'oe': c_oe
+            },
+            'all_correct': all([c_d1, c_d2, c_d3, c_sum, c_bs, c_oe]),
+            'any_correct': any([c_bs, c_oe])
+        }
+
+    def _calculate_all_metrics(self):
+        all_metrics = {}
+        for model_name, results in self.results.items():
+            if not results: continue
+            n = len(results)
+            metrics = {
+                'total_predictions': n,
+                'parameters': {}
+            }
+            for param in ['dice1', 'dice2', 'dice3', 'sum', 'bs', 'oe']:
+                correct = sum(1 for r in results if r['correct'][param])
+                metrics['parameters'][param] = {
+                    'accuracy': correct / n,
+                    'correct': correct,
+                    'total': n
+                }
+                metrics[f'{param}_accuracy'] = correct / n
+                
+            exact_matches = sum(1 for r in results if all(r['correct'].values()))
+            metrics['exact_matches'] = exact_matches
+            metrics['exact_match_rate'] = exact_matches / n
+            
+            any_correct = sum(1 for r in results if r['any_correct'])
+            metrics['any_binary_correct'] = any_correct / n
+            
+            tp = fp = tn = fn = 0
+            for r in results:
+                pred_bs = str(r['prediction'].get('bs_pred') or r['prediction'].get('bs', '')).capitalize()
+                actual_bs = str(r['actual']['bs']).capitalize()
+                if pred_bs == 'Big' and actual_bs == 'Big': tp += 1
+                elif pred_bs == 'Big' and actual_bs == 'Small': fp += 1
+                elif pred_bs == 'Small' and actual_bs == 'Small': tn += 1
+                elif pred_bs == 'Small' and actual_bs == 'Big': fn += 1
+                
+            metrics['binary_metrics'] = {
+                'precision': tp / (tp + fp) if (tp + fp) > 0 else 0.0,
+                'recall': tp / (tp + fn) if (tp + fn) > 0 else 0.0,
+                'f1': 2 * tp / (2 * tp + fp + fn) if (2 * tp + fp + fn) > 0 else 0.0
+            }
+            
+            if n >= 20:
+                recent = results[-20:]
+                recent_bs_acc = sum(1 for r in recent if r['correct']['bs']) / 20.0
+                metrics['recent_bs_accuracy'] = recent_bs_acc
+            else:
+                metrics['recent_bs_accuracy'] = metrics['parameters']['bs']['accuracy']
+                
+            all_metrics[model_name] = metrics
+        return all_metrics
 
     def calculate_backtest_metrics(self):
-        if not self.results: return {}
-        df = pd.DataFrame(self.results)
-        metrics = {}
-        for model_name in df['model'].unique():
-            model_df = df[df['model'] == model_name]
-            if 'all_correct' in model_df.columns:
-                metrics[model_name] = {
-                    'total_predictions': len(model_df),
-                    'exact_matches': int(model_df['all_correct'].sum()),
-                    'exact_match_rate': float(model_df['all_correct'].mean()),
-                    'dice1_accuracy': float(sum(1 for r in model_df['correct'] if isinstance(r, dict) and r.get('dice1')) / max(1, len(model_df))),
-                    'sum_accuracy': float(sum(1 for r in model_df['correct'] if isinstance(r, dict) and r.get('sum')) / max(1, len(model_df))),
-                    'bs_accuracy': float(sum(1 for r in model_df['correct'] if isinstance(r, dict) and r.get('bs')) / max(1, len(model_df))),
-                    'oe_accuracy': float(sum(1 for r in model_df['correct'] if isinstance(r, dict) and r.get('oe')) / max(1, len(model_df))),
-                }
-        return metrics
+        if not self.metrics:
+            self.metrics = self._calculate_all_metrics()
+        return self.metrics
 
     def plot_backtest_results(self):
         if not self.results: return None
-        df = pd.DataFrame(self.results)
         fig_data = []
-        for model_name in df['model'].unique():
-            model_df = df[df['model'] == model_name]
-            if 'all_correct' in model_df.columns:
-                rolling_acc = model_df['all_correct'].rolling(20).mean()
+        for model_name, model_entries in self.results.items():
+            if model_entries:
+                bs_corrects = [1.0 if r['correct']['bs'] else 0.0 for r in model_entries]
+                s = pd.Series(bs_corrects)
+                rolling_acc = s.rolling(min(20, max(1, len(s))), min_periods=1).mean()
                 fig_data.append({
                     'model': model_name,
-                    'issue': model_df['issue'].values,
+                    'issue': [r['issue'] for r in model_entries],
                     'rolling_accuracy': rolling_acc.values
                 })
         return fig_data
+
+    def generate_report(self):
+        if not self.metrics:
+            self.metrics = self._calculate_all_metrics()
+        if not self.metrics:
+            return "No backtest results yet."
+            
+        report = "╔═══════════════════════════════════════════════════════════╗\n"
+        report += "║           BACKTEST RESULTS COMPARISON                     ║\n"
+        report += "╠═══════════════════════════════════════════════════════════╣\n\n"
+        
+        for model_name, metrics in self.metrics.items():
+            report += f"📊 **{model_name}**\n"
+            report += f"   Total Predictions: {metrics['total_predictions']}\n"
+            report += f"   Exact Match Rate: {metrics['exact_match_rate']*100:.2f}%\n"
+            report += f"   Any Binary Correct: {metrics['any_binary_correct']*100:.2f}%\n\n"
+            
+            report += "   Per-Parameter Accuracy:\n"
+            for param, stats in metrics['parameters'].items():
+                report += f"     {param:>10}: {stats['accuracy']*100:>6.2f}% ({stats['correct']}/{stats['total']})\n"
+            
+            report += "\n   Big/Small Metrics:\n"
+            bm = metrics['binary_metrics']
+            report += f"     Precision: {bm['precision']*100:.2f}%\n"
+            report += f"     Recall:    {bm['recall']*100:.2f}%\n"
+            report += f"     F1 Score:  {bm['f1']*100:.2f}%\n\n"
+            
+            if 'recent_bs_accuracy' in metrics:
+                report += f"   Recent BS Accuracy (last 20): {metrics['recent_bs_accuracy']*100:.2f}%\n\n"
+            
+            report += "─" * 60 + "\n\n"
+        
+        best_model = max(
+            self.metrics.keys(),
+            key=lambda m: self.metrics[m]['any_binary_correct']
+        )
+        best_acc = self.metrics[best_model]['any_binary_correct']
+        
+        report += f"🏆 **BEST MODEL:** {best_model}\n"
+        report += f"   Any Binary Correct: {best_acc*100:.2f}%\n\n"
+        report += "💡 **Random Baseline:** ~50% (Big/Small)\n"
+        report += "   If your model < 55%, it's barely better than random.\n"
+        return report
+
+
+def create_baseline_models():
+    """Create simple baseline models for backtesting."""
+    
+    def mean_predictor(df):
+        sum_mean = float(df['sum'].mean())
+        d1_mean = int(np.clip(round(df['dice1'].mean()), 1, 6))
+        d2_mean = int(np.clip(round(df['dice2'].mean()), 1, 6))
+        d3_mean = int(np.clip(round(df['dice3'].mean()), 1, 6))
+        
+        return {
+            'dice1': d1_mean, 'dice2': d2_mean, 'dice3': d3_mean,
+            'sum': int(round(sum_mean)),
+            'bs_pred': 'Big' if sum_mean >= 11 else 'Small',
+            'oe_pred': 'Odd' if int(round(sum_mean)) % 2 else 'Even',
+            'premium': f"{d1_mean}{d2_mean}{d3_mean}",
+            'bs_conf': 55.0, 'oe_conf': 55.0
+        }
+    
+    def median_predictor(df):
+        sum_med = float(df['sum'].median())
+        d1_med = int(np.clip(df['dice1'].median(), 1, 6))
+        d2_med = int(np.clip(df['dice2'].median(), 1, 6))
+        d3_med = int(np.clip(df['dice3'].median(), 1, 6))
+        
+        return {
+            'dice1': d1_med, 'dice2': d2_med, 'dice3': d3_med,
+            'sum': int(sum_med),
+            'bs_pred': 'Big' if sum_med >= 11 else 'Small',
+            'oe_pred': 'Odd' if int(sum_med) % 2 else 'Even',
+            'premium': f"{d1_med}{d2_med}{d3_med}",
+            'bs_conf': 52.0, 'oe_conf': 52.0
+        }
+    
+    def last_predictor(df):
+        last = df.iloc[0]
+        s = int(last['sum'])
+        d1, d2, d3 = int(last['dice1']), int(last['dice2']), int(last['dice3'])
+        
+        return {
+            'dice1': d1, 'dice2': d2, 'dice3': d3,
+            'sum': s,
+            'bs_pred': last['big_small'],
+            'oe_pred': last['odd_even'],
+            'premium': str(last['premium']),
+            'bs_conf': 50.0, 'oe_conf': 50.0
+        }
+    
+    def random_predictor(df):
+        d1, d2, d3 = np.random.randint(1, 7, 3)
+        s = int(d1 + d2 + d3)
+        
+        return {
+            'dice1': int(d1), 'dice2': int(d2), 'dice3': int(d3),
+            'sum': s,
+            'bs_pred': np.random.choice(['Big', 'Small']),
+            'oe_pred': np.random.choice(['Odd', 'Even']),
+            'premium': f"{d1}{d2}{d3}",
+            'bs_conf': 50.0, 'oe_conf': 50.0
+        }
+    
+    def frequency_bias_predictor(df):
+        most_common_sum = int(df['sum'].mode().iloc[0])
+        d1_mode = int(df['dice1'].mode().iloc[0])
+        d2_mode = int(df['dice2'].mode().iloc[0])
+        d3_mode = int(df['dice3'].mode().iloc[0])
+        
+        while d1_mode + d2_mode + d3_mode != most_common_sum:
+            d3_mode += 1
+            if d3_mode > 6:
+                d3_mode = 1
+                d2_mode += 1
+                if d2_mode > 6:
+                    d2_mode = 1
+        
+        s = d1_mode + d2_mode + d3_mode
+        
+        return {
+            'dice1': d1_mode, 'dice2': d2_mode, 'dice3': d3_mode,
+            'sum': s,
+            'bs_pred': 'Big' if s >= 11 else 'Small',
+            'oe_pred': 'Odd' if s % 2 else 'Even',
+            'premium': f"{d1_mode}{d2_mode}{d3_mode}",
+            'bs_conf': 60.0, 'oe_conf': 60.0
+        }
+    
+    return {
+        'Mean': mean_predictor,
+        'Median': median_predictor,
+        'Last_Value': last_predictor,
+        'Random': random_predictor,
+        'Frequency_Bias': frequency_bias_predictor
+    }
+
+
+class EnsemblePredictor:
+    """
+    Combines predictions from multiple models.
+    Methods: Majority, Weighted, Confidence-Weighted.
+    """
+    
+    def __init__(self, model_functions, weights=None):
+        self.model_functions = model_functions
+        self.model_names = list(model_functions.keys())
+        
+        if weights is None:
+            self.weights = {name: 1.0/len(model_functions) for name in self.model_names}
+        else:
+            self.weights = weights
+    
+    def majority_vote(self, df):
+        predictions = []
+        for name, func in self.model_functions.items():
+            pred = func(df)
+            predictions.append(pred)
+        
+        bs_votes = [p['bs_pred'] for p in predictions]
+        oe_votes = [p['oe_pred'] for p in predictions]
+        
+        d1_vals = [p['dice1'] for p in predictions]
+        d2_vals = [p['dice2'] for p in predictions]
+        d3_vals = [p['dice3'] for p in predictions]
+        
+        med_d1 = int(np.median(d1_vals))
+        med_d2 = int(np.median(d2_vals))
+        med_d3 = int(np.median(d3_vals))
+        
+        return {
+            'dice1': med_d1,
+            'dice2': med_d2,
+            'dice3': med_d3,
+            'sum': int(np.median([p['sum'] for p in predictions])),
+            'bs_pred': max(set(bs_votes), key=bs_votes.count),
+            'oe_pred': max(set(oe_votes), key=oe_votes.count),
+            'premium': f"{med_d1}{med_d2}{med_d3}",
+            'bs_conf': 60.0,
+            'oe_conf': 60.0,
+            'method': 'Majority Vote',
+            'n_models': len(predictions)
+        }
+    
+    def weighted_vote(self, df):
+        predictions = []
+        for name, func in self.model_functions.items():
+            pred = func(df)
+            pred['weight'] = self.weights.get(name, 1.0/max(1, len(self.model_functions)))
+            predictions.append(pred)
+        
+        d1 = sum(p['dice1'] * p['weight'] for p in predictions)
+        d2 = sum(p['dice2'] * p['weight'] for p in predictions)
+        d3 = sum(p['dice3'] * p['weight'] for p in predictions)
+        
+        d1, d2, d3 = int(np.clip(round(d1), 1, 6)), int(np.clip(round(d2), 1, 6)), int(np.clip(round(d3), 1, 6))
+        s = d1 + d2 + d3
+        
+        return {
+            'dice1': d1, 'dice2': d2, 'dice3': d3,
+            'sum': s,
+            'bs_pred': 'Big' if s >= 11 else 'Small',
+            'oe_pred': 'Odd' if s % 2 else 'Even',
+            'premium': f"{d1}{d2}{d3}",
+            'bs_conf': 65.0,
+            'oe_conf': 65.0,
+            'method': 'Weighted Vote',
+            'n_models': len(predictions)
+        }
+    
+    def confidence_weighted(self, df):
+        predictions = []
+        for name, func in self.model_functions.items():
+            pred = func(df)
+            predictions.append(pred)
+        
+        total_weight = sum(p.get('bs_conf', 50.0) for p in predictions)
+        if total_weight <= 0: total_weight = 1.0
+        
+        d1 = sum(p['dice1'] * p.get('bs_conf', 50.0) for p in predictions) / total_weight
+        d2 = sum(p['dice2'] * p.get('bs_conf', 50.0) for p in predictions) / total_weight
+        d3 = sum(p['dice3'] * p.get('bs_conf', 50.0) for p in predictions) / total_weight
+        
+        d1, d2, d3 = int(np.clip(round(d1), 1, 6)), int(np.clip(round(d2), 1, 6)), int(np.clip(round(d3), 1, 6))
+        s = d1 + d2 + d3
+        
+        return {
+            'dice1': d1, 'dice2': d2, 'dice3': d3,
+            'sum': s,
+            'bs_pred': 'Big' if s >= 11 else 'Small',
+            'oe_pred': 'Odd' if s % 2 else 'Even',
+            'premium': f"{d1}{d2}{d3}",
+            'bs_conf': float(max(p.get('bs_conf', 50.0) for p in predictions)),
+            'oe_conf': float(max(p.get('oe_conf', 50.0) for p in predictions)),
+            'method': 'Confidence Weighted',
+            'n_models': len(predictions)
+        }
+    
+    def predict(self, df, method='weighted'):
+        if method == 'majority':
+            return self.majority_vote(df)
+        elif method == 'weighted':
+            return self.weighted_vote(df)
+        elif method == 'confidence':
+            return self.confidence_weighted(df)
+        else:
+            return self.weighted_vote(df)
+
+
+def run_backtest_and_ensemble(df):
+    """Complete pipeline: Backtest first, then Ensemble."""
+    
+    # PHASE 1: BACKTEST
+    print("=" * 60)
+    print("PHASE 1: BACKTESTING")
+    print("=" * 60)
+    
+    baseline_models = create_baseline_models()
+    
+    engine = BacktestingEngine()
+    results = engine.run_backtest(
+        df=df,
+        model_functions=baseline_models,
+        initial_window=min(50, max(5, len(df)//2)),
+        step=1
+    )
+    
+    print(f"Tested {results['total_tested']} draws")
+    print(f"Models tested: {results['progress']['models']}")
+    try:
+        print("\n" + engine.generate_report().encode('ascii', errors='replace').decode('ascii'))
+    except Exception:
+        pass
+    
+    # PHASE 2: ENSEMBLE
+    print("\n" + "=" * 60)
+    print("PHASE 2: ENSEMBLE SYSTEM")
+    print("=" * 60)
+    
+    ensemble = EnsemblePredictor(baseline_models)
+    prediction = ensemble.predict(df, method='weighted')
+    
+    print(f"Ensemble Prediction:")
+    print(f"   Method: {prediction['method']}")
+    print(f"   Dice: [{prediction['dice1']}, {prediction['dice2']}, {prediction['dice3']}]")
+    print(f"   Sum: {prediction['sum']}")
+    print(f"   Premium: #{prediction['premium']}")
+    print(f"   Big/Small: {prediction['bs_pred']}")
+    print(f"   Odd/Even: {prediction['oe_pred']}")
+    print(f"   Confidence: {prediction['bs_conf']:.1f}%")
+    
+    return results, prediction
 
 
 class PerformanceMetrics:

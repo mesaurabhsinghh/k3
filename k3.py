@@ -10,6 +10,7 @@ import math
 from itertools import permutations
 from scipy import stats
 from scipy.stats import chi2, norm, kstest, anderson, skew, kurtosis, chisquare
+from scipy.special import gammaln, logsumexp
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -881,6 +882,207 @@ def run_full_advanced_analysis(df):
         'dice1_runs': runs_test(d1),
         'dice2_runs': runs_test(d2),
         'dice3_runs': runs_test(d3)
+    }
+
+
+# ============================================================================
+# BAYESIAN ANALYSIS SUITE FOR K3 GAME (CONJUGATE PRIORS & BAYES FACTORS)
+# ============================================================================
+
+class BetaBinomialModel:
+    """Bayesian model for proportion testing with Beta-Binomial conjugate prior."""
+    def __init__(self, alpha=1, beta=1):
+        self.alpha = float(alpha)
+        self.beta = float(beta)
+    
+    def update(self, successes, trials):
+        self.alpha += float(successes)
+        self.beta += float(trials - successes)
+        return self
+    
+    def posterior_mean(self):
+        return self.alpha / (self.alpha + self.beta)
+    
+    def posterior_variance(self):
+        n = self.alpha + self.beta
+        return (self.alpha * self.beta) / (n ** 2 * (n + 1))
+    
+    def credible_interval(self, prob=0.95):
+        tail = (1.0 - prob) / 2.0
+        lower = stats.beta.ppf(tail, self.alpha, self.beta)
+        upper = stats.beta.ppf(1.0 - tail, self.alpha, self.beta)
+        return float(lower), float(upper)
+    
+    def probability_greater_than(self, threshold):
+        return float(1.0 - stats.beta.cdf(threshold, self.alpha, self.beta))
+    
+    def probability_less_than(self, threshold):
+        return float(stats.beta.cdf(threshold, self.alpha, self.beta))
+    
+    def summary(self):
+        ci = self.credible_interval()
+        return {
+            'posterior_mean': float(self.posterior_mean()),
+            'posterior_std': float(np.sqrt(self.posterior_variance())),
+            'ci_95_lower': ci[0],
+            'ci_95_upper': ci[1],
+            'alpha': self.alpha,
+            'beta': self.beta,
+            'n_observations': self.alpha + self.beta - 2
+        }
+
+class DirichletMultinomialModel:
+    """Bayesian categorical model with Dirichlet-Multinomial conjugate prior."""
+    def __init__(self, n_categories, alpha=None, concentration=1.0):
+        if alpha is None:
+            self.alpha = np.full(n_categories, float(concentration))
+        else:
+            self.alpha = np.array(alpha, dtype=float)
+        self.n_categories = n_categories
+        self.total_counts = np.zeros(n_categories)
+    
+    def update(self, counts):
+        self.total_counts += np.array(counts, dtype=float)
+        return self
+    
+    def posterior_mean(self):
+        post_alpha = self.alpha + self.total_counts
+        return post_alpha / post_alpha.sum()
+    
+    def kl_divergence_from_uniform(self):
+        post_alpha = self.alpha + self.total_counts
+        post_mean = post_alpha / post_alpha.sum()
+        uniform = np.full(self.n_categories, 1.0 / self.n_categories)
+        kl = np.sum(post_mean * np.log((post_mean + 1e-12) / uniform))
+        return float(kl)
+    
+    def is_biased(self, threshold_kl=0.02):
+        kl = self.kl_divergence_from_uniform()
+        return bool(kl > threshold_kl), kl
+
+def interpret_bf(bf):
+    """Standard Jeffreys interpretation of Bayes Factor."""
+    log_bf = np.log(max(1e-12, bf))
+    if log_bf > 4.6: return 'Extreme evidence for bias (H1)'
+    elif log_bf > 2.3: return 'Strong evidence for bias (H1)'
+    elif log_bf > 1.1: return 'Moderate evidence for bias (H1)'
+    elif log_bf > 0: return 'Anecdotal/weak evidence for bias (H1)'
+    elif log_bf > -1.1: return 'Inconclusive / Neutral'
+    elif log_bf > -2.3: return 'Moderate evidence for fairness (H0)'
+    else: return 'Strong evidence for fairness (H0)'
+
+def bayes_factor_binomial(successes, trials, null_prob=0.5, alternative_alpha=2.0, alternative_beta=2.0):
+    """Compute Bayes Factor comparing Point Null (H0) vs Beta Prior Alternative (H1)."""
+    failures = trials - successes
+    null_prob = float(null_prob)
+    log_lik_h0 = successes * np.log(null_prob) + failures * np.log(1.0 - null_prob)
+    
+    log_marginal_h1 = (gammaln(alternative_alpha + successes) + 
+                       gammaln(alternative_beta + failures) - 
+                       gammaln(alternative_alpha + alternative_beta + trials) +
+                       gammaln(alternative_alpha + alternative_beta) -
+                       gammaln(alternative_alpha) - 
+                       gammaln(alternative_beta))
+    
+    log_bf = log_marginal_h1 - log_lik_h0
+    bf = float(np.exp(np.clip(log_bf, -50, 50)))
+    
+    if bf > 30: verdict = '🔴 Strong evidence for bias'
+    elif bf > 3: verdict = '🟡 Moderate evidence for bias'
+    elif bf > 1: verdict = '🟠 Weak evidence for bias'
+    elif bf > 0.33: verdict = '🟢 Neutral / Inconclusive'
+    else: verdict = '🟢 Strong evidence for fairness'
+    
+    return {
+        'bayes_factor': bf,
+        'log_bayes_factor': float(log_bf),
+        'interpretation': interpret_bf(bf),
+        'verdict': verdict,
+        'observed_prob': float(successes / max(1, trials)),
+        'expected_prob': null_prob
+    }
+
+def bayesian_change_point(sequence, n_segments=15):
+    """Detects if/when the underlying Bernoulli distribution changed via Bayes Factors."""
+    seq = np.array(sequence, dtype=int)
+    n = len(seq)
+    if n < 2 * n_segments:
+        return {'error': 'Insufficient data', 'interpretation': '🟢 No evidence of change', 'bayes_factor': 1.0}
+    
+    candidates = np.linspace(n_segments, n - n_segments, min(20, n // 2), dtype=int)
+    log_probs = []
+    
+    def log_marginal(s, f, a0=1.0, b0=1.0):
+        return (gammaln(a0 + s) + gammaln(b0 + f) - 
+                gammaln(a0 + b0 + s + f) +
+                gammaln(a0 + b0) - gammaln(a0) - gammaln(b0))
+    
+    s_all = np.sum(seq)
+    f_all = n - s_all
+    ll_no_change = log_marginal(s_all, f_all)
+    
+    for cp in candidates:
+        before = seq[:cp]
+        after = seq[cp:]
+        s1, f1 = np.sum(before), len(before) - np.sum(before)
+        s2, f2 = np.sum(after), len(after) - np.sum(after)
+        ll_change = log_marginal(s1, f1) + log_marginal(s2, f2)
+        log_bf = ll_change - ll_no_change
+        log_probs.append((int(cp), float(log_bf)))
+        
+    if not log_probs: return {'error': 'No change point', 'interpretation': '🟢 No evidence of change', 'bayes_factor': 1.0}
+    best_cp, best_bf = max(log_probs, key=lambda x: x[1])
+    
+    interp = '🔴 Distribution changed significantly' if best_bf > 2.3 else ('🟡 Mild change point signal' if best_bf > 0 else '🟢 No evidence of change')
+    return {
+        'best_change_point': int(best_cp),
+        'log_bayes_factor': float(best_bf),
+        'bayes_factor': float(np.exp(np.clip(best_bf, -50, 50))),
+        'interpretation': interp
+    }
+
+def run_bayesian_analysis(df, prior_alpha=1, prior_beta=1):
+    """Runs comprehensive Bayesian analysis suite on K3 game data."""
+    if df is None or len(df) < 10: return {}
+    n_total = len(df)
+    sums = pd.to_numeric(df['sum'], errors='coerce').dropna().astype(int).values
+    bs = (df['big_small'] == 'Big').astype(int).values
+    oe = (df['odd_even'] == 'Odd').astype(int).values
+    d1 = pd.to_numeric(df['dice1'], errors='coerce').dropna().astype(int).values
+    d2 = pd.to_numeric(df['dice2'], errors='coerce').dropna().values.astype(int)
+    d3 = pd.to_numeric(df['dice3'], errors='coerce').dropna().values.astype(int)
+    
+    # 1. Big/Small Model
+    n_big = int(np.sum(bs))
+    bs_model = BetaBinomialModel(alpha=prior_alpha, beta=prior_beta).update(n_big, n_total)
+    bs_bf = bayes_factor_binomial(n_big, n_total, null_prob=0.5)
+    
+    # 2. Odd/Even Model
+    n_odd = int(np.sum(oe))
+    oe_model = BetaBinomialModel(alpha=prior_alpha, beta=prior_beta).update(n_odd, n_total)
+    oe_bf = bayes_factor_binomial(n_odd, n_total, null_prob=0.5)
+    
+    # 3. Dice 1, 2, 3 Dirichlet Models
+    d1_counts = np.bincount(np.clip(d1 - 1, 0, 5), minlength=6)
+    d1_model = DirichletMultinomialModel(n_categories=6, concentration=1.0).update(d1_counts)
+    
+    d3_counts = np.bincount(np.clip(d3 - 1, 0, 5), minlength=6)
+    d3_model = DirichletMultinomialModel(n_categories=6, concentration=1.0).update(d3_counts)
+    
+    # 4. Critical Face Bayes Factors
+    d3_eq_3 = int(np.sum(d3 == 3))
+    bf_d3_3 = bayes_factor_binomial(d3_eq_3, n_total, null_prob=1/6.0)
+    
+    # 5. Change Point Detection
+    cp_oe = bayesian_change_point(oe, n_segments=15)
+    
+    return {
+        'big_small': {'model': bs_model, 'summary': bs_model.summary(), 'bayes_factor': bs_bf},
+        'odd_even': {'model': oe_model, 'summary': oe_model.summary(), 'bayes_factor': oe_bf},
+        'dice1_kl': d1_model.kl_divergence_from_uniform(),
+        'dice3_kl': d3_model.kl_divergence_from_uniform(),
+        'dice3_face3_bf': bf_d3_3,
+        'change_point': cp_oe
     }
 
 def run_nexus_pattern_sniper(df_k3_history, cache_info=None):
@@ -2188,6 +2390,49 @@ with st.expander("🧪 Advanced Statistical Forensics Suite (14 In-Depth Randomn
         st.warning("⚠️ Statistical observations reflect past draw distributions. In true casino RNG, short-term micro-clusters regress to the mean over long horizons.")
     else:
         st.info("Need at least 30 draws for advanced statistical testing.")
+
+with st.expander("🧬 Bayesian Statistical Inference & Bayes Factors Suite", expanded=False):
+    if len(df_active) >= 30:
+        b_c1, b_c2 = st.columns(2)
+        with b_c1:
+            p_alpha = st.slider("Prior α (Hypothesized Successes)", min_value=1, max_value=20, value=1, help="α=β=1 represents an uninformative uniform prior.")
+        with b_c2:
+            p_beta = st.slider("Prior β (Hypothesized Failures)", min_value=1, max_value=20, value=1, help="Higher α & β represent stronger 50/50 prior confidence.")
+            
+        b_res = run_bayesian_analysis(df_active, prior_alpha=p_alpha, prior_beta=p_beta)
+        
+        if b_res:
+            st.markdown("#### 🎯 Bayesian Posterior Parameter Estimations (95% Credible Intervals)")
+            m_col1, m_col2, m_col3 = st.columns(3)
+            
+            with m_col1:
+                bs_mean = b_res['big_small']['summary']['posterior_mean'] * 100.0
+                bs_ci = b_res['big_small']['model'].credible_interval()
+                bs_bf = b_res['big_small']['bayes_factor']['bayes_factor']
+                st.metric("Big/Small Posterior Mean", f"{bs_mean:.1f}%", f"95% CI: [{bs_ci[0]*100:.1f}%, {bs_ci[1]*100:.1f}%]")
+                st.caption(f"**Bayes Factor vs Fair:** `{bs_bf:.3f}` ({b_res['big_small']['bayes_factor']['verdict']})")
+                
+            with m_col2:
+                oe_mean = b_res['odd_even']['summary']['posterior_mean'] * 100.0
+                oe_ci = b_res['odd_even']['model'].credible_interval()
+                oe_bf = b_res['odd_even']['bayes_factor']['bayes_factor']
+                st.metric("Odd/Even Posterior Mean", f"{oe_mean:.1f}%", f"95% CI: [{oe_ci[0]*100:.1f}%, {oe_ci[1]*100:.1f}%]")
+                st.caption(f"**Bayes Factor vs Fair:** `{oe_bf:.3f}` ({b_res['odd_even']['bayes_factor']['verdict']})")
+                
+            with m_col3:
+                d1_kl = b_res.get('dice1_kl', 0.0)
+                d3_kl = b_res.get('dice3_kl', 0.0)
+                d3_bf = b_res['dice3_face3_bf']['bayes_factor']
+                st.metric("Dice 1 KL Divergence", f"{d1_kl:.4f}", "Uniform" if d1_kl < 0.02 else "Biased")
+                st.caption(f"**Dice 3 Face 3 BF vs 1/6:** `{d3_bf:.3f}` ({b_res['dice3_face3_bf']['verdict']})")
+                
+            st.markdown("---")
+            cp_info = b_res.get('change_point', {})
+            st.markdown(f"**🧬 Bayesian Change Point Detection:** {cp_info.get('interpretation', 'No change')} *(Log-BF: `{cp_info.get('log_bayes_factor', 0.0):.2f}` at index #{cp_info.get('best_change_point', 0)})*")
+            
+        st.warning("⚠️ Bayesian analysis quantifies evidence weight for fairness vs anomaly. It updates continuously with each live draw.")
+    else:
+        st.info("Need at least 30 draws for Bayesian inference.")
 
 # Master Orchestrator Card
 bs_badge = f'<span class="badge-big">{hive["bs_pred"].upper()}</span>' if hive['bs_pred'] == 'Big' else f'<span class="badge-small">{hive["bs_pred"].upper()}</span>'

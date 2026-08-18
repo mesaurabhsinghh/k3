@@ -3555,10 +3555,377 @@
           "harmonic_wave": "Lag5=Odd, Lag10=Odd"
         }
       },
-      "actual": null,
+      "actual": {
+        "issue": "20260818101011138",
+        "dice1": 5,
+        "dice2": 2,
+        "dice3": 4,
+        "sum": 11,
+        "bs": "Big",
+        "oe": "Odd",
+        "premium": "524"
+      },
       "confidence": 0.72,
       "metadata": {},
       "timestamp": "2026-08-19T00:27:27.972340",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:28:26.058668"
+    },
+    {
+      "id": "NEXUS PATTERN SNIPER_20260818101011138_1787079481.668922",
+      "issue": "20260818101011138",
+      "prediction": {
+        "name": "NEXUS PATTERN SNIPER",
+        "border": "border-emerald",
+        "color": "#10b981",
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 3,
+        "premium": "223",
+        "sum": 7,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 72.0,
+        "oe_conf": 77.5,
+        "kelly": 7.774,
+        "steps": [
+          "1. 84% Spillover Anchor: Locked Dice [2] from previous draw [2, 1, 2].",
+          "2. Elastic Jump Limit: Constrained search to [3 \u2014 10] around last sum (5).",
+          "3. Parity Reversion: Standard cut -> Projected Big.",
+          "4. Harmonic Resonance: Lag-5 & Lag-10 waves in sync -> Odd (+0.168 Corr).",
+          "5. Triad Resolution: [2][2][3] -> Sum=7 (Small, Odd) | Kelly=7.8%."
+        ],
+        "meta": {
+          "anchor": 2,
+          "window": "[3 \u2014 10]",
+          "dragon_streak": 1,
+          "harmonic_wave": "Lag5=Odd, Lag10=Odd"
+        }
+      },
+      "actual": {
+        "issue": "20260818101011138",
+        "dice1": 5,
+        "dice2": 2,
+        "dice3": 4,
+        "sum": 11,
+        "bs": "Big",
+        "oe": "Odd",
+        "premium": "524"
+      },
+      "confidence": 0.72,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:28:01.668922",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:28:26.058668"
+    },
+    {
+      "id": "NEXUS PATTERN SNIPER_20260818101011139_1787079513.945561",
+      "issue": "20260818101011139",
+      "prediction": {
+        "name": "NEXUS PATTERN SNIPER",
+        "border": "border-emerald",
+        "color": "#10b981",
+        "dice1": 4,
+        "dice2": 2,
+        "dice3": 3,
+        "premium": "423",
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 72.0,
+        "oe_conf": 77.5,
+        "kelly": 7.774,
+        "steps": [
+          "1. 84% Spillover Anchor: Locked Dice [4] from previous draw [5, 2, 4].",
+          "2. Elastic Jump Limit: Constrained search to [6 \u2014 16] around last sum (11).",
+          "3. Parity Reversion: Standard cut -> Projected Small.",
+          "4. Harmonic Resonance: Lag-5 & Lag-10 waves in sync -> Odd (+0.168 Corr).",
+          "5. Triad Resolution: [4][2][3] -> Sum=9 (Small, Odd) | Kelly=7.8%."
+        ],
+        "meta": {
+          "anchor": 4,
+          "window": "[6 \u2014 16]",
+          "dragon_streak": 1,
+          "harmonic_wave": "Lag5=Odd, Lag10=Odd"
+        }
+      },
+      "actual": {
+        "issue": "20260818101011139",
+        "dice1": 5,
+        "dice2": 1,
+        "dice3": 4,
+        "sum": 10,
+        "bs": "Small",
+        "oe": "Even",
+        "premium": "514"
+      },
+      "confidence": 0.72,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:28:33.945561",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:29:00.643517"
+    },
+    {
+      "id": "NEXUS PATTERN SNIPER_20260818101011140_1787079548.741459",
+      "issue": "20260818101011140",
+      "prediction": {
+        "name": "NEXUS PATTERN SNIPER",
+        "border": "border-emerald",
+        "color": "#10b981",
+        "dice1": 4,
+        "dice2": 4,
+        "dice3": 4,
+        "premium": "444",
+        "sum": 12,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "bs_conf": 72.0,
+        "oe_conf": 77.5,
+        "kelly": 7.774,
+        "steps": [
+          "1. 84% Spillover Anchor: Locked Dice [4] from previous draw [5, 1, 4].",
+          "2. Elastic Jump Limit: Constrained search to [5 \u2014 15] around last sum (10).",
+          "3. Parity Reversion: Standard cut -> Projected Big.",
+          "4. Harmonic Resonance: Lag-5 & Lag-10 waves in sync -> Even (+0.168 Corr).",
+          "5. Triad Resolution: [4][4][4] -> Sum=12 (Big, Even) | Kelly=7.8%."
+        ],
+        "meta": {
+          "anchor": 4,
+          "window": "[5 \u2014 15]",
+          "dragon_streak": 1,
+          "harmonic_wave": "Lag5=Even, Lag10=Even"
+        }
+      },
+      "actual": {
+        "issue": "20260818101011140",
+        "dice1": 1,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 8,
+        "bs": "Small",
+        "oe": "Even",
+        "premium": "134"
+      },
+      "confidence": 0.72,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:29:08.741459",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:30:15.487522"
+    },
+    {
+      "id": "NEXUS PATTERN SNIPER_20260818101011141_1787079621.967482",
+      "issue": "20260818101011141",
+      "prediction": {
+        "name": "NEXUS PATTERN SNIPER",
+        "border": "border-emerald",
+        "color": "#10b981",
+        "dice1": 3,
+        "dice2": 3,
+        "dice3": 4,
+        "premium": "334",
+        "sum": 10,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "bs_conf": 72.0,
+        "oe_conf": 77.5,
+        "kelly": 7.774,
+        "steps": [
+          "1. 84% Spillover Anchor: Locked Dice [3] from previous draw [1, 3, 4].",
+          "2. Elastic Jump Limit: Constrained search to [3 \u2014 13] around last sum (8).",
+          "3. Parity Reversion: Standard cut -> Projected Big.",
+          "4. Harmonic Resonance: Lag-5 & Lag-10 waves in sync -> Even (+0.168 Corr).",
+          "5. Triad Resolution: [3][3][4] -> Sum=10 (Small, Even) | Kelly=7.8%."
+        ],
+        "meta": {
+          "anchor": 3,
+          "window": "[3 \u2014 13]",
+          "dragon_streak": 2,
+          "harmonic_wave": "Lag5=Even, Lag10=Even"
+        }
+      },
+      "actual": {
+        "issue": "20260818101011141",
+        "dice1": 1,
+        "dice2": 5,
+        "dice3": 1,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "151"
+      },
+      "confidence": 0.72,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:30:21.967482",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:31:26.675069"
+    },
+    {
+      "id": "NEXUS PATTERN SNIPER_20260818101011141_1787079655.642573",
+      "issue": "20260818101011141",
+      "prediction": {
+        "name": "NEXUS PATTERN SNIPER",
+        "border": "border-emerald",
+        "color": "#10b981",
+        "dice1": 3,
+        "dice2": 3,
+        "dice3": 4,
+        "premium": "334",
+        "sum": 10,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "bs_conf": 72.0,
+        "oe_conf": 77.5,
+        "kelly": 7.774,
+        "steps": [
+          "1. 84% Spillover Anchor: Locked Dice [3] from previous draw [1, 3, 4].",
+          "2. Elastic Jump Limit: Constrained search to [3 \u2014 13] around last sum (8).",
+          "3. Parity Reversion: Standard cut -> Projected Big.",
+          "4. Harmonic Resonance: Lag-5 & Lag-10 waves in sync -> Even (+0.168 Corr).",
+          "5. Triad Resolution: [3][3][4] -> Sum=10 (Small, Even) | Kelly=7.8%."
+        ],
+        "meta": {
+          "anchor": 3,
+          "window": "[3 \u2014 13]",
+          "dragon_streak": 2,
+          "harmonic_wave": "Lag5=Even, Lag10=Even"
+        }
+      },
+      "actual": {
+        "issue": "20260818101011141",
+        "dice1": 1,
+        "dice2": 5,
+        "dice3": 1,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "151"
+      },
+      "confidence": 0.72,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:30:55.642573",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:31:26.675069"
+    },
+    {
+      "id": "NEXUS PATTERN SNIPER_20260818101011142_1787079697.10938",
+      "issue": "20260818101011142",
+      "prediction": {
+        "name": "NEXUS PATTERN SNIPER",
+        "border": "border-emerald",
+        "color": "#10b981",
+        "dice1": 1,
+        "dice2": 2,
+        "dice3": 2,
+        "premium": "122",
+        "sum": 5,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 79.5,
+        "oe_conf": 77.5,
+        "kelly": 8.164,
+        "steps": [
+          "1. 84% Spillover Anchor: Locked Dice [1] from previous draw [1, 5, 1].",
+          "2. Elastic Jump Limit: Constrained search to [3 \u2014 12] around last sum (7).",
+          "3. Dragon Momentum: Active 3x streak detected -> Riding Small (60% Law).",
+          "4. Harmonic Resonance: Lag-5 & Lag-10 waves in sync -> Odd (+0.168 Corr).",
+          "5. Triad Resolution: [1][2][2] -> Sum=5 (Small, Odd) | Kelly=8.2%."
+        ],
+        "meta": {
+          "anchor": 1,
+          "window": "[3 \u2014 12]",
+          "dragon_streak": 3,
+          "harmonic_wave": "Lag5=Odd, Lag10=Odd"
+        }
+      },
+      "actual": {
+        "issue": "20260818101011142",
+        "dice1": 4,
+        "dice2": 5,
+        "dice3": 5,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "455"
+      },
+      "confidence": 0.795,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:31:37.109380",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:32:05.486844"
+    },
+    {
+      "id": "NEXUS PATTERN SNIPER_20260818101011143_1787079736.113137",
+      "issue": "20260818101011143",
+      "prediction": {
+        "name": "NEXUS PATTERN SNIPER",
+        "border": "border-emerald",
+        "color": "#10b981",
+        "dice1": 5,
+        "dice2": 4,
+        "dice3": 4,
+        "premium": "544",
+        "sum": 13,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "bs_conf": 72.0,
+        "oe_conf": 77.5,
+        "kelly": 7.774,
+        "steps": [
+          "1. 84% Spillover Anchor: Locked Dice [5] from previous draw [4, 5, 5].",
+          "2. Elastic Jump Limit: Constrained search to [9 \u2014 18] around last sum (14).",
+          "3. Parity Reversion: Standard cut -> Projected Small.",
+          "4. Harmonic Resonance: Lag-5 & Lag-10 waves in sync -> Odd (+0.168 Corr).",
+          "5. Triad Resolution: [5][4][4] -> Sum=13 (Big, Odd) | Kelly=7.8%."
+        ],
+        "meta": {
+          "anchor": 5,
+          "window": "[9 \u2014 18]",
+          "dragon_streak": 1,
+          "harmonic_wave": "Lag5=Odd, Lag10=Odd"
+        }
+      },
+      "actual": null,
+      "confidence": 0.72,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:32:16.113137",
+      "validated": false,
+      "validation_timestamp": null
+    },
+    {
+      "id": "NEXUS PATTERN SNIPER_20260818101011143_1787079766.730095",
+      "issue": "20260818101011143",
+      "prediction": {
+        "name": "NEXUS PATTERN SNIPER",
+        "border": "border-emerald",
+        "color": "#10b981",
+        "dice1": 5,
+        "dice2": 4,
+        "dice3": 4,
+        "premium": "544",
+        "sum": 13,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "bs_conf": 72.0,
+        "oe_conf": 77.5,
+        "kelly": 7.774,
+        "steps": [
+          "1. 84% Spillover Anchor: Locked Dice [5] from previous draw [4, 5, 5].",
+          "2. Elastic Jump Limit: Constrained search to [9 \u2014 18] around last sum (14).",
+          "3. Parity Reversion: Standard cut -> Projected Small.",
+          "4. Harmonic Resonance: Lag-5 & Lag-10 waves in sync -> Odd (+0.168 Corr).",
+          "5. Triad Resolution: [5][4][4] -> Sum=13 (Big, Odd) | Kelly=7.8%."
+        ],
+        "meta": {
+          "anchor": 5,
+          "window": "[9 \u2014 18]",
+          "dragon_streak": 1,
+          "harmonic_wave": "Lag5=Odd, Lag10=Odd"
+        }
+      },
+      "actual": null,
+      "confidence": 0.72,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:32:46.730095",
       "validated": false,
       "validation_timestamp": null
     }
@@ -7180,10 +7547,385 @@
           "w_xgb": 0.48
         }
       },
-      "actual": null,
+      "actual": {
+        "issue": "20260818101011138",
+        "dice1": 5,
+        "dice2": 2,
+        "dice3": 4,
+        "sum": 11,
+        "bs": "Big",
+        "oe": "Odd",
+        "premium": "524"
+      },
       "confidence": 0.7029035186767578,
       "metadata": {},
       "timestamp": "2026-08-19T00:27:28.181006",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:28:26.175563"
+    },
+    {
+      "id": "NEXUS K3 TRIPLE THREAT_20260818101011138_1787079481.779922",
+      "issue": "20260818101011138",
+      "prediction": {
+        "name": "NEXUS K3 TRIPLE THREAT",
+        "border": "border-dual",
+        "color": "#38bdf8",
+        "dice1": 4,
+        "dice2": 2,
+        "dice3": 3,
+        "premium": "423",
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 70.29035186767578,
+        "oe_conf": 51.356689453125,
+        "sum_conf": 17.91602943753858,
+        "kelly_bs": "20.290352",
+        "kelly_oe": 0.0,
+        "kelly_sum": 5.0,
+        "safe_kelly": "20.290352",
+        "kelly": "20.290352",
+        "steps": [
+          "1. Ingestion: Processed 598 issues. Feature tensor generated.",
+          "2. Multi-Task Output: BS=Small (70.3%), OE=Odd (51.4%), Sum=9 (17.9%).",
+          "3. Triad Resolution: [4][2][3] -> Premium #423 | Safe Kelly=20.3%."
+        ],
+        "meta": {
+          "w_nn": 0.52,
+          "w_xgb": 0.48
+        }
+      },
+      "actual": {
+        "issue": "20260818101011138",
+        "dice1": 5,
+        "dice2": 2,
+        "dice3": 4,
+        "sum": 11,
+        "bs": "Big",
+        "oe": "Odd",
+        "premium": "524"
+      },
+      "confidence": 0.7029035186767578,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:28:01.779922",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:28:26.175563"
+    },
+    {
+      "id": "NEXUS K3 TRIPLE THREAT_20260818101011139_1787079514.067302",
+      "issue": "20260818101011139",
+      "prediction": {
+        "name": "NEXUS K3 TRIPLE THREAT",
+        "border": "border-dual",
+        "color": "#38bdf8",
+        "dice1": 1,
+        "dice2": 3,
+        "dice3": 3,
+        "premium": "133",
+        "sum": 7,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 73.67239379882812,
+        "oe_conf": 54.09431457519531,
+        "sum_conf": 17.67774897856982,
+        "kelly_bs": "23.67239",
+        "kelly_oe": 0.0,
+        "kelly_sum": 5.0,
+        "safe_kelly": "23.67239",
+        "kelly": "23.67239",
+        "steps": [
+          "1. Ingestion: Processed 599 issues. Feature tensor generated.",
+          "2. Multi-Task Output: BS=Small (73.7%), OE=Odd (54.1%), Sum=7 (17.7%).",
+          "3. Triad Resolution: [1][3][3] -> Premium #133 | Safe Kelly=23.7%."
+        ],
+        "meta": {
+          "w_nn": 0.52,
+          "w_xgb": 0.48
+        }
+      },
+      "actual": {
+        "issue": "20260818101011139",
+        "dice1": 5,
+        "dice2": 1,
+        "dice3": 4,
+        "sum": 10,
+        "bs": "Small",
+        "oe": "Even",
+        "premium": "514"
+      },
+      "confidence": 0.7367239379882813,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:28:34.067302",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:29:00.763561"
+    },
+    {
+      "id": "NEXUS K3 TRIPLE THREAT_20260818101011140_1787079548.863301",
+      "issue": "20260818101011140",
+      "prediction": {
+        "name": "NEXUS K3 TRIPLE THREAT",
+        "border": "border-dual",
+        "color": "#38bdf8",
+        "dice1": 1,
+        "dice2": 2,
+        "dice3": 2,
+        "premium": "122",
+        "sum": 5,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 67.27648162841797,
+        "oe_conf": 77.41883087158203,
+        "sum_conf": 12.178750145812705,
+        "kelly_bs": "17.276484",
+        "kelly_oe": "27.418835",
+        "kelly_sum": 0.0,
+        "safe_kelly": "17.276484",
+        "kelly": "17.276484",
+        "steps": [
+          "1. Ingestion: Processed 600 issues. Feature tensor generated.",
+          "2. Multi-Task Output: BS=Small (67.3%), OE=Odd (77.4%), Sum=5 (12.2%).",
+          "3. Triad Resolution: [1][2][2] -> Premium #122 | Safe Kelly=17.3%."
+        ],
+        "meta": {
+          "w_nn": 0.52,
+          "w_xgb": 0.48
+        }
+      },
+      "actual": {
+        "issue": "20260818101011140",
+        "dice1": 1,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 8,
+        "bs": "Small",
+        "oe": "Even",
+        "premium": "134"
+      },
+      "confidence": 0.6727648162841797,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:29:08.863301",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:30:15.588006"
+    },
+    {
+      "id": "NEXUS K3 TRIPLE THREAT_20260818101011141_1787079622.06984",
+      "issue": "20260818101011141",
+      "prediction": {
+        "name": "NEXUS K3 TRIPLE THREAT",
+        "border": "border-dual",
+        "color": "#38bdf8",
+        "dice1": 4,
+        "dice2": 2,
+        "dice3": 3,
+        "premium": "423",
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 67.62976837158203,
+        "oe_conf": 61.23845672607422,
+        "sum_conf": 20.431830133274566,
+        "kelly_bs": "17.629766",
+        "kelly_oe": "11.238456",
+        "kelly_sum": 5.0,
+        "safe_kelly": "11.238456",
+        "kelly": "11.238456",
+        "steps": [
+          "1. Ingestion: Processed 601 issues. Feature tensor generated.",
+          "2. Multi-Task Output: BS=Small (67.6%), OE=Odd (61.2%), Sum=9 (20.4%).",
+          "3. Triad Resolution: [4][2][3] -> Premium #423 | Safe Kelly=11.2%."
+        ],
+        "meta": {
+          "w_nn": 0.52,
+          "w_xgb": 0.48
+        }
+      },
+      "actual": {
+        "issue": "20260818101011141",
+        "dice1": 1,
+        "dice2": 5,
+        "dice3": 1,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "151"
+      },
+      "confidence": 0.6762976837158203,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:30:22.070735",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:31:26.799633"
+    },
+    {
+      "id": "NEXUS K3 TRIPLE THREAT_20260818101011141_1787079655.748789",
+      "issue": "20260818101011141",
+      "prediction": {
+        "name": "NEXUS K3 TRIPLE THREAT",
+        "border": "border-dual",
+        "color": "#38bdf8",
+        "dice1": 4,
+        "dice2": 2,
+        "dice3": 3,
+        "premium": "423",
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 67.62976837158203,
+        "oe_conf": 61.23845672607422,
+        "sum_conf": 20.431830133274566,
+        "kelly_bs": "17.629766",
+        "kelly_oe": "11.238456",
+        "kelly_sum": 5.0,
+        "safe_kelly": "11.238456",
+        "kelly": "11.238456",
+        "steps": [
+          "1. Ingestion: Processed 601 issues. Feature tensor generated.",
+          "2. Multi-Task Output: BS=Small (67.6%), OE=Odd (61.2%), Sum=9 (20.4%).",
+          "3. Triad Resolution: [4][2][3] -> Premium #423 | Safe Kelly=11.2%."
+        ],
+        "meta": {
+          "w_nn": 0.52,
+          "w_xgb": 0.48
+        }
+      },
+      "actual": {
+        "issue": "20260818101011141",
+        "dice1": 1,
+        "dice2": 5,
+        "dice3": 1,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "151"
+      },
+      "confidence": 0.6762976837158203,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:30:55.748789",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:31:26.799633"
+    },
+    {
+      "id": "NEXUS K3 TRIPLE THREAT_20260818101011142_1787079697.240449",
+      "issue": "20260818101011142",
+      "prediction": {
+        "name": "NEXUS K3 TRIPLE THREAT",
+        "border": "border-dual",
+        "color": "#38bdf8",
+        "dice1": 3,
+        "dice2": 3,
+        "dice3": 3,
+        "premium": "333",
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 88.29657745361328,
+        "oe_conf": 60.59714126586914,
+        "sum_conf": 28.913052289018097,
+        "kelly_bs": "38.29658",
+        "kelly_oe": "10.597139",
+        "kelly_sum": 5.0,
+        "safe_kelly": "10.597139",
+        "kelly": "10.597139",
+        "steps": [
+          "1. Ingestion: Processed 602 issues. Feature tensor generated.",
+          "2. Multi-Task Output: BS=Small (88.3%), OE=Odd (60.6%), Sum=9 (28.9%).",
+          "3. Triad Resolution: [3][3][3] -> Premium #333 | Safe Kelly=10.6%."
+        ],
+        "meta": {
+          "w_nn": 0.52,
+          "w_xgb": 0.48
+        }
+      },
+      "actual": {
+        "issue": "20260818101011142",
+        "dice1": 4,
+        "dice2": 5,
+        "dice3": 5,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "455"
+      },
+      "confidence": 0.8829657745361328,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:31:37.240449",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:32:05.610226"
+    },
+    {
+      "id": "NEXUS K3 TRIPLE THREAT_20260818101011143_1787079736.292407",
+      "issue": "20260818101011143",
+      "prediction": {
+        "name": "NEXUS K3 TRIPLE THREAT",
+        "border": "border-dual",
+        "color": "#38bdf8",
+        "dice1": 1,
+        "dice2": 3,
+        "dice3": 3,
+        "premium": "133",
+        "sum": 7,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 62.14821243286133,
+        "oe_conf": 65.59942626953125,
+        "sum_conf": 11.835626860676658,
+        "kelly_bs": "12.148213",
+        "kelly_oe": "15.59943",
+        "kelly_sum": 0.0,
+        "safe_kelly": "12.148213",
+        "kelly": "12.148213",
+        "steps": [
+          "1. Ingestion: Processed 603 issues. Feature tensor generated.",
+          "2. Multi-Task Output: BS=Small (62.1%), OE=Odd (65.6%), Sum=7 (11.8%).",
+          "3. Triad Resolution: [1][3][3] -> Premium #133 | Safe Kelly=12.1%."
+        ],
+        "meta": {
+          "w_nn": 0.52,
+          "w_xgb": 0.48
+        }
+      },
+      "actual": null,
+      "confidence": 0.6214821243286133,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:32:16.292407",
+      "validated": false,
+      "validation_timestamp": null
+    },
+    {
+      "id": "NEXUS K3 TRIPLE THREAT_20260818101011143_1787079766.859942",
+      "issue": "20260818101011143",
+      "prediction": {
+        "name": "NEXUS K3 TRIPLE THREAT",
+        "border": "border-dual",
+        "color": "#38bdf8",
+        "dice1": 1,
+        "dice2": 3,
+        "dice3": 3,
+        "premium": "133",
+        "sum": 7,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 62.14821243286133,
+        "oe_conf": 65.59942626953125,
+        "sum_conf": 11.835626860676658,
+        "kelly_bs": "12.148213",
+        "kelly_oe": "15.59943",
+        "kelly_sum": 0.0,
+        "safe_kelly": "12.148213",
+        "kelly": "12.148213",
+        "steps": [
+          "1. Ingestion: Processed 603 issues. Feature tensor generated.",
+          "2. Multi-Task Output: BS=Small (62.1%), OE=Odd (65.6%), Sum=7 (11.8%).",
+          "3. Triad Resolution: [1][3][3] -> Premium #133 | Safe Kelly=12.1%."
+        ],
+        "meta": {
+          "w_nn": 0.52,
+          "w_xgb": 0.48
+        }
+      },
+      "actual": null,
+      "confidence": 0.6214821243286133,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:32:46.859942",
       "validated": false,
       "validation_timestamp": null
     }
@@ -10195,10 +10937,305 @@
           "2. Conformal calibration synced."
         ]
       },
-      "actual": null,
+      "actual": {
+        "issue": "20260818101011138",
+        "dice1": 5,
+        "dice2": 2,
+        "dice3": 4,
+        "sum": 11,
+        "bs": "Big",
+        "oe": "Odd",
+        "premium": "524"
+      },
       "confidence": 0.92,
       "metadata": {},
       "timestamp": "2026-08-19T00:27:28.302605",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:28:26.285260"
+    },
+    {
+      "id": "QUANTUM TEMPORAL ORACLE K3_20260818101011138_1787079481.901045",
+      "issue": "20260818101011138",
+      "prediction": {
+        "name": "QUANTUM TEMPORAL ORACLE K3",
+        "border": "border-purple",
+        "color": "#c084fc",
+        "dice1": 1,
+        "dice2": 3,
+        "dice3": 3,
+        "premium": "133",
+        "sum": 7,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 92.0,
+        "oe_conf": 89.0,
+        "kelly": 6.5,
+        "steps": [
+          "1. Temporal Fusion Transformer pass.",
+          "2. Conformal calibration synced."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011138",
+        "dice1": 5,
+        "dice2": 2,
+        "dice3": 4,
+        "sum": 11,
+        "bs": "Big",
+        "oe": "Odd",
+        "premium": "524"
+      },
+      "confidence": 0.92,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:28:01.901045",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:28:26.285260"
+    },
+    {
+      "id": "QUANTUM TEMPORAL ORACLE K3_20260818101011139_1787079514.191014",
+      "issue": "20260818101011139",
+      "prediction": {
+        "name": "QUANTUM TEMPORAL ORACLE K3",
+        "border": "border-purple",
+        "color": "#c084fc",
+        "dice1": 1,
+        "dice2": 3,
+        "dice3": 3,
+        "premium": "133",
+        "sum": 7,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 92.0,
+        "oe_conf": 57.982242584228516,
+        "kelly": 6.5,
+        "steps": [
+          "1. Temporal Fusion Transformer pass.",
+          "2. Conformal calibration synced."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011139",
+        "dice1": 5,
+        "dice2": 1,
+        "dice3": 4,
+        "sum": 10,
+        "bs": "Small",
+        "oe": "Even",
+        "premium": "514"
+      },
+      "confidence": 0.92,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:28:34.191014",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:29:00.886365"
+    },
+    {
+      "id": "QUANTUM TEMPORAL ORACLE K3_20260818101011140_1787079548.971869",
+      "issue": "20260818101011140",
+      "prediction": {
+        "name": "QUANTUM TEMPORAL ORACLE K3",
+        "border": "border-purple",
+        "color": "#c084fc",
+        "dice1": 3,
+        "dice2": 2,
+        "dice3": 2,
+        "premium": "322",
+        "sum": 7,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 88.9013442993164,
+        "oe_conf": 89.0,
+        "kelly": 6.5,
+        "steps": [
+          "1. Temporal Fusion Transformer pass.",
+          "2. Conformal calibration synced."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011140",
+        "dice1": 1,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 8,
+        "bs": "Small",
+        "oe": "Even",
+        "premium": "134"
+      },
+      "confidence": 0.8890134429931641,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:29:08.971869",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:30:15.681675"
+    },
+    {
+      "id": "QUANTUM TEMPORAL ORACLE K3_20260818101011141_1787079622.17107",
+      "issue": "20260818101011141",
+      "prediction": {
+        "name": "QUANTUM TEMPORAL ORACLE K3",
+        "border": "border-purple",
+        "color": "#c084fc",
+        "dice1": 4,
+        "dice2": 2,
+        "dice3": 3,
+        "premium": "423",
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 92.0,
+        "oe_conf": 75.61009216308594,
+        "kelly": 6.5,
+        "steps": [
+          "1. Temporal Fusion Transformer pass.",
+          "2. Conformal calibration synced."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011141",
+        "dice1": 1,
+        "dice2": 5,
+        "dice3": 1,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "151"
+      },
+      "confidence": 0.92,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:30:22.171070",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:31:26.937485"
+    },
+    {
+      "id": "QUANTUM TEMPORAL ORACLE K3_20260818101011141_1787079655.852216",
+      "issue": "20260818101011141",
+      "prediction": {
+        "name": "QUANTUM TEMPORAL ORACLE K3",
+        "border": "border-purple",
+        "color": "#c084fc",
+        "dice1": 4,
+        "dice2": 2,
+        "dice3": 3,
+        "premium": "423",
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 92.0,
+        "oe_conf": 75.61009216308594,
+        "kelly": 6.5,
+        "steps": [
+          "1. Temporal Fusion Transformer pass.",
+          "2. Conformal calibration synced."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011141",
+        "dice1": 1,
+        "dice2": 5,
+        "dice3": 1,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "151"
+      },
+      "confidence": 0.92,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:30:55.852216",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:31:26.937485"
+    },
+    {
+      "id": "QUANTUM TEMPORAL ORACLE K3_20260818101011142_1787079697.366845",
+      "issue": "20260818101011142",
+      "prediction": {
+        "name": "QUANTUM TEMPORAL ORACLE K3",
+        "border": "border-purple",
+        "color": "#c084fc",
+        "dice1": 3,
+        "dice2": 2,
+        "dice3": 2,
+        "premium": "322",
+        "sum": 7,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 92.0,
+        "oe_conf": 89.0,
+        "kelly": 6.5,
+        "steps": [
+          "1. Temporal Fusion Transformer pass.",
+          "2. Conformal calibration synced."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011142",
+        "dice1": 4,
+        "dice2": 5,
+        "dice3": 5,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "455"
+      },
+      "confidence": 0.92,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:31:37.366845",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:32:05.724109"
+    },
+    {
+      "id": "QUANTUM TEMPORAL ORACLE K3_20260818101011143_1787079736.470689",
+      "issue": "20260818101011143",
+      "prediction": {
+        "name": "QUANTUM TEMPORAL ORACLE K3",
+        "border": "border-purple",
+        "color": "#c084fc",
+        "dice1": 2,
+        "dice2": 3,
+        "dice3": 3,
+        "premium": "233",
+        "sum": 8,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "bs_conf": 92.0,
+        "oe_conf": 89.0,
+        "kelly": 6.5,
+        "steps": [
+          "1. Temporal Fusion Transformer pass.",
+          "2. Conformal calibration synced."
+        ]
+      },
+      "actual": null,
+      "confidence": 0.92,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:32:16.470689",
+      "validated": false,
+      "validation_timestamp": null
+    },
+    {
+      "id": "QUANTUM TEMPORAL ORACLE K3_20260818101011143_1787079766.992634",
+      "issue": "20260818101011143",
+      "prediction": {
+        "name": "QUANTUM TEMPORAL ORACLE K3",
+        "border": "border-purple",
+        "color": "#c084fc",
+        "dice1": 2,
+        "dice2": 3,
+        "dice3": 3,
+        "premium": "233",
+        "sum": 8,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "bs_conf": 92.0,
+        "oe_conf": 89.0,
+        "kelly": 6.5,
+        "steps": [
+          "1. Temporal Fusion Transformer pass.",
+          "2. Conformal calibration synced."
+        ]
+      },
+      "actual": null,
+      "confidence": 0.92,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:32:46.992634",
       "validated": false,
       "validation_timestamp": null
     }
@@ -13149,10 +14186,297 @@
           "Trained Random Forest (BS) + Extra Trees (OE) on lag tensors."
         ]
       },
-      "actual": null,
+      "actual": {
+        "issue": "20260818101011138",
+        "dice1": 5,
+        "dice2": 2,
+        "dice3": 4,
+        "sum": 11,
+        "bs": "Big",
+        "oe": "Odd",
+        "premium": "524"
+      },
       "confidence": 0.5445826549993217,
       "metadata": {},
       "timestamp": "2026-08-19T00:27:28.436457",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:28:26.396397"
+    },
+    {
+      "id": "SENTINEL PRIME OMEGA K3_20260818101011138_1787079482.014973",
+      "issue": "20260818101011138",
+      "prediction": {
+        "name": "SENTINEL PRIME OMEGA K3",
+        "border": "border-gold",
+        "color": "#fbbf24",
+        "dice1": 3,
+        "dice2": 5,
+        "dice3": 5,
+        "premium": "355",
+        "sum": 13,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "bs_conf": 54.45826549993217,
+        "oe_conf": 72.8305050522167,
+        "kelly": 7.2,
+        "steps": [
+          "Trained Random Forest (BS) + Extra Trees (OE) on lag tensors."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011138",
+        "dice1": 5,
+        "dice2": 2,
+        "dice3": 4,
+        "sum": 11,
+        "bs": "Big",
+        "oe": "Odd",
+        "premium": "524"
+      },
+      "confidence": 0.5445826549993217,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:28:02.014973",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:28:26.396397"
+    },
+    {
+      "id": "SENTINEL PRIME OMEGA K3_20260818101011139_1787079514.303218",
+      "issue": "20260818101011139",
+      "prediction": {
+        "name": "SENTINEL PRIME OMEGA K3",
+        "border": "border-gold",
+        "color": "#fbbf24",
+        "dice1": 3,
+        "dice2": 5,
+        "dice3": 5,
+        "premium": "355",
+        "sum": 13,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "bs_conf": 62.489036107473986,
+        "oe_conf": 59.33627329460662,
+        "kelly": 7.2,
+        "steps": [
+          "Trained Random Forest (BS) + Extra Trees (OE) on lag tensors."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011139",
+        "dice1": 5,
+        "dice2": 1,
+        "dice3": 4,
+        "sum": 10,
+        "bs": "Small",
+        "oe": "Even",
+        "premium": "514"
+      },
+      "confidence": 0.6248903610747398,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:28:34.303218",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:29:01.007077"
+    },
+    {
+      "id": "SENTINEL PRIME OMEGA K3_20260818101011140_1787079549.082275",
+      "issue": "20260818101011140",
+      "prediction": {
+        "name": "SENTINEL PRIME OMEGA K3",
+        "border": "border-gold",
+        "color": "#fbbf24",
+        "dice1": 1,
+        "dice2": 3,
+        "dice3": 4,
+        "premium": "134",
+        "sum": 8,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "bs_conf": 56.81752596268724,
+        "oe_conf": 57.614543340646286,
+        "kelly": 7.2,
+        "steps": [
+          "Trained Random Forest (BS) + Extra Trees (OE) on lag tensors."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011140",
+        "dice1": 1,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 8,
+        "bs": "Small",
+        "oe": "Even",
+        "premium": "134"
+      },
+      "confidence": 0.5681752596268724,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:29:09.082275",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:30:15.781040"
+    },
+    {
+      "id": "SENTINEL PRIME OMEGA K3_20260818101011141_1787079622.272782",
+      "issue": "20260818101011141",
+      "prediction": {
+        "name": "SENTINEL PRIME OMEGA K3",
+        "border": "border-gold",
+        "color": "#fbbf24",
+        "dice1": 4,
+        "dice2": 2,
+        "dice3": 3,
+        "premium": "423",
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 59.21864970778014,
+        "oe_conf": 55.156874375624376,
+        "kelly": 7.2,
+        "steps": [
+          "Trained Random Forest (BS) + Extra Trees (OE) on lag tensors."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011141",
+        "dice1": 1,
+        "dice2": 5,
+        "dice3": 1,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "151"
+      },
+      "confidence": 0.5921864970778014,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:30:22.272782",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:31:27.082939"
+    },
+    {
+      "id": "SENTINEL PRIME OMEGA K3_20260818101011141_1787079655.953829",
+      "issue": "20260818101011141",
+      "prediction": {
+        "name": "SENTINEL PRIME OMEGA K3",
+        "border": "border-gold",
+        "color": "#fbbf24",
+        "dice1": 4,
+        "dice2": 2,
+        "dice3": 3,
+        "premium": "423",
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 59.21864970778014,
+        "oe_conf": 55.156874375624376,
+        "kelly": 7.2,
+        "steps": [
+          "Trained Random Forest (BS) + Extra Trees (OE) on lag tensors."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011141",
+        "dice1": 1,
+        "dice2": 5,
+        "dice3": 1,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "151"
+      },
+      "confidence": 0.5921864970778014,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:30:55.954860",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:31:27.082939"
+    },
+    {
+      "id": "SENTINEL PRIME OMEGA K3_20260818101011142_1787079697.482315",
+      "issue": "20260818101011142",
+      "prediction": {
+        "name": "SENTINEL PRIME OMEGA K3",
+        "border": "border-gold",
+        "color": "#fbbf24",
+        "dice1": 2,
+        "dice2": 4,
+        "dice3": 5,
+        "premium": "245",
+        "sum": 11,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "bs_conf": 72.08238395176582,
+        "oe_conf": 60.19580207861067,
+        "kelly": 7.2,
+        "steps": [
+          "Trained Random Forest (BS) + Extra Trees (OE) on lag tensors."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011142",
+        "dice1": 4,
+        "dice2": 5,
+        "dice3": 5,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "455"
+      },
+      "confidence": 0.7208238395176582,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:31:37.482315",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:32:05.844092"
+    },
+    {
+      "id": "SENTINEL PRIME OMEGA K3_20260818101011143_1787079736.677225",
+      "issue": "20260818101011143",
+      "prediction": {
+        "name": "SENTINEL PRIME OMEGA K3",
+        "border": "border-gold",
+        "color": "#fbbf24",
+        "dice1": 3,
+        "dice2": 4,
+        "dice3": 4,
+        "premium": "344",
+        "sum": 11,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "bs_conf": 53.55638026690658,
+        "oe_conf": 63.6694837157361,
+        "kelly": 7.2,
+        "steps": [
+          "Trained Random Forest (BS) + Extra Trees (OE) on lag tensors."
+        ]
+      },
+      "actual": null,
+      "confidence": 0.5355638026690658,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:32:16.677225",
+      "validated": false,
+      "validation_timestamp": null
+    },
+    {
+      "id": "SENTINEL PRIME OMEGA K3_20260818101011143_1787079767.119032",
+      "issue": "20260818101011143",
+      "prediction": {
+        "name": "SENTINEL PRIME OMEGA K3",
+        "border": "border-gold",
+        "color": "#fbbf24",
+        "dice1": 3,
+        "dice2": 4,
+        "dice3": 4,
+        "premium": "344",
+        "sum": 11,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "bs_conf": 53.55638026690658,
+        "oe_conf": 63.6694837157361,
+        "kelly": 7.2,
+        "steps": [
+          "Trained Random Forest (BS) + Extra Trees (OE) on lag tensors."
+        ]
+      },
+      "actual": null,
+      "confidence": 0.5355638026690658,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:32:47.119032",
       "validated": false,
       "validation_timestamp": null
     }
@@ -16103,10 +17427,297 @@
           "Trained XGBoost (BS) + Logistic Regression (OE)."
         ]
       },
-      "actual": null,
+      "actual": {
+        "issue": "20260818101011138",
+        "dice1": 5,
+        "dice2": 2,
+        "dice3": 4,
+        "sum": 11,
+        "bs": "Big",
+        "oe": "Odd",
+        "premium": "524"
+      },
       "confidence": 0.5056269073486328,
       "metadata": {},
       "timestamp": "2026-08-19T00:27:28.569432",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:28:26.512268"
+    },
+    {
+      "id": "NEXUS CORE K3_20260818101011138_1787079482.130583",
+      "issue": "20260818101011138",
+      "prediction": {
+        "name": "NEXUS CORE K3",
+        "border": "border-orange",
+        "color": "#f97316",
+        "dice1": 3,
+        "dice2": 4,
+        "dice3": 4,
+        "premium": "344",
+        "sum": 11,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "bs_conf": 50.56269073486328,
+        "oe_conf": 71.3029435758184,
+        "kelly": 6.0,
+        "steps": [
+          "Trained XGBoost (BS) + Logistic Regression (OE)."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011138",
+        "dice1": 5,
+        "dice2": 2,
+        "dice3": 4,
+        "sum": 11,
+        "bs": "Big",
+        "oe": "Odd",
+        "premium": "524"
+      },
+      "confidence": 0.5056269073486328,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:28:02.130583",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:28:26.512268"
+    },
+    {
+      "id": "NEXUS CORE K3_20260818101011139_1787079514.425953",
+      "issue": "20260818101011139",
+      "prediction": {
+        "name": "NEXUS CORE K3",
+        "border": "border-orange",
+        "color": "#f97316",
+        "dice1": 1,
+        "dice2": 3,
+        "dice3": 3,
+        "premium": "133",
+        "sum": 7,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 67.21537017822266,
+        "oe_conf": 54.26412383084306,
+        "kelly": 6.0,
+        "steps": [
+          "Trained XGBoost (BS) + Logistic Regression (OE)."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011139",
+        "dice1": 5,
+        "dice2": 1,
+        "dice3": 4,
+        "sum": 10,
+        "bs": "Small",
+        "oe": "Even",
+        "premium": "514"
+      },
+      "confidence": 0.6721537017822266,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:28:34.425953",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:29:01.126854"
+    },
+    {
+      "id": "NEXUS CORE K3_20260818101011140_1787079549.204881",
+      "issue": "20260818101011140",
+      "prediction": {
+        "name": "NEXUS CORE K3",
+        "border": "border-orange",
+        "color": "#f97316",
+        "dice1": 1,
+        "dice2": 3,
+        "dice3": 4,
+        "premium": "134",
+        "sum": 8,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "bs_conf": 61.09815979003906,
+        "oe_conf": 88.64511382900653,
+        "kelly": 6.0,
+        "steps": [
+          "Trained XGBoost (BS) + Logistic Regression (OE)."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011140",
+        "dice1": 1,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 8,
+        "bs": "Small",
+        "oe": "Even",
+        "premium": "134"
+      },
+      "confidence": 0.6109815979003906,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:29:09.204881",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:30:15.884564"
+    },
+    {
+      "id": "NEXUS CORE K3_20260818101011141_1787079622.376059",
+      "issue": "20260818101011141",
+      "prediction": {
+        "name": "NEXUS CORE K3",
+        "border": "border-orange",
+        "color": "#f97316",
+        "dice1": 4,
+        "dice2": 2,
+        "dice3": 3,
+        "premium": "423",
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 65.84900665283203,
+        "oe_conf": 62.45939244773416,
+        "kelly": 6.0,
+        "steps": [
+          "Trained XGBoost (BS) + Logistic Regression (OE)."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011141",
+        "dice1": 1,
+        "dice2": 5,
+        "dice3": 1,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "151"
+      },
+      "confidence": 0.6584900665283203,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:30:22.376059",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:31:27.235965"
+    },
+    {
+      "id": "NEXUS CORE K3_20260818101011141_1787079656.052421",
+      "issue": "20260818101011141",
+      "prediction": {
+        "name": "NEXUS CORE K3",
+        "border": "border-orange",
+        "color": "#f97316",
+        "dice1": 4,
+        "dice2": 2,
+        "dice3": 3,
+        "premium": "423",
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 65.84900665283203,
+        "oe_conf": 62.45939244773416,
+        "kelly": 6.0,
+        "steps": [
+          "Trained XGBoost (BS) + Logistic Regression (OE)."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011141",
+        "dice1": 1,
+        "dice2": 5,
+        "dice3": 1,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "151"
+      },
+      "confidence": 0.6584900665283203,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:30:56.052421",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:31:27.235965"
+    },
+    {
+      "id": "NEXUS CORE K3_20260818101011142_1787079697.606737",
+      "issue": "20260818101011142",
+      "prediction": {
+        "name": "NEXUS CORE K3",
+        "border": "border-orange",
+        "color": "#f97316",
+        "dice1": 2,
+        "dice2": 4,
+        "dice3": 5,
+        "premium": "245",
+        "sum": 11,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "bs_conf": 66.0351333618164,
+        "oe_conf": 68.61291133781964,
+        "kelly": 6.0,
+        "steps": [
+          "Trained XGBoost (BS) + Logistic Regression (OE)."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011142",
+        "dice1": 4,
+        "dice2": 5,
+        "dice3": 5,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "455"
+      },
+      "confidence": 0.6603513336181641,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:31:37.606737",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:32:05.969970"
+    },
+    {
+      "id": "NEXUS CORE K3_20260818101011143_1787079736.875343",
+      "issue": "20260818101011143",
+      "prediction": {
+        "name": "NEXUS CORE K3",
+        "border": "border-orange",
+        "color": "#f97316",
+        "dice1": 5,
+        "dice2": 3,
+        "dice3": 4,
+        "premium": "534",
+        "sum": 12,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "bs_conf": 56.63787078857422,
+        "oe_conf": 68.8430736104916,
+        "kelly": 6.0,
+        "steps": [
+          "Trained XGBoost (BS) + Logistic Regression (OE)."
+        ]
+      },
+      "actual": null,
+      "confidence": 0.5663787078857422,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:32:16.875343",
+      "validated": false,
+      "validation_timestamp": null
+    },
+    {
+      "id": "NEXUS CORE K3_20260818101011143_1787079767.240593",
+      "issue": "20260818101011143",
+      "prediction": {
+        "name": "NEXUS CORE K3",
+        "border": "border-orange",
+        "color": "#f97316",
+        "dice1": 5,
+        "dice2": 3,
+        "dice3": 4,
+        "premium": "534",
+        "sum": 12,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "bs_conf": 56.63787078857422,
+        "oe_conf": 68.8430736104916,
+        "kelly": 6.0,
+        "steps": [
+          "Trained XGBoost (BS) + Logistic Regression (OE)."
+        ]
+      },
+      "actual": null,
+      "confidence": 0.5663787078857422,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:32:47.240593",
       "validated": false,
       "validation_timestamp": null
     }
@@ -19057,10 +20668,297 @@
           "Trained ElasticNet SGD Online Policy Network."
         ]
       },
-      "actual": null,
+      "actual": {
+        "issue": "20260818101011138",
+        "dice1": 5,
+        "dice2": 2,
+        "dice3": 4,
+        "sum": 11,
+        "bs": "Big",
+        "oe": "Odd",
+        "premium": "524"
+      },
       "confidence": 1.0,
       "metadata": {},
       "timestamp": "2026-08-19T00:27:28.694325",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:28:26.623037"
+    },
+    {
+      "id": "OMNI K3 RL_20260818101011138_1787079482.246868",
+      "issue": "20260818101011138",
+      "prediction": {
+        "name": "OMNI K3 RL",
+        "border": "border-green",
+        "color": "#10b981",
+        "dice1": 2,
+        "dice2": 4,
+        "dice3": 4,
+        "premium": "244",
+        "sum": 10,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "bs_conf": 100.0,
+        "oe_conf": 100.0,
+        "kelly": 4.8,
+        "steps": [
+          "Trained ElasticNet SGD Online Policy Network."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011138",
+        "dice1": 5,
+        "dice2": 2,
+        "dice3": 4,
+        "sum": 11,
+        "bs": "Big",
+        "oe": "Odd",
+        "premium": "524"
+      },
+      "confidence": 1.0,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:28:02.246868",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:28:26.624039"
+    },
+    {
+      "id": "OMNI K3 RL_20260818101011139_1787079514.541935",
+      "issue": "20260818101011139",
+      "prediction": {
+        "name": "OMNI K3 RL",
+        "border": "border-green",
+        "color": "#10b981",
+        "dice1": 4,
+        "dice2": 6,
+        "dice3": 6,
+        "premium": "466",
+        "sum": 16,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "bs_conf": 100.0,
+        "oe_conf": 100.0,
+        "kelly": 4.8,
+        "steps": [
+          "Trained ElasticNet SGD Online Policy Network."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011139",
+        "dice1": 5,
+        "dice2": 1,
+        "dice3": 4,
+        "sum": 10,
+        "bs": "Small",
+        "oe": "Even",
+        "premium": "514"
+      },
+      "confidence": 1.0,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:28:34.541935",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:29:01.240793"
+    },
+    {
+      "id": "OMNI K3 RL_20260818101011140_1787079549.301999",
+      "issue": "20260818101011140",
+      "prediction": {
+        "name": "OMNI K3 RL",
+        "border": "border-green",
+        "color": "#10b981",
+        "dice1": 6,
+        "dice2": 5,
+        "dice3": 5,
+        "premium": "655",
+        "sum": 16,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "bs_conf": 100.0,
+        "oe_conf": 100.0,
+        "kelly": 4.8,
+        "steps": [
+          "Trained ElasticNet SGD Online Policy Network."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011140",
+        "dice1": 1,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 8,
+        "bs": "Small",
+        "oe": "Even",
+        "premium": "134"
+      },
+      "confidence": 1.0,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:29:09.301999",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:30:15.981208"
+    },
+    {
+      "id": "OMNI K3 RL_20260818101011141_1787079622.477662",
+      "issue": "20260818101011141",
+      "prediction": {
+        "name": "OMNI K3 RL",
+        "border": "border-green",
+        "color": "#10b981",
+        "dice1": 3,
+        "dice2": 4,
+        "dice3": 4,
+        "premium": "344",
+        "sum": 11,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "bs_conf": 100.0,
+        "oe_conf": 100.0,
+        "kelly": 4.8,
+        "steps": [
+          "Trained ElasticNet SGD Online Policy Network."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011141",
+        "dice1": 1,
+        "dice2": 5,
+        "dice3": 1,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "151"
+      },
+      "confidence": 1.0,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:30:22.477662",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:31:27.408465"
+    },
+    {
+      "id": "OMNI K3 RL_20260818101011141_1787079656.149647",
+      "issue": "20260818101011141",
+      "prediction": {
+        "name": "OMNI K3 RL",
+        "border": "border-green",
+        "color": "#10b981",
+        "dice1": 3,
+        "dice2": 4,
+        "dice3": 4,
+        "premium": "344",
+        "sum": 11,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "bs_conf": 100.0,
+        "oe_conf": 100.0,
+        "kelly": 4.8,
+        "steps": [
+          "Trained ElasticNet SGD Online Policy Network."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011141",
+        "dice1": 1,
+        "dice2": 5,
+        "dice3": 1,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "151"
+      },
+      "confidence": 1.0,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:30:56.149647",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:31:27.408465"
+    },
+    {
+      "id": "OMNI K3 RL_20260818101011142_1787079697.73016",
+      "issue": "20260818101011142",
+      "prediction": {
+        "name": "OMNI K3 RL",
+        "border": "border-green",
+        "color": "#10b981",
+        "dice1": 5,
+        "dice2": 5,
+        "dice3": 5,
+        "premium": "555",
+        "sum": 15,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "bs_conf": 100.0,
+        "oe_conf": 100.0,
+        "kelly": 4.8,
+        "steps": [
+          "Trained ElasticNet SGD Online Policy Network."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011142",
+        "dice1": 4,
+        "dice2": 5,
+        "dice3": 5,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "455"
+      },
+      "confidence": 1.0,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:31:37.730160",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:32:06.090993"
+    },
+    {
+      "id": "OMNI K3 RL_20260818101011143_1787079737.049762",
+      "issue": "20260818101011143",
+      "prediction": {
+        "name": "OMNI K3 RL",
+        "border": "border-green",
+        "color": "#10b981",
+        "dice1": 2,
+        "dice2": 4,
+        "dice3": 4,
+        "premium": "244",
+        "sum": 10,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "bs_conf": 100.0,
+        "oe_conf": 100.0,
+        "kelly": 4.8,
+        "steps": [
+          "Trained ElasticNet SGD Online Policy Network."
+        ]
+      },
+      "actual": null,
+      "confidence": 1.0,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:32:17.049762",
+      "validated": false,
+      "validation_timestamp": null
+    },
+    {
+      "id": "OMNI K3 RL_20260818101011143_1787079767.356129",
+      "issue": "20260818101011143",
+      "prediction": {
+        "name": "OMNI K3 RL",
+        "border": "border-green",
+        "color": "#10b981",
+        "dice1": 2,
+        "dice2": 4,
+        "dice3": 4,
+        "premium": "244",
+        "sum": 10,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "bs_conf": 100.0,
+        "oe_conf": 100.0,
+        "kelly": 4.8,
+        "steps": [
+          "Trained ElasticNet SGD Online Policy Network."
+        ]
+      },
+      "actual": null,
+      "confidence": 1.0,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:32:47.356129",
       "validated": false,
       "validation_timestamp": null
     }
@@ -22011,10 +23909,297 @@
           "Trained HistGradientBoosting Tree Evaluator."
         ]
       },
-      "actual": null,
+      "actual": {
+        "issue": "20260818101011138",
+        "dice1": 5,
+        "dice2": 2,
+        "dice3": 4,
+        "sum": 11,
+        "bs": "Big",
+        "oe": "Odd",
+        "premium": "524"
+      },
       "confidence": 0.5524632826347616,
       "metadata": {},
       "timestamp": "2026-08-19T00:27:28.821898",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:28:26.733922"
+    },
+    {
+      "id": "OMEGA ZERO K3_20260818101011138_1787079482.356497",
+      "issue": "20260818101011138",
+      "prediction": {
+        "name": "OMEGA ZERO K3",
+        "border": "border-cyan",
+        "color": "#06b6d4",
+        "dice1": 4,
+        "dice2": 2,
+        "dice3": 3,
+        "premium": "423",
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 55.246328263476165,
+        "oe_conf": 53.38509745792738,
+        "kelly": 5.8,
+        "steps": [
+          "Trained HistGradientBoosting Tree Evaluator."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011138",
+        "dice1": 5,
+        "dice2": 2,
+        "dice3": 4,
+        "sum": 11,
+        "bs": "Big",
+        "oe": "Odd",
+        "premium": "524"
+      },
+      "confidence": 0.5524632826347616,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:28:02.356497",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:28:26.733922"
+    },
+    {
+      "id": "OMEGA ZERO K3_20260818101011139_1787079514.66704",
+      "issue": "20260818101011139",
+      "prediction": {
+        "name": "OMEGA ZERO K3",
+        "border": "border-cyan",
+        "color": "#06b6d4",
+        "dice1": 4,
+        "dice2": 2,
+        "dice3": 3,
+        "premium": "423",
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 61.33169039316315,
+        "oe_conf": 58.283811339065835,
+        "kelly": 5.8,
+        "steps": [
+          "Trained HistGradientBoosting Tree Evaluator."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011139",
+        "dice1": 5,
+        "dice2": 1,
+        "dice3": 4,
+        "sum": 10,
+        "bs": "Small",
+        "oe": "Even",
+        "premium": "514"
+      },
+      "confidence": 0.6133169039316315,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:28:34.667040",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:29:01.353989"
+    },
+    {
+      "id": "OMEGA ZERO K3_20260818101011140_1787079549.401943",
+      "issue": "20260818101011140",
+      "prediction": {
+        "name": "OMEGA ZERO K3",
+        "border": "border-cyan",
+        "color": "#06b6d4",
+        "dice1": 3,
+        "dice2": 5,
+        "dice3": 6,
+        "premium": "356",
+        "sum": 14,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "bs_conf": 51.610486987228896,
+        "oe_conf": 50.73054942669336,
+        "kelly": 5.8,
+        "steps": [
+          "Trained HistGradientBoosting Tree Evaluator."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011140",
+        "dice1": 1,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 8,
+        "bs": "Small",
+        "oe": "Even",
+        "premium": "134"
+      },
+      "confidence": 0.516104869872289,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:29:09.401943",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:30:16.079114"
+    },
+    {
+      "id": "OMEGA ZERO K3_20260818101011141_1787079622.573694",
+      "issue": "20260818101011141",
+      "prediction": {
+        "name": "OMEGA ZERO K3",
+        "border": "border-cyan",
+        "color": "#06b6d4",
+        "dice1": 4,
+        "dice2": 2,
+        "dice3": 3,
+        "premium": "423",
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 52.38562457412791,
+        "oe_conf": 59.18165633209422,
+        "kelly": 5.8,
+        "steps": [
+          "Trained HistGradientBoosting Tree Evaluator."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011141",
+        "dice1": 1,
+        "dice2": 5,
+        "dice3": 1,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "151"
+      },
+      "confidence": 0.5238562457412791,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:30:22.573694",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:31:27.951882"
+    },
+    {
+      "id": "OMEGA ZERO K3_20260818101011141_1787079656.244841",
+      "issue": "20260818101011141",
+      "prediction": {
+        "name": "OMEGA ZERO K3",
+        "border": "border-cyan",
+        "color": "#06b6d4",
+        "dice1": 4,
+        "dice2": 2,
+        "dice3": 3,
+        "premium": "423",
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 52.38562457412791,
+        "oe_conf": 59.18165633209422,
+        "kelly": 5.8,
+        "steps": [
+          "Trained HistGradientBoosting Tree Evaluator."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011141",
+        "dice1": 1,
+        "dice2": 5,
+        "dice3": 1,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "151"
+      },
+      "confidence": 0.5238562457412791,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:30:56.244841",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:31:27.951882"
+    },
+    {
+      "id": "OMEGA ZERO K3_20260818101011142_1787079697.842894",
+      "issue": "20260818101011142",
+      "prediction": {
+        "name": "OMEGA ZERO K3",
+        "border": "border-cyan",
+        "color": "#06b6d4",
+        "dice1": 5,
+        "dice2": 5,
+        "dice3": 5,
+        "premium": "555",
+        "sum": 15,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "bs_conf": 59.66719329361519,
+        "oe_conf": 62.27452154513633,
+        "kelly": 5.8,
+        "steps": [
+          "Trained HistGradientBoosting Tree Evaluator."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011142",
+        "dice1": 4,
+        "dice2": 5,
+        "dice3": 5,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "455"
+      },
+      "confidence": 0.596671932936152,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:31:37.842894",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:32:06.216487"
+    },
+    {
+      "id": "OMEGA ZERO K3_20260818101011143_1787079737.194051",
+      "issue": "20260818101011143",
+      "prediction": {
+        "name": "OMEGA ZERO K3",
+        "border": "border-cyan",
+        "color": "#06b6d4",
+        "dice1": 2,
+        "dice2": 3,
+        "dice3": 3,
+        "premium": "233",
+        "sum": 8,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "bs_conf": 55.699922315314865,
+        "oe_conf": 53.804873088734986,
+        "kelly": 5.8,
+        "steps": [
+          "Trained HistGradientBoosting Tree Evaluator."
+        ]
+      },
+      "actual": null,
+      "confidence": 0.5569992231531486,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:32:17.194051",
+      "validated": false,
+      "validation_timestamp": null
+    },
+    {
+      "id": "OMEGA ZERO K3_20260818101011143_1787079767.472478",
+      "issue": "20260818101011143",
+      "prediction": {
+        "name": "OMEGA ZERO K3",
+        "border": "border-cyan",
+        "color": "#06b6d4",
+        "dice1": 2,
+        "dice2": 3,
+        "dice3": 3,
+        "premium": "233",
+        "sum": 8,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "bs_conf": 55.699922315314865,
+        "oe_conf": 53.804873088734986,
+        "kelly": 5.8,
+        "steps": [
+          "Trained HistGradientBoosting Tree Evaluator."
+        ]
+      },
+      "actual": null,
+      "confidence": 0.5569992231531486,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:32:47.472478",
       "validated": false,
       "validation_timestamp": null
     }
@@ -24965,10 +27150,297 @@
           "Trained GaussianNB (BS) + KNN Instance Learner (OE)."
         ]
       },
-      "actual": null,
+      "actual": {
+        "issue": "20260818101011138",
+        "dice1": 5,
+        "dice2": 2,
+        "dice3": 4,
+        "sum": 11,
+        "bs": "Big",
+        "oe": "Odd",
+        "premium": "524"
+      },
       "confidence": 0.7228778241262284,
       "metadata": {},
       "timestamp": "2026-08-19T00:27:28.944755",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:28:26.848334"
+    },
+    {
+      "id": "DUO FORCE K3_20260818101011138_1787079482.464376",
+      "issue": "20260818101011138",
+      "prediction": {
+        "name": "DUO FORCE K3",
+        "border": "border-dual",
+        "color": "#ec4899",
+        "dice1": 1,
+        "dice2": 2,
+        "dice3": 2,
+        "premium": "122",
+        "sum": 5,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 72.28778241262283,
+        "oe_conf": 60.0,
+        "kelly": 4.9,
+        "steps": [
+          "Trained GaussianNB (BS) + KNN Instance Learner (OE)."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011138",
+        "dice1": 5,
+        "dice2": 2,
+        "dice3": 4,
+        "sum": 11,
+        "bs": "Big",
+        "oe": "Odd",
+        "premium": "524"
+      },
+      "confidence": 0.7228778241262284,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:28:02.464376",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:28:26.848334"
+    },
+    {
+      "id": "DUO FORCE K3_20260818101011139_1787079514.794924",
+      "issue": "20260818101011139",
+      "prediction": {
+        "name": "DUO FORCE K3",
+        "border": "border-dual",
+        "color": "#ec4899",
+        "dice1": 4,
+        "dice2": 6,
+        "dice3": 6,
+        "premium": "466",
+        "sum": 16,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "bs_conf": 64.09063562568741,
+        "oe_conf": 60.0,
+        "kelly": 4.9,
+        "steps": [
+          "Trained GaussianNB (BS) + KNN Instance Learner (OE)."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011139",
+        "dice1": 5,
+        "dice2": 1,
+        "dice3": 4,
+        "sum": 10,
+        "bs": "Small",
+        "oe": "Even",
+        "premium": "514"
+      },
+      "confidence": 0.6409063562568741,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:28:34.794924",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:29:01.468925"
+    },
+    {
+      "id": "DUO FORCE K3_20260818101011140_1787079549.498361",
+      "issue": "20260818101011140",
+      "prediction": {
+        "name": "DUO FORCE K3",
+        "border": "border-dual",
+        "color": "#ec4899",
+        "dice1": 4,
+        "dice2": 3,
+        "dice3": 3,
+        "premium": "433",
+        "sum": 10,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "bs_conf": 82.54311863519267,
+        "oe_conf": 60.0,
+        "kelly": 4.9,
+        "steps": [
+          "Trained GaussianNB (BS) + KNN Instance Learner (OE)."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011140",
+        "dice1": 1,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 8,
+        "bs": "Small",
+        "oe": "Even",
+        "premium": "134"
+      },
+      "confidence": 0.8254311863519267,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:29:09.498361",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:30:16.175738"
+    },
+    {
+      "id": "DUO FORCE K3_20260818101011141_1787079622.675261",
+      "issue": "20260818101011141",
+      "prediction": {
+        "name": "DUO FORCE K3",
+        "border": "border-dual",
+        "color": "#ec4899",
+        "dice1": 4,
+        "dice2": 2,
+        "dice3": 3,
+        "premium": "423",
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 55.847941789782055,
+        "oe_conf": 100.0,
+        "kelly": 4.9,
+        "steps": [
+          "Trained GaussianNB (BS) + KNN Instance Learner (OE)."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011141",
+        "dice1": 1,
+        "dice2": 5,
+        "dice3": 1,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "151"
+      },
+      "confidence": 0.5584794178978205,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:30:22.675261",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:31:28.222984"
+    },
+    {
+      "id": "DUO FORCE K3_20260818101011141_1787079656.341251",
+      "issue": "20260818101011141",
+      "prediction": {
+        "name": "DUO FORCE K3",
+        "border": "border-dual",
+        "color": "#ec4899",
+        "dice1": 4,
+        "dice2": 2,
+        "dice3": 3,
+        "premium": "423",
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 55.847941789782055,
+        "oe_conf": 100.0,
+        "kelly": 4.9,
+        "steps": [
+          "Trained GaussianNB (BS) + KNN Instance Learner (OE)."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011141",
+        "dice1": 1,
+        "dice2": 5,
+        "dice3": 1,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "151"
+      },
+      "confidence": 0.5584794178978205,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:30:56.341251",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:31:28.222984"
+    },
+    {
+      "id": "DUO FORCE K3_20260818101011142_1787079697.960828",
+      "issue": "20260818101011142",
+      "prediction": {
+        "name": "DUO FORCE K3",
+        "border": "border-dual",
+        "color": "#ec4899",
+        "dice1": 5,
+        "dice2": 5,
+        "dice3": 5,
+        "premium": "555",
+        "sum": 15,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "bs_conf": 87.19741659081619,
+        "oe_conf": 60.0,
+        "kelly": 4.9,
+        "steps": [
+          "Trained GaussianNB (BS) + KNN Instance Learner (OE)."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011142",
+        "dice1": 4,
+        "dice2": 5,
+        "dice3": 5,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "455"
+      },
+      "confidence": 0.8719741659081619,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:31:37.961817",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:32:06.344048"
+    },
+    {
+      "id": "DUO FORCE K3_20260818101011143_1787079737.345179",
+      "issue": "20260818101011143",
+      "prediction": {
+        "name": "DUO FORCE K3",
+        "border": "border-dual",
+        "color": "#ec4899",
+        "dice1": 4,
+        "dice2": 2,
+        "dice3": 3,
+        "premium": "423",
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 82.03264275418792,
+        "oe_conf": 80.0,
+        "kelly": 4.9,
+        "steps": [
+          "Trained GaussianNB (BS) + KNN Instance Learner (OE)."
+        ]
+      },
+      "actual": null,
+      "confidence": 0.8203264275418792,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:32:17.345179",
+      "validated": false,
+      "validation_timestamp": null
+    },
+    {
+      "id": "DUO FORCE K3_20260818101011143_1787079767.59261",
+      "issue": "20260818101011143",
+      "prediction": {
+        "name": "DUO FORCE K3",
+        "border": "border-dual",
+        "color": "#ec4899",
+        "dice1": 4,
+        "dice2": 2,
+        "dice3": 3,
+        "premium": "423",
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 82.03264275418792,
+        "oe_conf": 80.0,
+        "kelly": 4.9,
+        "steps": [
+          "Trained GaussianNB (BS) + KNN Instance Learner (OE)."
+        ]
+      },
+      "actual": null,
+      "confidence": 0.8203264275418792,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:32:47.592610",
       "validated": false,
       "validation_timestamp": null
     }
@@ -28346,10 +30818,353 @@
           "bnn_trained": false
         }
       },
-      "actual": null,
+      "actual": {
+        "issue": "20260818101011138",
+        "dice1": 5,
+        "dice2": 2,
+        "dice3": 4,
+        "sum": 11,
+        "bs": "Big",
+        "oe": "Odd",
+        "premium": "524"
+      },
       "confidence": 0.6,
       "metadata": {},
       "timestamp": "2026-08-19T00:27:29.071195",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:28:26.977064"
+    },
+    {
+      "id": "BAYESIAN NEURAL NETWORK_20260818101011138_1787079482.574928",
+      "issue": "20260818101011138",
+      "prediction": {
+        "name": "BAYESIAN NEURAL NETWORK",
+        "border": "border-purple",
+        "color": "#c084fc",
+        "dice1": 4,
+        "dice2": 3,
+        "dice3": 4,
+        "premium": "434",
+        "sum": 11,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "bs_conf": 60.0,
+        "oe_conf": 60.0,
+        "kelly": 3.0,
+        "steps": [
+          "BNN runtime fallback: name 'TensorDataset' is not defined"
+        ],
+        "uncertainty": {
+          "epistemic_sum": 0.15,
+          "total_uncertainty": 0.4
+        },
+        "meta": {
+          "bnn_trained": false
+        }
+      },
+      "actual": {
+        "issue": "20260818101011138",
+        "dice1": 5,
+        "dice2": 2,
+        "dice3": 4,
+        "sum": 11,
+        "bs": "Big",
+        "oe": "Odd",
+        "premium": "524"
+      },
+      "confidence": 0.6,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:28:02.574928",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:28:26.977064"
+    },
+    {
+      "id": "BAYESIAN NEURAL NETWORK_20260818101011139_1787079514.911203",
+      "issue": "20260818101011139",
+      "prediction": {
+        "name": "BAYESIAN NEURAL NETWORK",
+        "border": "border-purple",
+        "color": "#c084fc",
+        "dice1": 4,
+        "dice2": 3,
+        "dice3": 4,
+        "premium": "434",
+        "sum": 11,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "bs_conf": 60.0,
+        "oe_conf": 60.0,
+        "kelly": 3.0,
+        "steps": [
+          "BNN runtime fallback: name 'TensorDataset' is not defined"
+        ],
+        "uncertainty": {
+          "epistemic_sum": 0.15,
+          "total_uncertainty": 0.4
+        },
+        "meta": {
+          "bnn_trained": false
+        }
+      },
+      "actual": {
+        "issue": "20260818101011139",
+        "dice1": 5,
+        "dice2": 1,
+        "dice3": 4,
+        "sum": 10,
+        "bs": "Small",
+        "oe": "Even",
+        "premium": "514"
+      },
+      "confidence": 0.6,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:28:34.911203",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:29:01.580255"
+    },
+    {
+      "id": "BAYESIAN NEURAL NETWORK_20260818101011140_1787079549.602424",
+      "issue": "20260818101011140",
+      "prediction": {
+        "name": "BAYESIAN NEURAL NETWORK",
+        "border": "border-purple",
+        "color": "#c084fc",
+        "dice1": 4,
+        "dice2": 3,
+        "dice3": 4,
+        "premium": "434",
+        "sum": 11,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "bs_conf": 60.0,
+        "oe_conf": 60.0,
+        "kelly": 3.0,
+        "steps": [
+          "BNN runtime fallback: name 'TensorDataset' is not defined"
+        ],
+        "uncertainty": {
+          "epistemic_sum": 0.15,
+          "total_uncertainty": 0.4
+        },
+        "meta": {
+          "bnn_trained": false
+        }
+      },
+      "actual": {
+        "issue": "20260818101011140",
+        "dice1": 1,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 8,
+        "bs": "Small",
+        "oe": "Even",
+        "premium": "134"
+      },
+      "confidence": 0.6,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:29:09.602424",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:30:16.276542"
+    },
+    {
+      "id": "BAYESIAN NEURAL NETWORK_20260818101011141_1787079622.781488",
+      "issue": "20260818101011141",
+      "prediction": {
+        "name": "BAYESIAN NEURAL NETWORK",
+        "border": "border-purple",
+        "color": "#c084fc",
+        "dice1": 4,
+        "dice2": 3,
+        "dice3": 4,
+        "premium": "434",
+        "sum": 11,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "bs_conf": 60.0,
+        "oe_conf": 60.0,
+        "kelly": 3.0,
+        "steps": [
+          "BNN runtime fallback: name 'TensorDataset' is not defined"
+        ],
+        "uncertainty": {
+          "epistemic_sum": 0.15,
+          "total_uncertainty": 0.4
+        },
+        "meta": {
+          "bnn_trained": false
+        }
+      },
+      "actual": {
+        "issue": "20260818101011141",
+        "dice1": 1,
+        "dice2": 5,
+        "dice3": 1,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "151"
+      },
+      "confidence": 0.6,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:30:22.781488",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:31:28.385679"
+    },
+    {
+      "id": "BAYESIAN NEURAL NETWORK_20260818101011141_1787079656.446534",
+      "issue": "20260818101011141",
+      "prediction": {
+        "name": "BAYESIAN NEURAL NETWORK",
+        "border": "border-purple",
+        "color": "#c084fc",
+        "dice1": 4,
+        "dice2": 3,
+        "dice3": 4,
+        "premium": "434",
+        "sum": 11,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "bs_conf": 60.0,
+        "oe_conf": 60.0,
+        "kelly": 3.0,
+        "steps": [
+          "BNN runtime fallback: name 'TensorDataset' is not defined"
+        ],
+        "uncertainty": {
+          "epistemic_sum": 0.15,
+          "total_uncertainty": 0.4
+        },
+        "meta": {
+          "bnn_trained": false
+        }
+      },
+      "actual": {
+        "issue": "20260818101011141",
+        "dice1": 1,
+        "dice2": 5,
+        "dice3": 1,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "151"
+      },
+      "confidence": 0.6,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:30:56.446534",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:31:28.385679"
+    },
+    {
+      "id": "BAYESIAN NEURAL NETWORK_20260818101011142_1787079698.079388",
+      "issue": "20260818101011142",
+      "prediction": {
+        "name": "BAYESIAN NEURAL NETWORK",
+        "border": "border-purple",
+        "color": "#c084fc",
+        "dice1": 4,
+        "dice2": 3,
+        "dice3": 4,
+        "premium": "434",
+        "sum": 11,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "bs_conf": 60.0,
+        "oe_conf": 60.0,
+        "kelly": 3.0,
+        "steps": [
+          "BNN runtime fallback: name 'TensorDataset' is not defined"
+        ],
+        "uncertainty": {
+          "epistemic_sum": 0.15,
+          "total_uncertainty": 0.4
+        },
+        "meta": {
+          "bnn_trained": false
+        }
+      },
+      "actual": {
+        "issue": "20260818101011142",
+        "dice1": 4,
+        "dice2": 5,
+        "dice3": 5,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "455"
+      },
+      "confidence": 0.6,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:31:38.079388",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:32:06.464520"
+    },
+    {
+      "id": "BAYESIAN NEURAL NETWORK_20260818101011143_1787079737.492092",
+      "issue": "20260818101011143",
+      "prediction": {
+        "name": "BAYESIAN NEURAL NETWORK",
+        "border": "border-purple",
+        "color": "#c084fc",
+        "dice1": 4,
+        "dice2": 3,
+        "dice3": 4,
+        "premium": "434",
+        "sum": 11,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "bs_conf": 60.0,
+        "oe_conf": 60.0,
+        "kelly": 3.0,
+        "steps": [
+          "BNN runtime fallback: name 'TensorDataset' is not defined"
+        ],
+        "uncertainty": {
+          "epistemic_sum": 0.15,
+          "total_uncertainty": 0.4
+        },
+        "meta": {
+          "bnn_trained": false
+        }
+      },
+      "actual": null,
+      "confidence": 0.6,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:32:17.492092",
+      "validated": false,
+      "validation_timestamp": null
+    },
+    {
+      "id": "BAYESIAN NEURAL NETWORK_20260818101011143_1787079767.717351",
+      "issue": "20260818101011143",
+      "prediction": {
+        "name": "BAYESIAN NEURAL NETWORK",
+        "border": "border-purple",
+        "color": "#c084fc",
+        "dice1": 4,
+        "dice2": 3,
+        "dice3": 4,
+        "premium": "434",
+        "sum": 11,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "bs_conf": 60.0,
+        "oe_conf": 60.0,
+        "kelly": 3.0,
+        "steps": [
+          "BNN runtime fallback: name 'TensorDataset' is not defined"
+        ],
+        "uncertainty": {
+          "epistemic_sum": 0.15,
+          "total_uncertainty": 0.4
+        },
+        "meta": {
+          "bnn_trained": false
+        }
+      },
+      "actual": null,
+      "confidence": 0.6,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:32:47.717351",
       "validated": false,
       "validation_timestamp": null
     }
@@ -31483,10 +34298,321 @@
           "3. Consensus Parity: Small (84.5%) & Odd (80.0%) with 67% agent agreement."
         ]
       },
-      "actual": null,
+      "actual": {
+        "issue": "20260818101011138",
+        "dice1": 5,
+        "dice2": 2,
+        "dice3": 4,
+        "sum": 11,
+        "bs": "Big",
+        "oe": "Odd",
+        "premium": "524"
+      },
       "confidence": 0.845,
       "metadata": {},
       "timestamp": "2026-08-19T00:27:29.193208",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:28:27.085810"
+    },
+    {
+      "id": "HIVE MIND MASTER_20260818101011138_1787079482.70837",
+      "issue": "20260818101011138",
+      "prediction": {
+        "name": "HIVE MIND MASTER",
+        "dice1": 2,
+        "dice2": 3,
+        "dice3": 4,
+        "premium": "234",
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 84.5,
+        "oe_conf": 80.0,
+        "agreement_pct": 66.66666666666666,
+        "active_agents": 9,
+        "master_kelly": 9.0,
+        "bias_mode": false,
+        "steps": [
+          "1. Aggregated forecasts from all 8 advanced AI engines.",
+          "2. Consensus Triad: [2] [3] [4] -> Premium #234 | Sum=9.",
+          "3. Consensus Parity: Small (84.5%) & Odd (80.0%) with 67% agent agreement."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011138",
+        "dice1": 5,
+        "dice2": 2,
+        "dice3": 4,
+        "sum": 11,
+        "bs": "Big",
+        "oe": "Odd",
+        "premium": "524"
+      },
+      "confidence": 0.845,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:28:02.708370",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:28:27.085810"
+    },
+    {
+      "id": "HIVE MIND MASTER_20260818101011139_1787079515.041777",
+      "issue": "20260818101011139",
+      "prediction": {
+        "name": "HIVE MIND MASTER",
+        "dice1": 2,
+        "dice2": 1,
+        "dice3": 2,
+        "premium": "212",
+        "sum": 5,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 84.5,
+        "oe_conf": 80.0,
+        "agreement_pct": 55.55555555555556,
+        "active_agents": 9,
+        "master_kelly": 9.0,
+        "bias_mode": false,
+        "steps": [
+          "1. Aggregated forecasts from all 8 advanced AI engines.",
+          "2. Consensus Triad: [2] [1] [2] -> Premium #212 | Sum=5.",
+          "3. Consensus Parity: Small (84.5%) & Odd (80.0%) with 56% agent agreement."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011139",
+        "dice1": 5,
+        "dice2": 1,
+        "dice3": 4,
+        "sum": 10,
+        "bs": "Small",
+        "oe": "Even",
+        "premium": "514"
+      },
+      "confidence": 0.845,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:28:35.041777",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:29:01.695426"
+    },
+    {
+      "id": "HIVE MIND MASTER_20260818101011140_1787079549.701051",
+      "issue": "20260818101011140",
+      "prediction": {
+        "name": "HIVE MIND MASTER",
+        "dice1": 3,
+        "dice2": 3,
+        "dice3": 4,
+        "premium": "334",
+        "sum": 10,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "bs_conf": 84.5,
+        "oe_conf": 80.0,
+        "agreement_pct": 55.55555555555556,
+        "active_agents": 9,
+        "master_kelly": 9.0,
+        "bias_mode": false,
+        "steps": [
+          "1. Aggregated forecasts from all 8 advanced AI engines.",
+          "2. Consensus Triad: [3] [3] [4] -> Premium #334 | Sum=10.",
+          "3. Consensus Parity: Small (84.5%) & Even (80.0%) with 56% agent agreement."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011140",
+        "dice1": 1,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 8,
+        "bs": "Small",
+        "oe": "Even",
+        "premium": "134"
+      },
+      "confidence": 0.845,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:29:09.701051",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:30:16.379250"
+    },
+    {
+      "id": "HIVE MIND MASTER_20260818101011141_1787079622.885773",
+      "issue": "20260818101011141",
+      "prediction": {
+        "name": "HIVE MIND MASTER",
+        "dice1": 2,
+        "dice2": 3,
+        "dice3": 4,
+        "premium": "234",
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 84.5,
+        "oe_conf": 80.0,
+        "agreement_pct": 77.77777777777779,
+        "active_agents": 9,
+        "master_kelly": 9.0,
+        "bias_mode": false,
+        "steps": [
+          "1. Aggregated forecasts from all 8 advanced AI engines.",
+          "2. Consensus Triad: [2] [3] [4] -> Premium #234 | Sum=9.",
+          "3. Consensus Parity: Small (84.5%) & Odd (80.0%) with 78% agent agreement."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011141",
+        "dice1": 1,
+        "dice2": 5,
+        "dice3": 1,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "151"
+      },
+      "confidence": 0.845,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:30:22.885773",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:31:28.518758"
+    },
+    {
+      "id": "HIVE MIND MASTER_20260818101011141_1787079656.545236",
+      "issue": "20260818101011141",
+      "prediction": {
+        "name": "HIVE MIND MASTER",
+        "dice1": 2,
+        "dice2": 3,
+        "dice3": 4,
+        "premium": "234",
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 84.5,
+        "oe_conf": 80.0,
+        "agreement_pct": 77.77777777777779,
+        "active_agents": 9,
+        "master_kelly": 9.0,
+        "bias_mode": false,
+        "steps": [
+          "1. Aggregated forecasts from all 8 advanced AI engines.",
+          "2. Consensus Triad: [2] [3] [4] -> Premium #234 | Sum=9.",
+          "3. Consensus Parity: Small (84.5%) & Odd (80.0%) with 78% agent agreement."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011141",
+        "dice1": 1,
+        "dice2": 5,
+        "dice3": 1,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "151"
+      },
+      "confidence": 0.845,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:30:56.545236",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:31:28.518758"
+    },
+    {
+      "id": "HIVE MIND MASTER_20260818101011142_1787079698.199692",
+      "issue": "20260818101011142",
+      "prediction": {
+        "name": "HIVE MIND MASTER",
+        "dice1": 4,
+        "dice2": 4,
+        "dice3": 5,
+        "premium": "445",
+        "sum": 13,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "bs_conf": 84.5,
+        "oe_conf": 80.0,
+        "agreement_pct": 66.66666666666666,
+        "active_agents": 9,
+        "master_kelly": 9.0,
+        "bias_mode": false,
+        "steps": [
+          "1. Aggregated forecasts from all 8 advanced AI engines.",
+          "2. Consensus Triad: [4] [4] [5] -> Premium #445 | Sum=13.",
+          "3. Consensus Parity: Big (84.5%) & Odd (80.0%) with 67% agent agreement."
+        ]
+      },
+      "actual": {
+        "issue": "20260818101011142",
+        "dice1": 4,
+        "dice2": 5,
+        "dice3": 5,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "455"
+      },
+      "confidence": 0.845,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:31:38.199692",
+      "validated": true,
+      "validation_timestamp": "2026-08-19T00:32:06.695176"
+    },
+    {
+      "id": "HIVE MIND MASTER_20260818101011143_1787079737.648166",
+      "issue": "20260818101011143",
+      "prediction": {
+        "name": "HIVE MIND MASTER",
+        "dice1": 2,
+        "dice2": 1,
+        "dice3": 2,
+        "premium": "212",
+        "sum": 5,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 84.5,
+        "oe_conf": 80.0,
+        "agreement_pct": 55.55555555555556,
+        "active_agents": 9,
+        "master_kelly": 9.0,
+        "bias_mode": false,
+        "steps": [
+          "1. Aggregated forecasts from all 8 advanced AI engines.",
+          "2. Consensus Triad: [2] [1] [2] -> Premium #212 | Sum=5.",
+          "3. Consensus Parity: Small (84.5%) & Odd (80.0%) with 56% agent agreement."
+        ]
+      },
+      "actual": null,
+      "confidence": 0.845,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:32:17.648166",
+      "validated": false,
+      "validation_timestamp": null
+    },
+    {
+      "id": "HIVE MIND MASTER_20260818101011143_1787079767.824099",
+      "issue": "20260818101011143",
+      "prediction": {
+        "name": "HIVE MIND MASTER",
+        "dice1": 2,
+        "dice2": 1,
+        "dice3": 2,
+        "premium": "212",
+        "sum": 5,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "bs_conf": 84.5,
+        "oe_conf": 80.0,
+        "agreement_pct": 55.55555555555556,
+        "active_agents": 9,
+        "master_kelly": 9.0,
+        "bias_mode": false,
+        "steps": [
+          "1. Aggregated forecasts from all 8 advanced AI engines.",
+          "2. Consensus Triad: [2] [1] [2] -> Premium #212 | Sum=5.",
+          "3. Consensus Parity: Small (84.5%) & Odd (80.0%) with 56% agent agreement."
+        ]
+      },
+      "actual": null,
+      "confidence": 0.845,
+      "metadata": {},
+      "timestamp": "2026-08-19T00:32:47.824099",
       "validated": false,
       "validation_timestamp": null
     }

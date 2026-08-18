@@ -1636,6 +1636,271 @@ def run_backtest_and_ensemble(df):
     return results, prediction
 
 
+def render_full_pipeline_ui(df):
+    """
+    Renders an interactive, comprehensive dashboard for Phase 1 Backtesting & Phase 2 Ensemble Pipeline.
+    Allows user to click and inspect complete execution output, model comparison matrix, and next draw forecast.
+    """
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95)); border: 1px solid rgba(59, 130, 246, 0.35); border-radius: 12px; padding: 18px; margin-bottom: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.4);">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <span style="color: #60a5fa; font-size: 0.8rem; font-weight: 800; letter-spacing: 1.2px;">PHASE 1 & 2 AUTOMATED ENGINE</span>
+                <h2 style="color: #ffffff; margin: 2px 0 0 0; font-size: 1.6rem; font-weight: 900;">📊 FULL PIPELINE EXECUTION OUTPUT</h2>
+                <p style="color: #94a3b8; font-size: 0.85rem; margin: 4px 0 0 0;">Walk-Forward Backtesting (Zero Future Leakage) + Multi-Model Ensemble Prediction</p>
+            </div>
+            <div style="text-align: right;">
+                <span style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid #3b82f6; padding: 4px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 800;">5 Baseline Models + Ensemble</span>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    if df is None or df.empty or len(df) < 10:
+        st.warning("⚠️ Insufficient historical data to run full pipeline backtest. Need at least 10 draws.")
+        return
+
+    col_act1, col_act2 = st.columns([1, 2])
+    with col_act1:
+        run_new = st.button("🚀 Re-Run Full Walk-Forward Pipeline", use_container_width=True, key="btn_rerun_full_pipeline")
+    with col_act2:
+        model_choice = st.selectbox(
+            "Select Backtesting Model Suite:",
+            ["Standard Baseline Models (Mean, Median, Last, Random, FreqBias)", "Fast Sub-Sample (Last 100 Draws)"],
+            key="sb_pipeline_model_choice"
+        )
+        
+    if 'full_pipeline_cache' not in st.session_state or run_new:
+        with st.spinner("⏳ Executing Walk-Forward Backtesting & Multi-Model Ensemble over historical draws..."):
+            baseline_models = create_baseline_models()
+            engine = BacktestingEngine()
+            
+            sub_df = df if "Standard" in model_choice else df.head(100)
+            init_w = min(50, max(5, len(sub_df) // 2))
+            
+            results = engine.run_backtest(
+                df=sub_df,
+                model_functions=baseline_models,
+                initial_window=init_w,
+                step=1
+            )
+            report_text = engine.generate_report()
+            
+            ensemble = EnsemblePredictor(baseline_models)
+            prediction = ensemble.predict(sub_df, method='weighted')
+            
+            st.session_state.full_pipeline_cache = {
+                'results': results,
+                'metrics': results.get('metrics', {}),
+                'report': report_text,
+                'prediction': prediction,
+                'total_tested': results.get('total_tested', 0),
+                'engine': engine,
+                'timestamp': datetime.now().strftime('%H:%M:%S')
+            }
+            st.success(f"✅ Pipeline executed successfully over {results.get('total_tested', 0)} draws at {st.session_state.full_pipeline_cache['timestamp']}!")
+            
+    cache = st.session_state.full_pipeline_cache
+    metrics = cache['metrics']
+    prediction = cache['prediction']
+    report = cache['report']
+    total_tested = cache['total_tested']
+    engine = cache.get('engine')
+    
+    t1, t2, t3, t4, t5 = st.tabs([
+        "🔮 Phase 2: Ensemble Prediction",
+        "🏆 Model Comparison Matrix",
+        "📈 Rolling Accuracy Visualizer",
+        "🎯 Parameter-Wise Deep-Dive",
+        "📜 Terminal Output & ASCII Audit"
+    ])
+    
+    with t1:
+        bs_color = "#10b981" if prediction['bs_pred'] == 'Big' else "#ef4444"
+        oe_color = "#8b5cf6" if prediction['oe_pred'] == 'Odd' else "#f97316"
+        
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, rgba(17, 24, 39, 0.9), rgba(15, 23, 42, 0.95)); border: 2px solid #3b82f6; border-radius: 14px; padding: 22px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(59, 130, 246, 0.2);">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px; margin-bottom: 16px;">
+                <div>
+                    <span style="color: #60a5fa; font-size: 0.8rem; font-weight: 800; letter-spacing: 1px;">PHASE 2 ENSEMBLE FORECASTER</span>
+                    <h3 style="color: #ffffff; margin: 2px 0 0 0; font-size: 1.5rem; font-weight: 900;">NEXT DRAW PREDICTION</h3>
+                </div>
+                <div style="text-align: right;">
+                    <span style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #10b981; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 800;">Method: {prediction.get('method', 'Weighted Vote')}</span>
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                <div style="background: rgba(0,0,0,0.4); padding: 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); text-align: center;">
+                    <div style="color: #94a3b8; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 6px;">Dice Triad & Premium</div>
+                    <div style="display: flex; justify-content: center; gap: 6px; align-items: center;">
+                        <span style="background: #1e293b; color: #ffffff; border: 2px solid #3b82f6; width: 34px; height: 34px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: 900;">{prediction['dice1']}</span>
+                        <span style="background: #1e293b; color: #ffffff; border: 2px solid #3b82f6; width: 34px; height: 34px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: 900;">{prediction['dice2']}</span>
+                        <span style="background: #1e293b; color: #ffffff; border: 2px solid #3b82f6; width: 34px; height: 34px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: 900;">{prediction['dice3']}</span>
+                    </div>
+                    <div style="margin-top: 6px; font-weight: 900; color: #fbbf24; font-size: 1.1rem;">#{prediction.get('premium', f"{prediction['dice1']}{prediction['dice2']}{prediction['dice3']}")}</div>
+                </div>
+                
+                <div style="background: rgba(0,0,0,0.4); padding: 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); text-align: center;">
+                    <div style="color: #94a3b8; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 6px;">Predicted Sum</div>
+                    <div style="font-size: 2.2rem; font-weight: 900; color: #fbbf24; font-family: monospace;">{prediction['sum']}</div>
+                    <div style="color: #94a3b8; font-size: 0.75rem;">Total Dice Value</div>
+                </div>
+                
+                <div style="background: rgba(0,0,0,0.4); padding: 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); text-align: center;">
+                    <div style="color: #94a3b8; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 6px;">Big / Small</div>
+                    <div style="font-size: 1.6rem; font-weight: 900; color: {bs_color};">{prediction['bs_pred'].upper()}</div>
+                    <div style="color: #38bdf8; font-size: 0.85rem; font-weight: 800;">Confidence: {prediction.get('bs_conf', 65.0):.1f}%</div>
+                </div>
+                
+                <div style="background: rgba(0,0,0,0.4); padding: 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); text-align: center;">
+                    <div style="color: #94a3b8; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 6px;">Odd / Even</div>
+                    <div style="font-size: 1.6rem; font-weight: 900; color: {oe_color};">{prediction['oe_pred'].upper()}</div>
+                    <div style="color: #c084fc; font-size: 0.85rem; font-weight: 800;">Confidence: {prediction.get('oe_conf', 60.0):.1f}%</div>
+                </div>
+            </div>
+            
+            <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #cbd5e1; font-size: 0.85rem;">⚡ <b>Ensemble Aggregator:</b> Combinatorial weighted voting across 5 verified models with empirical accuracy priors.</span>
+                <span style="color: #60a5fa; font-weight: 800; font-size: 0.85rem;">Confidence Score: {prediction.get('bs_conf', 65.0):.1f}%</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    with t2:
+        if metrics:
+            best_model_name = max(metrics.keys(), key=lambda m: metrics[m].get('any_binary_correct', 0))
+            best_acc = metrics[best_model_name].get('any_binary_correct', 0) * 100.0
+            
+            st.markdown(f"""
+            <div style="background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; border-radius: 10px; padding: 12px 18px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <span style="color: #34d399; font-weight: 900; font-size: 1.15rem;">🏆 CHAMPION MODEL: {best_model_name}</span>
+                    <span style="color: #e2e8f0; font-size: 0.9rem; margin-left: 12px;">Achieved highest Any-Binary Accuracy of <b>{best_acc:.2f}%</b></span>
+                </div>
+                <span style="background: #10b981; color: #000000; font-weight: 900; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem;">BEST PERFORMER</span>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            matrix_rows = []
+            for m_name, m_data in metrics.items():
+                params = m_data.get('parameters', {})
+                bm = m_data.get('binary_metrics', {})
+                matrix_rows.append({
+                    'Model Name': m_name,
+                    'Any Binary Acc': f"{m_data.get('any_binary_correct', 0)*100:.2f}%",
+                    'Exact Triad Match': f"{m_data.get('exact_match_rate', 0)*100:.2f}%",
+                    'B/S Acc': f"{params.get('bs', {}).get('accuracy', 0)*100:.2f}%",
+                    'O/E Acc': f"{params.get('oe', {}).get('accuracy', 0)*100:.2f}%",
+                    'Sum Acc': f"{params.get('sum', {}).get('accuracy', 0)*100:.2f}%",
+                    'Dice1 Acc': f"{params.get('dice1', {}).get('accuracy', 0)*100:.2f}%",
+                    'Dice2 Acc': f"{params.get('dice2', {}).get('accuracy', 0)*100:.2f}%",
+                    'Dice3 Acc': f"{params.get('dice3', {}).get('accuracy', 0)*100:.2f}%",
+                    'Precision': f"{bm.get('precision', 0)*100:.2f}%",
+                    'Recall': f"{bm.get('recall', 0)*100:.2f}%",
+                    'F1 Score': f"{bm.get('f1', 0)*100:.2f}%",
+                    'Recent 20 BS Acc': f"{m_data.get('recent_bs_accuracy', 0)*100:.2f}%",
+                    'Tested Draws': m_data.get('total_predictions', 0)
+                })
+            df_matrix = pd.DataFrame(matrix_rows)
+            st.dataframe(df_matrix, use_container_width=True, hide_index=True)
+            
+            fig_bar = go.Figure()
+            models_list = list(metrics.keys())
+            accs = [metrics[m].get('any_binary_correct', 0)*100 for m in models_list]
+            colors = ['#10b981' if m == best_model_name else '#3b82f6' for m in models_list]
+            
+            fig_bar.add_trace(go.Bar(
+                x=models_list,
+                y=accs,
+                marker_color=colors,
+                text=[f"{a:.1f}%" for a in accs],
+                textposition='auto'
+            ))
+            fig_bar.add_hline(y=50.0, line_dash="dash", line_color="#ef4444", annotation_text="Fair Random 50% Baseline")
+            fig_bar.update_layout(
+                title="Any-Binary Correct Rate Comparison across Models (%)",
+                template="plotly_dark",
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0.2)",
+                yaxis_title="Accuracy (%)",
+                height=350
+            )
+            st.plotly_chart(fig_bar, use_container_width=True)
+
+    with t3:
+        if engine:
+            plot_data = engine.plot_backtest_results()
+            if plot_data:
+                fig_roll = go.Figure()
+                palette = ['#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4']
+                for i, p_entry in enumerate(plot_data):
+                    fig_roll.add_trace(go.Scatter(
+                        y=p_entry['rolling_accuracy'] * 100.0,
+                        mode='lines',
+                        name=p_entry['model'],
+                        line=dict(width=2.5, color=palette[i % len(palette)])
+                    ))
+                fig_roll.add_hline(y=50.0, line_dash="dash", line_color="#ef4444", annotation_text="50% Threshold")
+                fig_roll.update_layout(
+                    title="20-Draw Rolling Big/Small Accuracy Trajectory (%)",
+                    template="plotly_dark",
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    plot_bgcolor="rgba(0,0,0,0.2)",
+                    yaxis_title="Rolling BS Accuracy (%)",
+                    xaxis_title="Walk-Forward Draw Sequence Steps",
+                    height=400
+                )
+                st.plotly_chart(fig_roll, use_container_width=True)
+            else:
+                st.info("Rolling accuracy data will populate after walk-forward runs.")
+
+    with t4:
+        if metrics:
+            sel_m = st.selectbox("Select Model to Inspect Parameter Breakdown:", list(metrics.keys()), key="sb_param_model")
+            m_info = metrics[sel_m]
+            params = m_info.get('parameters', {})
+            
+            p_cols = st.columns(6)
+            p_cols[0].metric("Dice 1 Acc", f"{params.get('dice1',{}).get('accuracy',0)*100:.1f}%")
+            p_cols[1].metric("Dice 2 Acc", f"{params.get('dice2',{}).get('accuracy',0)*100:.1f}%")
+            p_cols[2].metric("Dice 3 Acc", f"{params.get('dice3',{}).get('accuracy',0)*100:.1f}%")
+            p_cols[3].metric("Sum Total Acc", f"{params.get('sum',{}).get('accuracy',0)*100:.1f}%")
+            p_cols[4].metric("Big/Small Acc", f"{params.get('bs',{}).get('accuracy',0)*100:.1f}%")
+            p_cols[5].metric("Odd/Even Acc", f"{params.get('oe',{}).get('accuracy',0)*100:.1f}%")
+            
+            categories = ['Dice 1', 'Dice 2', 'Dice 3', 'Sum', 'Big/Small', 'Odd/Even']
+            values = [
+                params.get('dice1',{}).get('accuracy',0)*100,
+                params.get('dice2',{}).get('accuracy',0)*100,
+                params.get('dice3',{}).get('accuracy',0)*100,
+                params.get('sum',{}).get('accuracy',0)*100,
+                params.get('bs',{}).get('accuracy',0)*100,
+                params.get('oe',{}).get('accuracy',0)*100,
+            ]
+            fig_radar = go.Figure()
+            fig_radar.add_trace(go.Scatterpolar(
+                r=values + [values[0]],
+                theta=categories + [categories[0]],
+                fill='toself',
+                name=sel_m,
+                line_color='#38bdf8'
+            ))
+            fig_radar.update_layout(
+                polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
+                template="plotly_dark",
+                paper_bgcolor="rgba(0,0,0,0)",
+                height=350,
+                title=f"Multi-Parameter Radar Profile: {sel_m}"
+            )
+            st.plotly_chart(fig_radar, use_container_width=True)
+
+    with t5:
+        st.markdown("#### 📜 Complete Raw ASCII Terminal Log Output")
+        st.code(report, language="text")
+
+
 class PerformanceMetrics:
     """Calculates comprehensive parameter-wise accuracy, Brier scores, calibration error, and F1 statistics."""
     @staticmethod
@@ -5847,6 +6112,10 @@ def run_app():
     if show_sidebar_decomp:
         render_decomposition_ui(df_active)
 
+    show_sidebar_pipeline = st.sidebar.checkbox("🚀 Full Pipeline Output (Backtesting & Ensemble)", value=False, help="Display the Full Pipeline Execution Output with multi-model walk-forward backtest comparison and ensemble prediction.")
+    if show_sidebar_pipeline:
+        render_full_pipeline_ui(df_active)
+
     st.sidebar.markdown("## 🎯 Probabilistic Priors")
     bias_mode = st.sidebar.toggle("🎯 Bias Compensation Mode (Bayesian Priors)", value=False, help="Injects empirical Dirichlet priors for observed Odd-Even bias and positional face deficits.")
     if bias_mode:
@@ -6331,6 +6600,12 @@ def run_app():
             render_decomposition_ui(df_active)
         else:
             st.info("Need at least 15 draws for time series decomposition.")
+
+    with st.expander("📊 FULL PIPELINE EXECUTION OUTPUT (Multi-Model Walk-Forward Backtest & Ensemble Forecaster)", expanded=False):
+        if len(df_active) >= 10:
+            render_full_pipeline_ui(df_active)
+        else:
+            st.info("Need at least 10 draws to execute full pipeline.")
 
     # Master Orchestrator Card
     bs_badge = f'<span class="badge-big">{hive["bs_pred"].upper()}</span>' if hive['bs_pred'] == 'Big' else f'<span class="badge-small">{hive["bs_pred"].upper()}</span>'

@@ -21,18 +21,27 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import xgboost as xgb
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from sklearn.model_selection import TimeSeriesSplit
+from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import LabelEncoder
-from sklearn.linear_model import LogisticRegression, SGDClassifier
+from sklearn.linear_model import LogisticRegression, SGDClassifier, Ridge
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import (
     RandomForestClassifier,
     ExtraTreesClassifier,
     GradientBoostingClassifier,
     HistGradientBoostingClassifier,
-    RandomForestRegressor
+    RandomForestRegressor,
+    AdaBoostClassifier
 )
 from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.feature_selection import mutual_info_classif
+from sqlalchemy import create_engine, Column, String, Integer, Float, DateTime, Boolean, JSON, Text
+from sqlalchemy.orm import declarative_base, sessionmaker
 import ruptures as rpt
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -4364,6 +4373,771 @@ def render_decomposition_ui(df):
             else:
                 st.info("No strong cyclical resonance detected.")
 
+
+# ============================================================================
+# PHASE 5: ADVANCED AUTOML, ALERTING & DATABASE PERSISTENCE
+# ============================================================================
+
+class AutoMLSystem:
+    """
+    Automated Machine Learning for K3 prediction.
+    Tries multiple models, validates with TimeSeriesSplit, selects best performer.
+    """
+    
+    def __init__(self, n_splits=5, metric='accuracy'):
+        self.n_splits = n_splits
+        self.metric = metric
+        self.results = {}
+        self.best_model = None
+        self.best_score = 0.0
+        self.trained_models = {}
+    
+    def get_model_pool(self) -> Dict:
+        return {
+            'LogisticRegression': LogisticRegression(max_iter=1000, random_state=42),
+            'Ridge': Ridge(random_state=42),
+            'DecisionTree': DecisionTreeClassifier(max_depth=5, random_state=42),
+            'RandomForest': RandomForestClassifier(n_estimators=50, random_state=42),
+            'GradientBoosting': GradientBoostingClassifier(n_estimators=50, random_state=42),
+            'AdaBoost': AdaBoostClassifier(n_estimators=50, random_state=42),
+            'NaiveBayes': GaussianNB(),
+            'KNN': KNeighborsClassifier(n_neighbors=5)
+        }
+    
+    def prepare_features(self, df: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
+        fe = K3FeatureEngineer()
+        X = []
+        y = []
+        df_sorted = df.sort_values('issueNumber').reset_index(drop=True)
+        lookback = 20 if len(df_sorted) >= 30 else max(5, len(df_sorted) // 2)
+            
+        for i in range(lookback, len(df_sorted)):
+            subset = df_sorted.iloc[max(0, i-lookback):i]
+            features = fe.extract_features(subset)
+            X.append(features)
+            bs_val = str(df_sorted.iloc[i].get('big_small', 'Big')).strip().lower()
+            target = 1 if bs_val in ['big', '1', 'true'] else 0
+            y.append(target)
+            
+        return np.array(X, dtype=np.float32), np.array(y, dtype=int)
+    
+    def evaluate_model(self, model, X, y) -> Dict:
+        if len(X) < 10:
+            return {'mean_score': 0.5, 'std_score': 0.0, 'scores': [0.5], 'n_folds': 1}
+        n_splits = min(self.n_splits, max(2, len(X) // 5))
+        tscv = TimeSeriesSplit(n_splits=n_splits)
+        scores = []
+        
+        for train_idx, test_idx in tscv.split(X):
+            X_train, X_test = X[train_idx], X[test_idx]
+            y_train, y_test = y[train_idx], y[test_idx]
+            
+            try:
+                if hasattr(model, 'fit'):
+                    model.fit(X_train, y_train)
+                    y_pred = model.predict(X_test)
+                    if isinstance(model, Ridge):
+                        y_pred = (y_pred >= 0.5).astype(int)
+                    score = accuracy_score(y_test, y_pred)
+                    scores.append(float(score))
+            except Exception:
+                scores.append(0.5)
+        
+        return {
+            'mean_score': float(np.mean(scores)) if scores else 0.5,
+            'std_score': float(np.std(scores)) if scores else 0.0,
+            'scores': scores,
+            'n_folds': len(scores)
+        }
+    
+    def run_automl(self, df: pd.DataFrame, top_n: int = 3) -> Dict:
+        X, y = self.prepare_features(df)
+        if len(X) < 10:
+            return {'error': 'Insufficient data for AutoML. Need at least 15 historical draws.'}
+        
+        models = self.get_model_pool()
+        for name, model in models.items():
+            result = self.evaluate_model(model, X, y)
+            self.results[name] = result
+            try:
+                model.fit(X, y)
+                self.trained_models[name] = model
+            except Exception:
+                pass
+        
+        ranked = sorted(self.results.items(), key=lambda x: x[1]['mean_score'], reverse=True)
+        if ranked:
+            self.best_model, best_result = ranked[0]
+            self.best_score = best_result['mean_score']
+        
+        top_models = ranked[:top_n]
+        return {
+            'best_model': self.best_model,
+            'best_score': self.best_score,
+            'top_models': [
+                {'name': name, 'score': result['mean_score'], 'std': result['std_score']}
+                for name, result in top_models
+            ],
+            'all_results': self.results
+        }
+    
+    def predict_with_best(self, df: pd.DataFrame) -> Dict:
+        if self.best_model is None:
+            res = self.run_automl(df)
+            if 'error' in res:
+                return {'error': res['error']}
+        
+        fe = K3FeatureEngineer()
+        features = fe.extract_features(df).reshape(1, -1)
+        model = self.trained_models.get(self.best_model)
+        if model is None:
+            model = self.get_model_pool()[self.best_model]
+            X, y = self.prepare_features(df)
+            model.fit(X, y)
+            self.trained_models[self.best_model] = model
+            
+        try:
+            if hasattr(model, 'predict_proba'):
+                proba = model.predict_proba(features)[0]
+                prediction = int(model.predict(features)[0])
+                confidence = float(max(proba))
+                prob_big = float(proba[1]) * 100.0 if len(proba) > 1 else 50.0
+            elif isinstance(model, Ridge):
+                raw_val = float(model.predict(features)[0])
+                prediction = 1 if raw_val >= 0.5 else 0
+                confidence = float(np.clip(0.5 + abs(raw_val - 0.5), 0.5, 0.95))
+                prob_big = float(np.clip(raw_val * 100.0, 5.0, 95.0))
+            else:
+                prediction = int(model.predict(features)[0])
+                confidence = 0.65
+                prob_big = 65.0 if prediction == 1 else 35.0
+        except Exception:
+            prediction = 1
+            confidence = 0.60
+            prob_big = 60.0
+            
+        return {
+            'model_used': self.best_model,
+            'prediction': 'Big' if prediction == 1 else 'Small',
+            'confidence': confidence * 100.0,
+            'probability_big': prob_big
+        }
+
+
+# ============================================================================
+# FEATURE 2: ALERT SYSTEM
+# ============================================================================
+
+class AlertSystem:
+    """
+    Multi-channel alert system (Console, Email, Telegram, Discord Webhook, History Log).
+    """
+    
+    def __init__(self, config_path='alert_config.json'):
+        self.config_path = Path(config_path)
+        self.config = self._load_config()
+        self.alert_history = deque(maxlen=1000)
+    
+    def _load_config(self) -> Dict:
+        default_config = {
+            'email': {
+                'enabled': False,
+                'smtp_server': 'smtp.gmail.com',
+                'smtp_port': 587,
+                'sender_email': '',
+                'sender_password': '',
+                'recipient_emails': []
+            },
+            'telegram': {
+                'enabled': False,
+                'bot_token': '',
+                'chat_ids': []
+            },
+            'discord': {
+                'enabled': False,
+                'webhook_url': ''
+            },
+            'console': {
+                'enabled': True,
+                'min_severity': 'LOW'
+            },
+            'thresholds': {
+                'high_confidence': 70.0,
+                'critical_confidence': 85.0,
+                'anomaly_severity': 'HIGH'
+            }
+        }
+        if self.config_path.exists():
+            try:
+                with open(self.config_path, 'r') as f:
+                    user_config = json.load(f)
+                    for key in default_config:
+                        if key in user_config:
+                            default_config[key].update(user_config[key])
+            except Exception:
+                pass
+        return default_config
+    
+    def save_config(self):
+        with open(self.config_path, 'w') as f:
+            json.dump(self.config, f, indent=2)
+    
+    def send_alert(self, title: str, message: str, severity: str = 'MEDIUM', data: Dict = None) -> Dict:
+        alert = {
+            'id': f"{datetime.now().timestamp()}",
+            'timestamp': datetime.now().isoformat(),
+            'title': title,
+            'message': message,
+            'severity': severity,
+            'data': data or {},
+            'channels_sent': []
+        }
+        
+        if self.config['console']['enabled']:
+            self._send_console(alert)
+            alert['channels_sent'].append('console')
+        
+        if self.config['email']['enabled'] and self._should_send(severity):
+            if self._send_email(alert): alert['channels_sent'].append('email')
+        
+        if self.config['telegram']['enabled'] and self._should_send(severity):
+            if self._send_telegram(alert): alert['channels_sent'].append('telegram')
+        
+        if self.config['discord']['enabled'] and self._should_send(severity):
+            if self._send_discord(alert): alert['channels_sent'].append('discord')
+        
+        self.alert_history.append(alert)
+        return alert
+    
+    def _should_send(self, severity: str) -> bool:
+        levels = {'LOW': 1, 'MEDIUM': 2, 'HIGH': 3, 'CRITICAL': 4}
+        return levels.get(severity, 1) >= levels.get(self.config['console']['min_severity'], 1)
+    
+    def _send_console(self, alert: Dict):
+        colors = {'LOW': '[INFO]', 'MEDIUM': '[WARN]', 'HIGH': '[ALERT]', 'CRITICAL': '[CRITICAL]'}
+        icon = colors.get(alert['severity'], '[ALERT]')
+        try:
+            print(f"\n{icon} [{alert['severity']}] {alert['title']}\n   Time: {alert['timestamp']}\n   Message: {alert['message']}")
+            if alert.get('data'):
+                print(f"   Data: {alert['data']}")
+        except Exception:
+            try:
+                clean_title = str(alert['title']).encode('ascii', errors='replace').decode('ascii')
+                clean_msg = str(alert['message']).encode('ascii', errors='replace').decode('ascii')
+                print(f"\n[{alert['severity']}] {clean_title}\n   Time: {alert['timestamp']}\n   Message: {clean_msg}")
+            except Exception:
+                pass
+    
+    def _send_email(self, alert: Dict) -> bool:
+        try:
+            cfg = self.config['email']
+            if not cfg['sender_email'] or not cfg['recipient_emails']: return False
+            msg = MIMEMultipart()
+            msg['From'] = cfg['sender_email']
+            msg['Subject'] = f"[{alert['severity']}] {alert['title']}"
+            body = f"K3 Prediction Alert\n\n{alert['message']}\nTime: {alert['timestamp']}\nSeverity: {alert['severity']}\n\nData:\n{json.dumps(alert['data'], indent=2)}"
+            msg.attach(MIMEText(body, 'plain'))
+            server = smtplib.SMTP(cfg['smtp_server'], cfg['smtp_port'])
+            server.starttls()
+            server.login(cfg['sender_email'], cfg['sender_password'])
+            for recipient in cfg['recipient_emails']:
+                msg['To'] = recipient
+                server.send_message(msg)
+            server.quit()
+            return True
+        except Exception as e:
+            print(f"Email alert error: {e}")
+            return False
+    
+    def _send_telegram(self, alert: Dict) -> bool:
+        try:
+            cfg = self.config['telegram']
+            if not cfg['bot_token'] or not cfg['chat_ids']: return False
+            text = f"🚨 *{alert['severity']}* - *{alert['title']}*\n\n{alert['message']}\n\n_Time: {alert['timestamp']}_"
+            for chat_id in cfg['chat_ids']:
+                url = f"https://api.telegram.org/bot{cfg['bot_token']}/sendMessage"
+                requests.post(url, data={'chat_id': chat_id, 'text': text, 'parse_mode': 'Markdown'}, timeout=5)
+            return True
+        except Exception as e:
+            print(f"Telegram alert error: {e}")
+            return False
+    
+    def _send_discord(self, alert: Dict) -> bool:
+        try:
+            cfg = self.config['discord']
+            if not cfg['webhook_url']: return False
+            colors = {'LOW': 0x10b981, 'MEDIUM': 0xf59e0b, 'HIGH': 0xf97316, 'CRITICAL': 0xef4444}
+            embed = {
+                'title': alert['title'],
+                'description': alert['message'],
+                'color': colors.get(alert['severity'], 0x64748b),
+                'fields': [{'name': str(k), 'value': str(v), 'inline': True} for k, v in alert['data'].items()] if alert['data'] else [],
+                'timestamp': alert['timestamp']
+            }
+            requests.post(cfg['webhook_url'], json={'embeds': [embed]}, timeout=5)
+            return True
+        except Exception as e:
+            print(f"Discord alert error: {e}")
+            return False
+    
+    def alert_high_confidence(self, prediction: Dict) -> Optional[Dict]:
+        conf = float(prediction.get('bs_conf', 0.0))
+        if conf >= self.config['thresholds']['critical_confidence']:
+            severity = 'CRITICAL'
+        elif conf >= self.config['thresholds']['high_confidence']:
+            severity = 'HIGH'
+        else:
+            return None
+        title = f"🎯 High Confidence Prediction ({conf:.1f}%)"
+        message = (
+            f"Prediction: {prediction.get('bs_pred', 'N/A')}\n"
+            f"Dice Triad: [{prediction.get('dice1', '?')}, {prediction.get('dice2', '?')}, {prediction.get('dice3', '?')}]\n"
+            f"Sum: {prediction.get('sum', '?')}\n"
+            f"Method: {prediction.get('method', 'AutoML / Ensemble')}"
+        )
+        return self.send_alert(title, message, severity, prediction)
+    
+    def alert_anomaly(self, anomaly: Dict) -> Optional[Dict]:
+        severity = anomaly.get('severity', 'MEDIUM')
+        if severity not in ['HIGH', 'CRITICAL']: return None
+        title = f"🔍 Anomaly Detected: {severity}"
+        message = anomaly.get('explanation', 'Anomaly detected across statistical metrics')
+        return self.send_alert(title, message, severity, anomaly)
+    
+    def alert_performance_drop(self, model_name: str, old_accuracy: float, new_accuracy: float) -> Optional[Dict]:
+        drop = old_accuracy - new_accuracy
+        if drop < 0.05: return None
+        title = f"📉 Performance Drop: {model_name}"
+        message = f"Model performance dropped by {drop*100:.1f}%\nPrevious: {old_accuracy*100:.1f}%\nCurrent: {new_accuracy*100:.1f}%"
+        severity = 'HIGH' if drop > 0.15 else 'MEDIUM'
+        return self.send_alert(title, message, severity, {'model': model_name, 'old_accuracy': old_accuracy, 'new_accuracy': new_accuracy, 'drop': drop})
+    
+    def get_recent_alerts(self, n: int = 20) -> List[Dict]:
+        return list(self.alert_history)[-n:]
+
+
+# ============================================================================
+# FEATURE 3: DATABASE INTEGRATION (SQLALCHEMY + SQLITE / POSTGRES / MONGODB)
+# ============================================================================
+
+Base = declarative_base()
+
+class DrawRecord(Base):
+    __tablename__ = 'draws'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    issue_number = Column(String(50), unique=True, nullable=False, index=True)
+    draw_timestamp = Column(DateTime, default=datetime.now)
+    dice1 = Column(Integer, nullable=False)
+    dice2 = Column(Integer, nullable=False)
+    dice3 = Column(Integer, nullable=False)
+    sum_value = Column(Integer, nullable=False)
+    big_small = Column(String(10), nullable=False)
+    odd_even = Column(String(10), nullable=False)
+    premium = Column(String(10), nullable=False)
+    raw_data = Column(JSON)
+
+class PredictionRecord(Base):
+    __tablename__ = 'predictions'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    prediction_timestamp = Column(DateTime, default=datetime.now)
+    issue_number = Column(String(50), nullable=False, index=True)
+    model_name = Column(String(100), nullable=False, index=True)
+    method = Column(String(100))
+    predicted_dice1 = Column(Integer)
+    predicted_dice2 = Column(Integer)
+    predicted_dice3 = Column(Integer)
+    predicted_sum = Column(Integer)
+    predicted_bs = Column(String(10))
+    predicted_oe = Column(String(10))
+    predicted_premium = Column(String(10))
+    confidence = Column(Float)
+    actual_dice1 = Column(Integer)
+    actual_dice2 = Column(Integer)
+    actual_dice3 = Column(Integer)
+    actual_sum = Column(Integer)
+    actual_bs = Column(String(10))
+    actual_oe = Column(String(10))
+    is_validated = Column(Boolean, default=False)
+    validation_timestamp = Column(DateTime)
+    full_prediction = Column(JSON)
+    metrics = Column(JSON)
+
+class AlertRecord(Base):
+    __tablename__ = 'alerts'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    alert_timestamp = Column(DateTime, default=datetime.now, index=True)
+    title = Column(String(200), nullable=False)
+    message = Column(Text)
+    severity = Column(String(20), index=True)
+    channels_sent = Column(String(200))
+    alert_data = Column(JSON)
+
+class ModelPerformanceRecord(Base):
+    __tablename__ = 'model_performance'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    record_timestamp = Column(DateTime, default=datetime.now)
+    model_name = Column(String(100), nullable=False, index=True)
+    n_predictions = Column(Integer)
+    bs_accuracy = Column(Float)
+    oe_accuracy = Column(Float)
+    sum_accuracy = Column(Float)
+    exact_match_rate = Column(Float)
+    calibration_error = Column(Float)
+    brier_score = Column(Float)
+    metrics_json = Column(JSON)
+
+class DatabaseManager:
+    """
+    Unified database manager with persistent SQLite / PostgreSQL storage.
+    """
+    def __init__(self, db_url: str = None):
+        if db_url is None:
+            db_url = 'sqlite:///k3_data.db'
+        self.engine = create_engine(db_url, echo=False)
+        Base.metadata.create_all(self.engine)
+        Session = sessionmaker(bind=self.engine)
+        self.session = Session()
+    
+    def insert_draw(self, issue_number: str, dice1: int, dice2: int, dice3: int,
+                    sum_value: int, big_small: str, odd_even: str, 
+                    premium: str, raw_data: Dict = None) -> int:
+        draw = DrawRecord(
+            issue_number=str(issue_number),
+            dice1=dice1, dice2=dice2, dice3=dice3,
+            sum_value=sum_value,
+            big_small=big_small, odd_even=odd_even,
+            premium=premium,
+            raw_data=raw_data or {}
+        )
+        self.session.add(draw)
+        self.session.commit()
+        return draw.id
+    
+    def bulk_insert_draws(self, df: pd.DataFrame) -> int:
+        count = 0
+        for _, row in df.iterrows():
+            try:
+                d1 = int(float(row.get('dice1', 3)))
+                d2 = int(float(row.get('dice2', 3)))
+                d3 = int(float(row.get('dice3', 3)))
+                s = int(float(row.get('sum', d1+d2+d3)))
+                self.insert_draw(
+                    issue_number=str(row.get('issueNumber', '')),
+                    dice1=d1, dice2=d2, dice3=d3,
+                    sum_value=s,
+                    big_small=str(row.get('big_small', 'Big')),
+                    odd_even=str(row.get('odd_even', 'Odd')),
+                    premium=str(row.get('premium', f"{d1}{d2}{d3}"))
+                )
+                count += 1
+            except Exception:
+                self.session.rollback()
+                continue
+        return count
+    
+    def get_all_draws(self) -> pd.DataFrame:
+        draws = self.session.query(DrawRecord).order_by(DrawRecord.issue_number.desc()).all()
+        data = [{
+            'issueNumber': d.issue_number,
+            'dice1': d.dice1, 'dice2': d.dice2, 'dice3': d.dice3,
+            'sum': d.sum_value, 'big_small': d.big_small,
+            'odd_even': d.odd_even, 'premium': d.premium
+        } for d in draws]
+        return pd.DataFrame(data)
+    
+    def get_recent_draws(self, n: int = 100) -> pd.DataFrame:
+        draws = self.session.query(DrawRecord).order_by(DrawRecord.issue_number.desc()).limit(n).all()
+        data = [{
+            'issueNumber': d.issue_number,
+            'dice1': d.dice1, 'dice2': d.dice2, 'dice3': d.dice3,
+            'sum': d.sum_value, 'big_small': d.big_small,
+            'odd_even': d.odd_even, 'premium': d.premium
+        } for d in draws]
+        return pd.DataFrame(data)
+    
+    def log_prediction(self, model_name: str, issue_number: str, prediction: Dict, method: str = None, confidence: float = None) -> int:
+        pred = PredictionRecord(
+            model_name=model_name,
+            issue_number=str(issue_number),
+            method=method or prediction.get('method', 'AutoML'),
+            predicted_dice1=prediction.get('dice1'),
+            predicted_dice2=prediction.get('dice2'),
+            predicted_dice3=prediction.get('dice3'),
+            predicted_sum=prediction.get('sum'),
+            predicted_bs=prediction.get('bs_pred') or prediction.get('prediction'),
+            predicted_oe=prediction.get('oe_pred'),
+            predicted_premium=prediction.get('premium'),
+            confidence=confidence or prediction.get('confidence', 50.0),
+            full_prediction=prediction
+        )
+        self.session.add(pred)
+        self.session.commit()
+        return pred.id
+    
+    def validate_prediction(self, issue_number: str, actual: Dict) -> int:
+        predictions = self.session.query(PredictionRecord).filter(
+            PredictionRecord.issue_number == str(issue_number),
+            PredictionRecord.is_validated == False
+        ).all()
+        count = 0
+        for pred in predictions:
+            pred.actual_dice1 = actual.get('dice1')
+            pred.actual_dice2 = actual.get('dice2')
+            pred.actual_dice3 = actual.get('dice3')
+            pred.actual_sum = actual.get('sum')
+            pred.actual_bs = actual.get('bs') or actual.get('big_small')
+            pred.actual_oe = actual.get('oe') or actual.get('odd_even')
+            pred.is_validated = True
+            pred.validation_timestamp = datetime.now()
+            metrics = {
+                'bs_correct': pred.predicted_bs == pred.actual_bs,
+                'oe_correct': pred.predicted_oe == pred.actual_oe,
+                'sum_correct': pred.predicted_sum == pred.actual_sum
+            }
+            pred.metrics = metrics
+            count += 1
+        self.session.commit()
+        return count
+    
+    def get_statistics(self) -> Dict:
+        return {
+            'total_draws': self.session.query(DrawRecord).count(),
+            'total_predictions': self.session.query(PredictionRecord).count(),
+            'validated_predictions': self.session.query(PredictionRecord).filter(PredictionRecord.is_validated == True).count(),
+            'total_alerts': self.session.query(AlertRecord).count(),
+            'models_tracked': self.session.query(ModelPerformanceRecord.model_name).distinct().count()
+        }
+    
+    def close(self):
+        self.session.close()
+
+class MongoDBManager:
+    """MongoDB manager alternative."""
+    def __init__(self, connection_string='mongodb://localhost:27017/', db_name='k3_db'):
+        try:
+            from pymongo import MongoClient
+            self.client = MongoClient(connection_string, serverSelectionTimeoutMS=2000)
+            self.db = self.client[db_name]
+            self.enabled = True
+        except Exception:
+            self.enabled = False
+            
+    def insert_draw(self, draw_data: Dict):
+        if not self.enabled: return None
+        return self.db.draws.insert_one(draw_data).inserted_id
+
+    def get_recent_draws(self, n=100):
+        if not self.enabled: return pd.DataFrame()
+        draws = list(self.db.draws.find().sort('issueNumber', -1).limit(n))
+        return pd.DataFrame(draws)
+
+
+# ============================================================================
+# PHASE 5: STREAMLIT ADVANCED FEATURES UI
+# ============================================================================
+
+def render_advanced_features_ui(df):
+    """Complete UI for Phase 5 Advanced Features (AutoML, Alerts, Database)."""
+    render_html("""
+    <div style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95)); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 12px; padding: 18px; margin-bottom: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.4);">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <span style="color: #34d399; font-size: 0.8rem; font-weight: 800; letter-spacing: 1.2px;">PHASE 5 ADVANCED SUITE</span>
+                <h2 style="color: #ffffff; margin: 2px 0 0 0; font-size: 1.6rem; font-weight: 900;">✨ AUTOML, ALERTS & DATABASE MANAGEMENT</h2>
+                <p style="color: #94a3b8; font-size: 0.85rem; margin: 4px 0 0 0;">Automatic Model Selection (8 ML Classifiers) + Multi-Channel Alerts + Persistent SQLAlchemy Database.</p>
+            </div>
+            <div style="text-align: right;">
+                <span style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid #10b981; padding: 4px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 800;">AutoML • Alerts • DB</span>
+            </div>
+        </div>
+    </div>
+    """)
+    
+    feature = st.selectbox("Select Phase 5 Feature Module:", [
+        "🤖 AutoML - Automatic Model Selection",
+        "🔔 Multi-Channel Alert System",
+        "💾 SQLAlchemy Database Manager"
+    ], key="sb_phase5_feature_selector")
+    
+    if "AutoML" in feature:
+        st.markdown("### 🤖 AutoML: Automatic Model Selection")
+        st.caption("Cross-validates 8 machine learning models using Walk-Forward Time-Series Split to identify the current best performer.")
+        
+        if 'automl' not in st.session_state:
+            st.session_state.automl = AutoMLSystem()
+        
+        col_btn, col_metric = st.columns([1, 2])
+        with col_btn:
+            run_automl_btn = st.button("🚀 Run Walk-Forward AutoML Evaluation", key="btn_run_automl", use_container_width=True)
+            
+        if run_automl_btn or 'automl_results' not in st.session_state:
+            with st.spinner("Training & validating 8 classification models over time-series splits..."):
+                st.session_state.automl_results = st.session_state.automl.run_automl(df, top_n=3)
+        
+        results = st.session_state.automl_results
+        if 'error' not in results:
+            render_html(f"""
+            <div style="background: rgba(16, 185, 129, 0.12); border: 1px solid #10b981; border-radius: 10px; padding: 14px 18px; margin: 15px 0;">
+                <span style="color: #34d399; font-weight: 900; font-size: 1.2rem;">🏆 TOP CHAMPION MODEL: {results['best_model']}</span>
+                <span style="color: #e2e8f0; font-size: 0.95rem; margin-left: 12px;">CV Accuracy Score: <b>{results['best_score']*100:.2f}%</b></span>
+            </div>
+            """)
+            
+            st.markdown("#### 🥇 Top 3 Ranked Models:")
+            cols = st.columns(len(results['top_models']))
+            for idx, model in enumerate(results['top_models']):
+                with cols[idx]:
+                    st.metric(f"Rank #{idx+1}: {model['name']}", f"{model['score']*100:.2f}%", f"±{model['std']*100:.2f}% SD")
+            
+            with st.expander("📊 View Complete Model Benchmark Matrix", expanded=False):
+                all_results_df = pd.DataFrame([
+                    {'Model': name, 'Mean CV Accuracy': f"{r['mean_score']*100:.2f}%", 'Std Dev': f"{r['std_score']*100:.2f}%", 'Folds': r['n_folds']}
+                    for name, r in results['all_results'].items()
+                ]).sort_values('Mean CV Accuracy', ascending=False)
+                st.dataframe(all_results_df, use_container_width=True, hide_index=True)
+                
+            st.markdown("#### 🔮 Forecast with Best AutoML Model:")
+            pred_best = st.session_state.automl.predict_with_best(df)
+            if 'error' not in pred_best:
+                col_p1, col_p2, col_p3 = st.columns(3)
+                col_p1.metric("Selected Model", pred_best['model_used'])
+                col_p2.metric("Target Prediction", pred_best['prediction'])
+                col_p3.metric("Decision Confidence", f"{pred_best['confidence']:.1f}%")
+        else:
+            st.warning(f"⚠️ {results['error']}")
+            
+    elif "Alert" in feature:
+        st.markdown("### 🔔 Multi-Channel Alert System")
+        st.caption("Configure automated push notifications for high confidence signals and detected anomalies.")
+        
+        if 'alert_system' not in st.session_state:
+            st.session_state.alert_system = AlertSystem()
+        alert_sys = st.session_state.alert_system
+        
+        with st.expander("⚙️ Push Notification Channel Configuration", expanded=False):
+            alert_sys.config['console']['min_severity'] = st.selectbox(
+                "Minimum Severity Threshold:",
+                ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'],
+                key="sb_alert_min_sev"
+            )
+            
+            col_em, col_tg = st.columns(2)
+            with col_em:
+                st.markdown("##### ✉️ Email (SMTP)")
+                alert_sys.config['email']['enabled'] = st.checkbox("Enable Email Alerts", value=alert_sys.config['email']['enabled'], key="cb_alert_email")
+                if alert_sys.config['email']['enabled']:
+                    alert_sys.config['email']['sender_email'] = st.text_input("Sender Email", value=alert_sys.config['email']['sender_email'], key="ti_alert_sender")
+                    alert_sys.config['email']['sender_password'] = st.text_input("Password / App Key", value=alert_sys.config['email']['sender_password'], type="password", key="ti_alert_pwd")
+                    recipients = st.text_area("Recipient Emails (one per line)", value="\n".join(alert_sys.config['email']['recipient_emails']), key="ta_alert_recip")
+                    alert_sys.config['email']['recipient_emails'] = [r.strip() for r in recipients.split('\n') if r.strip()]
+            
+            with col_tg:
+                st.markdown("##### 📱 Telegram Bot & Discord")
+                alert_sys.config['telegram']['enabled'] = st.checkbox("Enable Telegram Bot", value=alert_sys.config['telegram']['enabled'], key="cb_alert_tg")
+                if alert_sys.config['telegram']['enabled']:
+                    alert_sys.config['telegram']['bot_token'] = st.text_input("Bot Token", value=alert_sys.config['telegram']['bot_token'], type="password", key="ti_alert_tg_token")
+                    chat_ids = st.text_area("Chat IDs (one per line)", value="\n".join(alert_sys.config['telegram']['chat_ids']), key="ta_alert_tg_chat")
+                    alert_sys.config['telegram']['chat_ids'] = [c.strip() for c in chat_ids.split('\n') if c.strip()]
+                    
+                alert_sys.config['discord']['enabled'] = st.checkbox("Enable Discord Webhook", value=alert_sys.config['discord']['enabled'], key="cb_alert_dc")
+                if alert_sys.config['discord']['enabled']:
+                    alert_sys.config['discord']['webhook_url'] = st.text_input("Webhook URL", value=alert_sys.config['discord']['webhook_url'], type="password", key="ti_alert_dc_url")
+            
+            if st.button("💾 Save Alert Configuration", key="btn_save_alert_cfg"):
+                alert_sys.save_config()
+                st.success("✅ Configuration saved successfully to alert_config.json!")
+                
+        st.markdown("#### 🧪 Test Alert Dispatcher")
+        col_t1, col_t2 = st.columns([3, 1])
+        with col_t1:
+            test_msg = st.text_input("Test Notification Payload:", "High Probability Triad Identified on Target Issue!", key="ti_test_alert_msg")
+        with col_t2:
+            test_sev = st.selectbox("Severity Level:", ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'], index=2, key="sb_test_alert_sev")
+            
+        if st.button("🚀 Dispatch Test Alert Across Enabled Channels", key="btn_send_test_alert"):
+            res = alert_sys.send_alert("🎯 K3 Surveillance Alert", test_msg, test_sev, {'issue': 'Test Draw', 'confidence': 85.0})
+            st.success(f"✅ Dispatched successfully to channels: **{', '.join(res['channels_sent'])}**")
+            
+        st.markdown("#### 📜 Recent Dispatch Audit Log")
+        recent = alert_sys.get_recent_alerts(10)
+        if recent:
+            st.dataframe(pd.DataFrame([{
+                'Timestamp': a['timestamp'][:19], 'Severity': a['severity'], 'Title': a['title'], 'Channels': ', '.join(a['channels_sent'])
+            } for a in recent]), use_container_width=True, hide_index=True)
+        else:
+            st.info("No push alerts recorded in this session yet.")
+            
+    elif "Database" in feature:
+        st.markdown("### 💾 SQLAlchemy Database Management")
+        st.caption("Persistent SQL storage for historical records, validated agent predictions, and audit logs.")
+        
+        if 'db_manager' not in st.session_state:
+            st.session_state.db_manager = DatabaseManager('sqlite:///k3_data.db')
+        db = st.session_state.db_manager
+        
+        stats = db.get_statistics()
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("📊 Total Draws in DB", stats['total_draws'])
+        c2.metric("🎯 Total Predictions Logged", stats['total_predictions'])
+        c3.metric("✅ Validated Outcomes", stats['validated_predictions'])
+        c4.metric("🔔 Alerts Recorded", stats['total_alerts'])
+        
+        st.markdown("#### 🔧 Database Operations")
+        col_d1, col_d2 = st.columns(2)
+        with col_d1:
+            if st.button("📥 Import Active CSV History into DB", key="btn_db_import_csv", use_container_width=True):
+                inserted = db.bulk_insert_draws(df)
+                st.success(f"✅ Successfully inserted / verified {inserted} draws into SQLite DB!")
+                st.rerun()
+        with col_d2:
+            all_db_draws = db.get_all_draws()
+            if not all_db_draws.empty:
+                st.download_button(
+                    "📤 Export Full DB to CSV",
+                    all_db_draws.to_csv(index=False),
+                    "k3_database_export.csv",
+                    "text/csv",
+                    key="btn_download_db_csv",
+                    use_container_width=True
+                )
+            else:
+                st.info("DB currently empty. Click import to load draws.")
+                
+        st.markdown("#### 📋 Recent Draws in Database Table")
+        recent_draws_df = db.get_recent_draws(15)
+        if not recent_draws_df.empty:
+            st.dataframe(recent_draws_df, use_container_width=True, hide_index=True)
+        else:
+            st.info("No records in database. Click 'Import Active CSV History' above.")
+
+
+def integrate_all_features(df):
+    """Integration helper for Phase 5."""
+    automl = AutoMLSystem()
+    automl_results = automl.run_automl(df)
+    best_model_name = automl_results.get('best_model', 'RandomForest')
+    
+    alert_system = AlertSystem()
+    prediction = {
+        'bs_pred': 'Big',
+        'dice1': 5, 'dice2': 5, 'dice3': 5,
+        'sum': 15,
+        'bs_conf': 82.5,
+        'method': 'AutoML-Selected'
+    }
+    alert_system.alert_high_confidence(prediction)
+    
+    db = DatabaseManager()
+    db.log_prediction(
+        model_name=best_model_name,
+        issue_number='20260818101010656',
+        prediction=prediction,
+        method='AutoML-Selected',
+        confidence=prediction['bs_conf']
+    )
+    print("✅ All Phase 5 features integrated successfully!")
+
+
 def run_bias_aware_prediction(df):
     """Generates prediction weighted by observed historical biases."""
     if df is None or len(df) < 5:
@@ -6787,6 +7561,10 @@ def run_app():
     if show_sidebar_ensemble:
         render_ensemble_ui(df_active)
 
+    show_sidebar_p5 = st.sidebar.checkbox("✨ Phase 5: AutoML, Alerts & DB", value=False, help="Automatic Model Selection (8 ML Classifiers), Multi-Channel Push Alerts, and Persistent SQLite Database.")
+    if show_sidebar_p5:
+        render_advanced_features_ui(df_active)
+
     st.sidebar.markdown("## 🎯 Probabilistic Priors")
     bias_mode = st.sidebar.toggle("🎯 Bias Compensation Mode (Bayesian Priors)", value=False, help="Injects empirical Dirichlet priors for observed Odd-Even bias and positional face deficits.")
     if bias_mode:
@@ -7283,6 +8061,12 @@ def run_app():
             render_ensemble_ui(df_active)
         else:
             st.info("Need at least 10 draws to execute ensemble system.")
+
+    with st.expander("✨ PHASE 5: AUTOML, REAL-TIME ALERTS & DATABASE PERSISTENCE", expanded=False):
+        if len(df_active) >= 10:
+            render_advanced_features_ui(df_active)
+        else:
+            st.info("Need at least 10 draws for Phase 5 features.")
 
     # Master Orchestrator Card
     bs_badge = f'<span class="badge-big">{hive["bs_pred"].upper()}</span>' if hive['bs_pred'] == 'Big' else f'<span class="badge-small">{hive["bs_pred"].upper()}</span>'

@@ -354,6 +354,48 @@ def compute_chi_square_randomness(df):
     status = "Statistically Biased (p < 0.05)" if p_val < 0.05 else "Fair RNG Distribution (p >= 0.05)"
     return float(chi2), float(p_val), status
 
+def run_chi_square_tests(df):
+    """Runs comprehensive Chi-Square goodness-of-fit tests."""
+    results = {}
+    if df is None or len(df) < 10:
+        return results
+        
+    # TEST 1: Sum Distribution (Multinomial 3-dice theoretical distribution)
+    combos = np.array([1, 3, 6, 10, 15, 21, 25, 27, 27, 25, 21, 15, 10, 6, 3, 1])
+    theoretical_prob = combos / 216.0
+    sums = pd.to_numeric(df['sum'], errors='coerce').dropna().astype(int).values
+    observed_sums = np.bincount(np.clip(sums - 3, 0, 15), minlength=16)
+    expected_sums = len(sums) * theoretical_prob
+    chi2_sum, p_sum = chisquare(observed_sums, expected_sums)
+    results['sum'] = {'chi2': float(chi2_sum), 'p_value': float(p_sum), 'biased': bool(p_sum < 0.05)}
+    
+    # TEST 2: Big/Small
+    bs_counts = df['big_small'].value_counts()
+    observed_bs = [bs_counts.get('Big', 0), bs_counts.get('Small', 0)]
+    expected_bs = [len(df) / 2.0, len(df) / 2.0]
+    chi2_bs, p_bs = chisquare(observed_bs, expected_bs)
+    results['big_small'] = {'chi2': float(chi2_bs), 'p_value': float(p_bs), 'biased': bool(p_bs < 0.05)}
+    
+    # TEST 3: Odd/Even
+    oe_counts = df['odd_even'].value_counts()
+    observed_oe = [oe_counts.get('Odd', 0), oe_counts.get('Even', 0)]
+    expected_oe = [len(df) / 2.0, len(df) / 2.0]
+    chi2_oe, p_oe = chisquare(observed_oe, expected_oe)
+    results['odd_even'] = {'chi2': float(chi2_oe), 'p_value': float(p_oe), 'biased': bool(p_oe < 0.05)}
+    
+    # TEST 4: Dice 3 position specifically
+    d3_values = pd.to_numeric(df['dice3'], errors='coerce').dropna().astype(int).values
+    observed_d3 = np.bincount(d3_values - 1, minlength=6)
+    expected_d3 = np.full(6, len(d3_values) / 6.0)
+    chi2_d3, p_d3 = chisquare(observed_d3, expected_d3)
+    results['dice3_bias'] = {
+        'chi2': float(chi2_d3), 'p_value': float(p_d3), 'biased': bool(p_d3 < 0.05),
+        'worst_value': int(np.argmin(observed_d3) + 1),
+        'worst_freq': float(observed_d3.min() / max(1, len(d3_values)) * 100)
+    }
+    
+    return results
+
 def compute_anomaly_telemetry(df):
     """Computes real-time anomaly scores, triple detections, and dormant face watches."""
     if df is None or df.empty:
@@ -1634,6 +1676,28 @@ diagnostics_html = f"""
 </div>
 """
 render_html(diagnostics_html)
+
+with st.expander("🔬 Statistical Randomness Test (Chi-Square)", expanded=False):
+    if len(df_active) >= 30:
+        chi_results = run_chi_square_tests(df_active)
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            bias = chi_results.get('sum', {}).get('biased', False)
+            p_v = chi_results.get('sum', {}).get('p_value', 1.0)
+            st.metric("Sum Bias", "BIASED 🔴" if bias else "Random 🟢", f"p={p_v:.4f}")
+        with col2:
+            bias = chi_results.get('odd_even', {}).get('biased', False)
+            p_v = chi_results.get('odd_even', {}).get('p_value', 1.0)
+            st.metric("Odd/Even Bias", "BIASED 🔴" if bias else "Random 🟢", f"p={p_v:.4f}")
+        with col3:
+            bias = chi_results.get('dice3_bias', {}).get('biased', False)
+            p_v = chi_results.get('dice3_bias', {}).get('p_value', 1.0)
+            st.metric("Dice 3 Bias", "BIASED 🔴" if bias else "Random 🟢", f"p={p_v:.4f}")
+        
+        st.warning("⚠️ These are observed biases in past data. They don't guarantee future outcomes.")
+    else:
+        st.info("Need at least 30 draws for statistical tests.")
 
 # Master Orchestrator Card
 bs_badge = f'<span class="badge-big">{hive["bs_pred"].upper()}</span>' if hive['bs_pred'] == 'Big' else f'<span class="badge-small">{hive["bs_pred"].upper()}</span>'

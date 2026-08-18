@@ -15,6 +15,7 @@ from scipy.spatial.distance import cdist
 from scipy.optimize import minimize
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.optim as optim
 import xgboost as xgb
 from sklearn.preprocessing import LabelEncoder
@@ -1453,7 +1454,17 @@ class K3VAETrainer:
             s = (float(row['sum']) - 3.0) / 15.0
             bs = 1.0 if str(row['big_small']).lower() == 'big' else 0.0
             oe = 1.0 if str(row['odd_even']).lower() == 'odd' else 0.0
-            prem_val = float(str(row.get('premium', f"{int(row['dice1'])}{int(row['dice2'])}{int(row['dice3'])}"))[:3]) / 1000.0 if str(row.get('premium', '')).isdigit() else 0.5
+            prem_str = str(row.get('premium', '')).strip()
+            if prem_str.isdigit():
+                prem_val = float(prem_str[:3]) / 1000.0
+            else:
+                try:
+                    p1 = int(float(row['dice1']))
+                    p2 = int(float(row['dice2']))
+                    p3 = int(float(row['dice3']))
+                    prem_val = float(f"{p1}{p2}{p3}") / 1000.0
+                except:
+                    prem_val = 0.5
             features.append([d1, d2, d3, s, bs, oe, prem_val])
         return torch.tensor(np.nan_to_num(np.array(features, dtype=np.float32), nan=0.5), dtype=torch.float32)
     
@@ -1641,21 +1652,22 @@ class K3GaussianProcess:
     def fit(self, df):
         df_clean = df.dropna(subset=['sum', 'dice1', 'dice2', 'dice3']).sort_values('issueNumber').reset_index(drop=True)
         if len(df_clean) < 15: return
-        X = np.column_stack([
-            df_clean['dice1'].values, df_clean['dice2'].values, df_clean['dice3'].values,
-            np.roll(df_clean['sum'].values, 1), np.roll(df_clean['sum'].values, 2)
-        ])[5:]
-        y_sum = df_clean['sum'].values[5:] / 18.0
+        d1 = pd.to_numeric(df_clean['dice1'], errors='coerce').fillna(3).values.astype(float)
+        d2 = pd.to_numeric(df_clean['dice2'], errors='coerce').fillna(3).values.astype(float)
+        d3 = pd.to_numeric(df_clean['dice3'], errors='coerce').fillna(3).values.astype(float)
+        s_arr = pd.to_numeric(df_clean['sum'], errors='coerce').fillna(10).values.astype(float)
+        X = np.column_stack([d1, d2, d3, np.roll(s_arr, 1), np.roll(s_arr, 2)])[5:]
+        y_sum = s_arr[5:] / 18.0
         y_bs = (df_clean['big_small'].values[5:] == 'Big').astype(float)
         self.gp_sum.fit(X[-60:], y_sum[-60:])
         self.gp_bs.fit(X[-60:], y_bs[-60:])
     
     def predict_with_uncertainty(self, df):
         df_clean = df.dropna(subset=['sum', 'dice1', 'dice2', 'dice3']).sort_values('issueNumber').reset_index(drop=True)
-        if len(df_clean) < 5: return {'sum_pred': 10.5, 'total_uncertainty': 0.25}
+        if len(df_clean) < 5: return {'sum_pred': 10.5, 'sum_std': 2.5, 'bs_prob': 0.5, 'total_uncertainty': 0.25}
         X_latest = np.array([[
-            df_clean['dice1'].iloc[-1], df_clean['dice2'].iloc[-1], df_clean['dice3'].iloc[-1],
-            df_clean['sum'].iloc[-1], df_clean['sum'].iloc[-2] if len(df_clean) > 1 else 10
+            float(df_clean['dice1'].iloc[-1]), float(df_clean['dice2'].iloc[-1]), float(df_clean['dice3'].iloc[-1]),
+            float(df_clean['sum'].iloc[-1]), float(df_clean['sum'].iloc[-2]) if len(df_clean) > 1 else 10.0
         ]])
         m_s, s_s = self.gp_sum.predict(X_latest, return_std=True)
         m_bs, s_bs = self.gp_bs.predict(X_latest, return_std=True)

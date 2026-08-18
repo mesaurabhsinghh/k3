@@ -45,12 +45,20 @@ HEADERS = {
     'Referer': 'https://damanclub.in/'
 }
 
-st.set_page_config(
-    page_title='K3 HIVE MIND | Nexus Pattern Sniper & AI Dashboard',
-    page_icon='🎲',
-    layout='wide',
-    initial_sidebar_state='expanded'
-)
+def is_streamlit_running() -> bool:
+    try:
+        from streamlit.runtime.scriptrunner import get_script_run_ctx
+        return get_script_run_ctx() is not None
+    except Exception:
+        return False
+
+if is_streamlit_running():
+    st.set_page_config(
+        page_title='K3 HIVE MIND | Nexus Pattern Sniper & AI Dashboard',
+        page_icon='🎲',
+        layout='wide',
+        initial_sidebar_state='expanded'
+    )
 
 def render_html(html_str):
     """Directly renders HTML without triggering markdown code-block parser."""
@@ -1137,7 +1145,9 @@ class BacktestingEngine:
         if df is None or model_functions is None:
             return {'error': 'Missing DataFrame or model_functions for backtesting'}
             
-        df_sorted = df.sort_values('issueNumber').reset_index(drop=True)
+        cols_to_clean = [c for c in ['dice1', 'dice2', 'dice3', 'sum'] if c in df.columns]
+        df_clean = df.dropna(subset=cols_to_clean) if cols_to_clean else df
+        df_sorted = df_clean.sort_values('issueNumber').reset_index(drop=True)
         n_total = len(df_sorted)
         
         self.results = defaultdict(list)
@@ -1150,19 +1160,27 @@ class BacktestingEngine:
             'errors': []
         }
         
+        def safe_int(val, default=3):
+            try:
+                if pd.isna(val): return default
+                return int(float(val))
+            except Exception:
+                return default
+        
         for idx in range(initial_window, n_total, step):
             train_data = df_sorted.iloc[:idx]
             current = df_sorted.iloc[idx]
-            d1_act = int(float(current.get('dice1', 3)))
-            d2_act = int(float(current.get('dice2', 3)))
-            d3_act = int(float(current.get('dice3', 3)))
+            d1_act = safe_int(current.get('dice1'), 3)
+            d2_act = safe_int(current.get('dice2'), 3)
+            d3_act = safe_int(current.get('dice3'), 3)
+            sum_act = safe_int(current.get('sum'), d1_act + d2_act + d3_act)
             actual = {
                 'dice1': d1_act,
                 'dice2': d2_act,
                 'dice3': d3_act,
-                'sum': int(float(current.get('sum', d1_act + d2_act + d3_act))),
-                'bs': str(current.get('big_small', current.get('bs', 'Small'))),
-                'oe': str(current.get('odd_even', current.get('oe', 'Even'))),
+                'sum': sum_act,
+                'bs': str(current.get('big_small', 'Big' if sum_act >= 11 else 'Small')),
+                'oe': str(current.get('odd_even', 'Odd' if sum_act % 2 == 1 else 'Even')),
                 'premium': str(current.get('premium', f"{d1_act}{d2_act}{d3_act}"))
             }
             
@@ -1204,12 +1222,19 @@ class BacktestingEngine:
         p_d3 = prediction.get('dice3')
         p_sum = prediction.get('sum')
         
-        c_d1 = (int(float(p_d1)) == actual['dice1']) if p_d1 is not None else False
-        c_d2 = (int(float(p_d2)) == actual['dice2']) if p_d2 is not None else False
-        c_d3 = (int(float(p_d3)) == actual['dice3']) if p_d3 is not None else False
-        c_sum = (int(float(p_sum)) == actual['sum']) if p_sum is not None else False
-        c_bs = (str(p_bs).lower() == str(actual['bs']).lower()) if p_bs else False
-        c_oe = (str(p_oe).lower() == str(actual['oe']).lower()) if p_oe else False
+        def safe_match_int(p, a):
+            try:
+                if p is None or a is None: return False
+                return int(float(p)) == int(float(a))
+            except:
+                return False
+        
+        c_d1 = safe_match_int(p_d1, actual['dice1'])
+        c_d2 = safe_match_int(p_d2, actual['dice2'])
+        c_d3 = safe_match_int(p_d3, actual['dice3'])
+        c_sum = safe_match_int(p_sum, actual['sum'])
+        c_bs = (str(p_bs).strip().lower() == str(actual['bs']).strip().lower()) if p_bs else False
+        c_oe = (str(p_oe).strip().lower() == str(actual['oe']).strip().lower()) if p_oe else False
         
         return {
             'model': model_name,
@@ -1346,11 +1371,23 @@ class BacktestingEngine:
 def create_baseline_models():
     """Create simple baseline models for backtesting."""
     
+    def safe_mean(s, default=3.5):
+        s_c = pd.to_numeric(s, errors='coerce').dropna()
+        return float(s_c.mean()) if not s_c.empty else default
+        
+    def safe_median(s, default=3.5):
+        s_c = pd.to_numeric(s, errors='coerce').dropna()
+        return float(s_c.median()) if not s_c.empty else default
+        
+    def safe_mode(s, default=3):
+        s_c = pd.to_numeric(s, errors='coerce').dropna()
+        return int(s_c.mode().iloc[0]) if not s_c.empty else default
+
     def mean_predictor(df):
-        sum_mean = float(df['sum'].mean())
-        d1_mean = int(np.clip(round(df['dice1'].mean()), 1, 6))
-        d2_mean = int(np.clip(round(df['dice2'].mean()), 1, 6))
-        d3_mean = int(np.clip(round(df['dice3'].mean()), 1, 6))
+        sum_mean = safe_mean(df.get('sum'), 10.5)
+        d1_mean = int(np.clip(round(safe_mean(df.get('dice1'), 3.5)), 1, 6))
+        d2_mean = int(np.clip(round(safe_mean(df.get('dice2'), 3.5)), 1, 6))
+        d3_mean = int(np.clip(round(safe_mean(df.get('dice3'), 3.5)), 1, 6))
         
         return {
             'dice1': d1_mean, 'dice2': d2_mean, 'dice3': d3_mean,
@@ -1362,54 +1399,61 @@ def create_baseline_models():
         }
     
     def median_predictor(df):
-        sum_med = float(df['sum'].median())
-        d1_med = int(np.clip(df['dice1'].median(), 1, 6))
-        d2_med = int(np.clip(df['dice2'].median(), 1, 6))
-        d3_med = int(np.clip(df['dice3'].median(), 1, 6))
+        sum_med = safe_median(df.get('sum'), 10.0)
+        d1_med = int(np.clip(safe_median(df.get('dice1'), 3.0), 1, 6))
+        d2_med = int(np.clip(safe_median(df.get('dice2'), 3.0), 1, 6))
+        d3_med = int(np.clip(safe_median(df.get('dice3'), 3.0), 1, 6))
         
         return {
             'dice1': d1_med, 'dice2': d2_med, 'dice3': d3_med,
-            'sum': int(sum_med),
+            'sum': int(round(sum_med)),
             'bs_pred': 'Big' if sum_med >= 11 else 'Small',
-            'oe_pred': 'Odd' if int(sum_med) % 2 else 'Even',
+            'oe_pred': 'Odd' if int(round(sum_med)) % 2 else 'Even',
             'premium': f"{d1_med}{d2_med}{d3_med}",
             'bs_conf': 52.0, 'oe_conf': 52.0
         }
     
     def last_predictor(df):
-        last = df.iloc[0]
-        s = int(last['sum'])
-        d1, d2, d3 = int(last['dice1']), int(last['dice2']), int(last['dice3'])
+        last = df.iloc[-1] if not df.empty else {'sum': 10, 'dice1': 3, 'dice2': 3, 'dice3': 4, 'big_small': 'Small', 'odd_even': 'Even', 'premium': '334'}
+        try: s = int(float(last.get('sum', 10)))
+        except: s = 10
+        try: d1 = int(float(last.get('dice1', 3)))
+        except: d1 = 3
+        try: d2 = int(float(last.get('dice2', 3)))
+        except: d2 = 3
+        try: d3 = int(float(last.get('dice3', 4)))
+        except: d3 = 4
         
         return {
             'dice1': d1, 'dice2': d2, 'dice3': d3,
             'sum': s,
-            'bs_pred': last['big_small'],
-            'oe_pred': last['odd_even'],
-            'premium': str(last['premium']),
+            'bs_pred': str(last.get('big_small', 'Small')),
+            'oe_pred': str(last.get('odd_even', 'Even')),
+            'premium': str(last.get('premium', f"{d1}{d2}{d3}")),
             'bs_conf': 50.0, 'oe_conf': 50.0
         }
     
     def random_predictor(df):
         d1, d2, d3 = np.random.randint(1, 7, 3)
         s = int(d1 + d2 + d3)
-        
         return {
             'dice1': int(d1), 'dice2': int(d2), 'dice3': int(d3),
             'sum': s,
-            'bs_pred': np.random.choice(['Big', 'Small']),
-            'oe_pred': np.random.choice(['Odd', 'Even']),
+            'bs_pred': str(np.random.choice(['Big', 'Small'])),
+            'oe_pred': str(np.random.choice(['Odd', 'Even'])),
             'premium': f"{d1}{d2}{d3}",
             'bs_conf': 50.0, 'oe_conf': 50.0
         }
     
     def frequency_bias_predictor(df):
-        most_common_sum = int(df['sum'].mode().iloc[0])
-        d1_mode = int(df['dice1'].mode().iloc[0])
-        d2_mode = int(df['dice2'].mode().iloc[0])
-        d3_mode = int(df['dice3'].mode().iloc[0])
+        most_common_sum = safe_mode(df.get('sum'), 10)
+        d1_mode = safe_mode(df.get('dice1'), 3)
+        d2_mode = safe_mode(df.get('dice2'), 3)
+        d3_mode = safe_mode(df.get('dice3'), 3)
         
-        while d1_mode + d2_mode + d3_mode != most_common_sum:
+        iters = 0
+        while d1_mode + d2_mode + d3_mode != most_common_sum and iters < 30:
+            iters += 1
             d3_mode += 1
             if d3_mode > 6:
                 d3_mode = 1
@@ -1418,7 +1462,6 @@ def create_baseline_models():
                     d2_mode = 1
         
         s = d1_mode + d2_mode + d3_mode
-        
         return {
             'dice1': d1_mode, 'dice2': d2_mode, 'dice3': d3_mode,
             'sum': s,
@@ -5758,684 +5801,688 @@ def do_sync_k3():
         st.session_state.last_sync = datetime.now().strftime('%H:%M:%S')
         return current_df
 
-# Sync Data Live
-df_active = do_sync_k3()
-if df_active is None or df_active.empty:
-    df_active = generate_fallback_k3_df()
-    st.session_state.data_k3 = df_active
-
-init_scorecards_and_history(df_active)
-
-# Sidebar Data Controls
-st.sidebar.markdown("## ⚙️ Data Operations")
-col_s1, col_s2 = st.sidebar.columns(2)
-if col_s1.button("⚡ Fast Sync", use_container_width=True):
+def run_app():
+    # Sync Data Live
     df_active = do_sync_k3()
-    st.rerun()
-if col_s2.button("📂 Reload CSV", use_container_width=True):
-    st.session_state.data_k3 = load_k3()
-    if 'cached_target_issue' in st.session_state: del st.session_state['cached_target_issue']
-    st.rerun()
+    if df_active is None or df_active.empty:
+        df_active = generate_fallback_k3_df()
+        st.session_state.data_k3 = df_active
 
-if st.sidebar.button("🔄 Recalculate Backtest", use_container_width=True):
-    sc, vault, ev_set = compute_strict_historical_backtest(df_active, max_eval=20)
-    st.session_state.agent_scorecards = sc
-    st.session_state.agent_lifetime_vault = vault
-    st.session_state.evaluated_issues = ev_set
-    save_persisted_performance()
-    st.success("Re-evaluated with 100% mathematical equality!")
-    st.rerun()
+    init_scorecards_and_history(df_active)
 
-st.sidebar.markdown("## 🛡️ Real-Time Surveillance & Auditing")
-show_sidebar_anomaly = st.sidebar.checkbox("🔍 Anomaly Detection Dashboard", value=False, help="Display the real-time 6-dimensional anomaly detection dashboard.")
-if show_sidebar_anomaly:
-    render_anomaly_dashboard(df_active)
+    # Sidebar Data Controls
+    st.sidebar.markdown("## ⚙️ Data Operations")
+    col_s1, col_s2 = st.sidebar.columns(2)
+    if col_s1.button("⚡ Fast Sync", use_container_width=True):
+        df_active = do_sync_k3()
+        st.rerun()
+    if col_s2.button("📂 Reload CSV", use_container_width=True):
+        st.session_state.data_k3 = load_k3()
+        if 'cached_target_issue' in st.session_state: del st.session_state['cached_target_issue']
+        st.rerun()
 
-show_sidebar_perf = st.sidebar.checkbox("📊 Performance Tracking Dashboard", value=False, help="Display the comprehensive model performance tracker and walk-forward backtest suite.")
-if show_sidebar_perf:
-    render_performance_tracker_ui(df_active)
+    if st.sidebar.button("🔄 Recalculate Backtest", use_container_width=True):
+        sc, vault, ev_set = compute_strict_historical_backtest(df_active, max_eval=20)
+        st.session_state.agent_scorecards = sc
+        st.session_state.agent_lifetime_vault = vault
+        st.session_state.evaluated_issues = ev_set
+        save_persisted_performance()
+        st.success("Re-evaluated with 100% mathematical equality!")
+        st.rerun()
 
-show_sidebar_xai = st.sidebar.checkbox("🧠 Explainable AI", value=False, help="Inspect SHAP, LIME, and Counterfactual model explanations.")
-if show_sidebar_xai:
-    render_xai_ui(df_active)
-
-show_sidebar_decomp = st.sidebar.checkbox("🌊 Time Series Decomposition", value=False, help="Inspect STL, Fourier, Wavelets, and Change Point decompositions.")
-if show_sidebar_decomp:
-    render_decomposition_ui(df_active)
-
-st.sidebar.markdown("## 🎯 Probabilistic Priors")
-bias_mode = st.sidebar.toggle("🎯 Bias Compensation Mode (Bayesian Priors)", value=False, help="Injects empirical Dirichlet priors for observed Odd-Even bias and positional face deficits.")
-if bias_mode:
-    st.sidebar.caption("⚡ Bayesian empirical priors active in ensemble weighting.")
-
-n_records = len(df_active)
-st.sidebar.metric("Database Stored Records", n_records)
-st.sidebar.caption(f"🕒 Last Polled: **{st.session_state.last_sync}**")
-
-latest_row = df_active.iloc[0] if not df_active.empty else {'issueNumber': '20260818101010500', 'premium': '333'}
-latest_issue_str = str(latest_row.get('issueNumber', '20260818101010500'))
-next_issue_str = str(int(latest_issue_str) + 1) if latest_issue_str.isdigit() else "Next Draw"
-
-
-# ==============================================================================
-# 8. MULTI-MODEL INFERENCE PIPELINE
-# ==============================================================================
-sniper_res = run_nexus_pattern_sniper(df_active)
-tt_res = run_nexus_k3_triple_threat(df_active)
-oracle_res = run_quantum_temporal_oracle_k3(df_active)
-ag1 = run_sentinel_prime_omega_k3(df_active)
-ag2 = agent_nexus_core(df_active)
-ag4 = agent_omni_rl(df_active)
-ag5 = agent_omega_zero(df_active)
-ag6 = agent_duo_force(df_active)
-bnn_res = run_bnn_agent(df_active)
-
-all_agents = [sniper_res, tt_res, oracle_res, ag1, ag2, ag4, ag5, ag6, bnn_res]
-hive = orchestrate_hive_mind(all_agents, df_active, bias_compensation=bias_mode)
-
-# Statistical & Anomaly Diagnostics
-chi2_stat, chi2_pval, rng_status = compute_chi_square_randomness(df_active)
-anomaly_tel = compute_anomaly_telemetry(df_active)
-
-# Store predictions for next live validation
-st.session_state.agent_past_predictions[next_issue_str] = {
-    'HIVE MIND MASTER': {'dice1': hive['dice1'], 'dice2': hive['dice2'], 'dice3': hive['dice3'], 'premium': hive['premium'], 'sum': hive['sum'], 'bs': hive['bs_pred'], 'oe': hive['oe_pred']},
-    'NEXUS PATTERN SNIPER': {'dice1': sniper_res['dice1'], 'dice2': sniper_res['dice2'], 'dice3': sniper_res['dice3'], 'premium': sniper_res['premium'], 'sum': sniper_res['sum'], 'bs': sniper_res['bs_pred'], 'oe': sniper_res['oe_pred']},
-    'NEXUS K3 TRIPLE THREAT': {'dice1': tt_res['dice1'], 'dice2': tt_res['dice2'], 'dice3': tt_res['dice3'], 'premium': tt_res['premium'], 'sum': tt_res['sum'], 'bs': tt_res['bs_pred'], 'oe': tt_res['oe_pred']},
-    'QUANTUM TEMPORAL ORACLE K3': {'dice1': oracle_res['dice1'], 'dice2': oracle_res['dice2'], 'dice3': oracle_res['dice3'], 'premium': oracle_res['premium'], 'sum': oracle_res['sum'], 'bs': oracle_res['bs_pred'], 'oe': oracle_res['oe_pred']},
-    'SENTINEL PRIME OMEGA K3': {'dice1': ag1['dice1'], 'dice2': ag1['dice2'], 'dice3': ag1['dice3'], 'premium': ag1['premium'], 'sum': ag1['sum'], 'bs': ag1['bs_pred'], 'oe': ag1['oe_pred']},
-    'NEXUS CORE K3': {'dice1': ag2['dice1'], 'dice2': ag2['dice2'], 'dice3': ag2['dice3'], 'premium': ag2['premium'], 'sum': ag2['sum'], 'bs': ag2['bs_pred'], 'oe': ag2['oe_pred']},
-    'OMNI K3 RL': {'dice1': ag4['dice1'], 'dice2': ag4['dice2'], 'dice3': ag4['dice3'], 'premium': ag4['premium'], 'sum': ag4['sum'], 'bs': ag4['bs_pred'], 'oe': ag4['oe_pred']},
-    'OMEGA ZERO K3': {'dice1': ag5['dice1'], 'dice2': ag5['dice2'], 'dice3': ag5['dice3'], 'premium': ag5['premium'], 'sum': ag5['sum'], 'bs': ag5['bs_pred'], 'oe': ag5['oe_pred']},
-    'DUO FORCE K3': {'dice1': ag6['dice1'], 'dice2': ag6['dice2'], 'dice3': ag6['dice3'], 'premium': ag6['premium'], 'sum': ag6['sum'], 'bs': ag6['bs_pred'], 'oe': ag6['oe_pred']},
-    'BAYESIAN NEURAL NETWORK': {'dice1': bnn_res['dice1'], 'dice2': bnn_res['dice2'], 'dice3': bnn_res['dice3'], 'premium': bnn_res['premium'], 'sum': bnn_res['sum'], 'bs': bnn_res['bs_pred'], 'oe': bnn_res['oe_pred']}
-}
-
-# Synchronize Out-of-Sample Predictions to Performance Tracker Logger
-log_all_agent_predictions(all_agents + [hive], next_issue_str)
-
-
-# ==============================================================================
-# 9. UI RENDERERS FOR FLAGSHIP AGENTS
-# ==============================================================================
-
-def render_pattern_sniper_card(sniper):
-    steps = sniper.get('steps', [])
-    meta = sniper.get('meta', {})
-    
-    bs_glow = '#10b981' if sniper['bs_pred'] == 'Big' else '#ef4444'
-    oe_glow = '#8b5cf6' if sniper['oe_pred'] == 'Odd' else '#f97316'
-    
-    bs_b = f'<span class="badge-big" style="font-size:1.1rem; padding:6px 14px; box-shadow:0 0 15px {bs_glow};">{sniper["bs_pred"].upper()}</span>' if sniper['bs_pred'] == 'Big' else f'<span class="badge-small" style="font-size:1.1rem; padding:6px 14px; box-shadow:0 0 15px {bs_glow};">{sniper["bs_pred"].upper()}</span>'
-    oe_b = f'<span class="badge-odd" style="font-size:1.1rem; padding:6px 14px; box-shadow:0 0 15px {oe_glow};">{sniper["oe_pred"].upper()}</span>' if sniper['oe_pred'] == 'Odd' else f'<span class="badge-even" style="font-size:1.1rem; padding:6px 14px; box-shadow:0 0 15px {oe_glow};">{sniper["oe_pred"].upper()}</span>'
-    
-    agent_scorecard = render_scorecard_and_tracker(sniper['name'])
-    
-    sniper_html = f"""
-    <div class="sniper-card">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid rgba(16, 185, 129, 0.3); padding-bottom: 10px;">
-            <div>
-                <span style="color: #34d399; font-size: 0.8rem; font-weight: 800; letter-spacing: 1px;">EMPIRICAL 5-ANOMALY ENGINE (STATISTICAL EDGE)</span>
-                <div style="font-size: 1.45rem; font-weight: 900; color: #10b981;">🎯 NEXUS PATTERN SNIPER (Spillover + Elastic Bounds + Wave Cycles)</div>
-            </div>
-            <div style="display: flex; gap: 6px;">
-                <span style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid #34d399; padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 800;">84% Spillover</span>
-                <span style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid #38bdf8; padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 800;">±5 Elastic</span>
-                <span style="background: rgba(139, 92, 246, 0.15); color: #c084fc; border: 1px solid #c084fc; padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 800;">Harmonic Lag5/10</span>
-                <span style="background: rgba(251, 191, 36, 0.15); color: #fbbf24; border: 1px solid #fbbf24; padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 800;">Kelly Stake</span>
-            </div>
-        </div>
-        
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 12px;">
-            <div style="background: rgba(0,0,0,0.35); padding: 14px; border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.3); text-align: center;">
-                <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 6px; text-transform: uppercase;">1. Big / Small Forecast</div>
-                <div style="margin-bottom: 6px;">{bs_b}</div>
-                <div style="font-size: 1.1rem; font-weight: 900; color: #ffffff;">Confidence: <span style="color: #38bdf8;">{sniper['bs_conf']:.1f}%</span></div>
-            </div>
-            
-            <div style="background: rgba(0,0,0,0.35); padding: 14px; border-radius: 12px; border: 1px solid rgba(139, 92, 246, 0.3); text-align: center;">
-                <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 6px; text-transform: uppercase;">2. Odd / Even Forecast</div>
-                <div style="margin-bottom: 6px;">{oe_b}</div>
-                <div style="font-size: 1.1rem; font-weight: 900; color: #ffffff;">Confidence: <span style="color: #a855f7;">{sniper['oe_conf']:.1f}%</span></div>
-            </div>
-            
-            <div style="background: rgba(0,0,0,0.35); padding: 14px; border-radius: 12px; border: 1px solid rgba(251, 191, 36, 0.3); text-align: center;">
-                <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px; text-transform: uppercase;">3. Empirical Metrics</div>
-                <div style="font-size: 0.85rem; color: #34d399; font-weight: 800; margin-bottom: 2px;">🎲 Anchor Dice: [{meta.get('anchor', 3)}]</div>
-                <div style="font-size: 0.82rem; color: #38bdf8; font-weight: 700; margin-bottom: 2px;">📏 Elastic Bounds: {meta.get('window', '[6-16]')}</div>
-                <div style="font-size: 0.82rem; color: #fbbf24; font-weight: 800;">🔥 Streak: {meta.get('dragon_streak', 1)}x</div>
-            </div>
-        </div>
-        
-        <div style="display: flex; gap: 8px; align-items: center; background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 8px; margin-bottom: 6px;">
-            <span style="font-size: 0.75rem; color: #94a3b8;">Pattern Triad:</span>
-            <span class="dice-cube">{sniper['dice1']}</span>
-            <span class="dice-cube">{sniper['dice2']}</span>
-            <span class="dice-cube">{sniper['dice3']}</span>
-            <span class="premium-badge">#{sniper['premium']}</span>
-            <span class="sum-badge">SUM: {sniper['sum']}</span>
-            <span class="badge-kelly" style="margin-left: auto;">Recommended Stake: {sniper['kelly']:.1f}% Kelly</span>
-        </div>
-        
-        {agent_scorecard}
-    </div>
-    """
-    render_html(sniper_html)
-
-    with st.expander("🔬 Nexus Pattern Sniper (5 Empirical Anomalies Breakdown)", expanded=False):
-        for s in steps:
-            st.markdown(f"<small style='color: #cbd5e1;'>• {s}</small>", unsafe_allow_html=True)
-
-def render_triple_threat_card(tt):
-    bs_glow = '#10b981' if tt['bs_pred'] == 'Big' else '#ef4444'
-    oe_glow = '#8b5cf6' if tt['oe_pred'] == 'Odd' else '#f97316'
-    
-    bs_b = f'<span class="badge-big" style="font-size:1.1rem; padding:6px 14px; box-shadow:0 0 15px {bs_glow};">{tt["bs_pred"].upper()}</span>' if tt['bs_pred'] == 'Big' else f'<span class="badge-small" style="font-size:1.1rem; padding:6px 14px; box-shadow:0 0 15px {bs_glow};">{tt["bs_pred"].upper()}</span>'
-    oe_b = f'<span class="badge-odd" style="font-size:1.1rem; padding:6px 14px; box-shadow:0 0 15px {oe_glow};">{tt["oe_pred"].upper()}</span>' if tt['oe_pred'] == 'Odd' else f'<span class="badge-even" style="font-size:1.1rem; padding:6px 14px; box-shadow:0 0 15px {oe_glow};">{tt["oe_pred"].upper()}</span>'
-    sum_b = f'<span style="font-size: 2rem; font-weight: 900; color: #fbbf24; font-family: monospace;">{tt["sum"]}</span>'
-    
-    agent_scorecard = render_scorecard_and_tracker(tt['name'])
-    
-    tt_html = f"""
-    <div class="triple-threat-card">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 10px;">
-            <div>
-                <span style="color: #38bdf8; font-size: 0.8rem; font-weight: 800; letter-spacing: 1px;">TRIPLE FOCUS DEEP LEARNING AGENT</span>
-                <div style="font-size: 1.4rem; font-weight: 900; color: #ffffff;">🎯 NEXUS K3 TRIPLE THREAT (Big/Small + Odd/Even + Sum)</div>
-            </div>
-            <div style="display: flex; gap: 6px;">
-                <span style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid #10b981; padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 800;">Multi-Task NN</span>
-                <span style="background: rgba(139, 92, 246, 0.15); color: #a855f7; border: 1px solid #a855f7; padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 800;">XGBoost</span>
-                <span style="background: rgba(251, 191, 36, 0.15); color: #fbbf24; border: 1px solid #fbbf24; padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 800;">Dynamic Blend</span>
-            </div>
-        </div>
-        
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 12px;">
-            <div style="background: rgba(0,0,0,0.35); padding: 12px; border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.3); text-align: center;">
-                <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 6px; text-transform: uppercase;">1. Big / Small</div>
-                <div style="margin-bottom: 6px;">{bs_b}</div>
-                <div style="font-size: 1.05rem; font-weight: 900; color: #ffffff;">Confidence: <span style="color: #38bdf8;">{tt['bs_conf']:.1f}%</span></div>
-            </div>
-            
-            <div style="background: rgba(0,0,0,0.35); padding: 12px; border-radius: 12px; border: 1px solid rgba(139, 92, 246, 0.3); text-align: center;">
-                <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 6px; text-transform: uppercase;">2. Odd / Even</div>
-                <div style="margin-bottom: 6px;">{oe_b}</div>
-                <div style="font-size: 1.05rem; font-weight: 900; color: #ffffff;">Confidence: <span style="color: #a855f7;">{tt['oe_conf']:.1f}%</span></div>
-            </div>
-            
-            <div style="background: rgba(0,0,0,0.35); padding: 12px; border-radius: 12px; border: 1px solid rgba(251, 191, 36, 0.3); text-align: center;">
-                <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 2px; text-transform: uppercase;">3. Exact Sum (3-18)</div>
-                <div style="margin-bottom: 2px;">{sum_b}</div>
-                <div style="font-size: 1.05rem; font-weight: 900; color: #ffffff;">Confidence: <span style="color: #fbbf24;">{tt['sum_conf']:.1f}%</span></div>
-            </div>
-        </div>
-        
-        <div style="display: flex; gap: 8px; align-items: center; background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 8px; margin-bottom: 6px;">
-            <span style="font-size: 0.75rem; color: #94a3b8;">Consensus Triad:</span>
-            <span class="dice-cube">{tt['dice1']}</span>
-            <span class="dice-cube">{tt['dice2']}</span>
-            <span class="dice-cube">{tt['dice3']}</span>
-            <span class="premium-badge">#{tt['premium']}</span>
-            <span class="sum-badge">SUM: {tt['sum']}</span>
-            <span class="badge-kelly" style="margin-left: auto;">Safe Stake: {tt['safe_kelly']:.1f}% Kelly</span>
-        </div>
-        
-        {agent_scorecard}
-    </div>
-    """
-    render_html(tt_html)
-
-
-# ==============================================================================
-# 10. MAIN DASHBOARD PAGE LAYOUT
-# ==============================================================================
-
-render_html("""
-<div style="margin-bottom: 16px;">
-    <h1 style="margin:0; font-size: 2.2rem; font-weight:900; background: linear-gradient(135deg, #f59e0b, #10b981); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-        👑 K3 HIVE MIND | Full-Spectrum Autonomous Intelligence
-    </h1>
-    <p style="margin:4px 0 0 0; color: #94a3b8; font-size: 0.95rem;">
-        🎯 Nexus Pattern Sniper + Nexus Triple Threat + 6 Specialized AI Agents
-    </p>
-</div>
-""")
-
-# Statistical Diagnostics & Live Anomaly Telemetry Bar
-rng_glow = "#10b981" if chi2_pval >= 0.05 else "#f59e0b"
-bias_badge = f'<span style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid #38bdf8; padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 800;">🎯 Bayesian Priors Active</span>' if bias_mode else f'<span style="background: rgba(148, 163, 184, 0.2); color: #94a3b8; border: 1px solid #64748b; padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 800;">Standard Priors</span>'
-
-diagnostics_html = f"""
-<div style="background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(255, 255, 255, 0.08); backdrop-filter: blur(12px); border-radius: 12px; padding: 12px 18px; margin-bottom: 16px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px;">
-    <div style="display: flex; gap: 16px; align-items: center;">
-        <div>
-            <div style="font-size: 0.72rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">🎲 Chi-Square Randomness (Goodness-of-Fit)</div>
-            <div style="font-size: 0.95rem; font-weight: 800; color: {rng_glow};">
-                χ² = {chi2_stat:.2f} (p = {chi2_pval:.3f}) • <span style="font-size: 0.8rem;">{rng_status}</span>
-            </div>
-        </div>
-        <div style="border-left: 1px solid rgba(255, 255, 255, 0.1); padding-left: 16px;">
-            <div style="font-size: 0.72rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">🚨 Live Anomaly Score</div>
-            <div style="font-size: 0.92rem; font-weight: 800; color: #ffffff;">{anomaly_tel['anomaly_score']}</div>
-        </div>
-    </div>
-    <div style="display: flex; gap: 10px; align-items: center; font-size: 0.78rem;">
-        <span style="background: rgba(251, 191, 36, 0.12); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); padding: 4px 8px; border-radius: 6px;">
-            👑 Triples: <b>{anomaly_tel['triples_count']}</b> <small>({', '.join(anomaly_tel['recent_triples'][:3]) if anomaly_tel['recent_triples'] else 'None'})</small>
-        </span>
-        <span style="background: rgba(139, 92, 246, 0.12); color: #c084fc; border: 1px solid rgba(139, 92, 246, 0.3); padding: 4px 8px; border-radius: 6px;">
-            🔥 Rare Sums (≤4 / ≥17): <b>{anomaly_tel['rare_sums_count']}</b>
-        </span>
-        <span style="background: rgba(16, 185, 129, 0.12); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); padding: 4px 8px; border-radius: 6px;">
-            ⚖️ Parity: Odd <b>{anomaly_tel['odd_pct']:.1f}%</b> | Even <b>{100-anomaly_tel['odd_pct']:.1f}%</b>
-        </span>
-        {bias_badge}
-    </div>
-</div>
-"""
-render_html(diagnostics_html)
-
-with st.expander("🔬 Statistical Randomness Test (Chi-Square)", expanded=False):
-    if len(df_active) >= 30:
-        chi_results = run_chi_square_tests(df_active)
-        
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            bias = chi_results.get('sum', {}).get('biased', False)
-            p_v = chi_results.get('sum', {}).get('p_value', 1.0)
-            st.metric("Sum Bias", "BIASED 🔴" if bias else "Random 🟢", f"p={p_v:.4f}")
-        with col2:
-            bias = chi_results.get('odd_even', {}).get('biased', False)
-            p_v = chi_results.get('odd_even', {}).get('p_value', 1.0)
-            st.metric("Odd/Even Bias", "BIASED 🔴" if bias else "Random 🟢", f"p={p_v:.4f}")
-        with col3:
-            bias = chi_results.get('dice3_bias', {}).get('biased', False)
-            p_v = chi_results.get('dice3_bias', {}).get('p_value', 1.0)
-            st.metric("Dice 3 Bias", "BIASED 🔴" if bias else "Random 🟢", f"p={p_v:.4f}")
-        
-        st.warning("⚠️ These are observed biases in past data. They don't guarantee future outcomes.")
-    else:
-        st.info("Need at least 30 draws for statistical tests.")
-
-with st.expander("🧪 Advanced Statistical Forensics Suite (14 In-Depth Randomness Tests)", expanded=False):
-    if len(df_active) >= 30:
-        adv_results = run_full_advanced_analysis(df_active)
-        
-        verdicts = [v.get('verdict', '') for v in adv_results.values() if isinstance(v, dict)]
-        red_cnt = sum(1 for v in verdicts if '🔴' in v)
-        yellow_cnt = sum(1 for v in verdicts if '🟡' in v or '🟠' in v)
-        green_cnt = sum(1 for v in verdicts if '🟢' in v)
-        
-        c_v1, c_v2, c_v3 = st.columns(3)
-        c_v1.metric("🔴 Non-Random Tests", red_cnt)
-        c_v2.metric("🟡 Marginal / Mild Bias", yellow_cnt)
-        c_v3.metric("🟢 Truly Random Tests", green_cnt)
-        
-        st.markdown("---")
-        
-        t_cols = st.columns(2)
-        idx_c = 0
-        for test_key, res in adv_results.items():
-            if isinstance(res, dict):
-                col_target = t_cols[idx_c % 2]
-                with col_target:
-                    test_title = res.get('test', test_key)
-                    verdict_str = res.get('verdict', 'N/A')
-                    st.markdown(f"**{test_title}** — {verdict_str}")
-                    details = []
-                    for k, v in res.items():
-                        if k not in ['test', 'verdict'] and not isinstance(v, (list, dict)):
-                            if isinstance(v, float): details.append(f"`{k}`: {v:.4f}")
-                            else: details.append(f"`{k}`: {v}")
-                    if details:
-                        st.caption(" • ".join(details))
-                    st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
-                idx_c += 1
-                
-        st.warning("⚠️ Statistical observations reflect past draw distributions. In true casino RNG, short-term micro-clusters regress to the mean over long horizons.")
-    else:
-        st.info("Need at least 30 draws for advanced statistical testing.")
-
-with st.expander("🧬 Bayesian Statistical Inference & Bayes Factors Suite", expanded=False):
-    if len(df_active) >= 30:
-        b_c1, b_c2 = st.columns(2)
-        with b_c1:
-            p_alpha = st.slider("Prior α (Hypothesized Successes)", min_value=1, max_value=20, value=1, help="α=β=1 represents an uninformative uniform prior.")
-        with b_c2:
-            p_beta = st.slider("Prior β (Hypothesized Failures)", min_value=1, max_value=20, value=1, help="Higher α & β represent stronger 50/50 prior confidence.")
-            
-        b_res = run_bayesian_analysis(df_active, prior_alpha=p_alpha, prior_beta=p_beta)
-        
-        if b_res:
-            st.markdown("#### 🎯 Bayesian Posterior Parameter Estimations (95% Credible Intervals)")
-            m_col1, m_col2, m_col3 = st.columns(3)
-            
-            with m_col1:
-                bs_mean = b_res['big_small']['summary']['posterior_mean'] * 100.0
-                bs_ci = b_res['big_small']['model'].credible_interval()
-                bs_bf = b_res['big_small']['bayes_factor']['bayes_factor']
-                st.metric("Big/Small Posterior Mean", f"{bs_mean:.1f}%", f"95% CI: [{bs_ci[0]*100:.1f}%, {bs_ci[1]*100:.1f}%]")
-                st.caption(f"**Bayes Factor vs Fair:** `{bs_bf:.3f}` ({b_res['big_small']['bayes_factor']['verdict']})")
-                
-            with m_col2:
-                oe_mean = b_res['odd_even']['summary']['posterior_mean'] * 100.0
-                oe_ci = b_res['odd_even']['model'].credible_interval()
-                oe_bf = b_res['odd_even']['bayes_factor']['bayes_factor']
-                st.metric("Odd/Even Posterior Mean", f"{oe_mean:.1f}%", f"95% CI: [{oe_ci[0]*100:.1f}%, {oe_ci[1]*100:.1f}%]")
-                st.caption(f"**Bayes Factor vs Fair:** `{oe_bf:.3f}` ({b_res['odd_even']['bayes_factor']['verdict']})")
-                
-            with m_col3:
-                d1_kl = b_res.get('dice1_kl', 0.0)
-                d3_kl = b_res.get('dice3_kl', 0.0)
-                d3_bf = b_res['dice3_face3_bf']['bayes_factor']
-                st.metric("Dice 1 KL Divergence", f"{d1_kl:.4f}", "Uniform" if d1_kl < 0.02 else "Biased")
-                st.caption(f"**Dice 3 Face 3 BF vs 1/6:** `{d3_bf:.3f}` ({b_res['dice3_face3_bf']['verdict']})")
-                
-            st.markdown("---")
-            cp_info = b_res.get('change_point', {})
-            st.markdown(f"**🧬 Bayesian Change Point Detection:** {cp_info.get('interpretation', 'No change')} *(Log-BF: `{cp_info.get('log_bayes_factor', 0.0):.2f}` at index #{cp_info.get('best_change_point', 0)})*")
-            
-        st.warning("⚠️ Bayesian analysis quantifies evidence weight for fairness vs anomaly. It updates continuously with each live draw.")
-    else:
-        st.info("Need at least 30 draws for Bayesian inference.")
-
-with st.expander("🧠 Bayesian Neural Network (BNN) & Uncertainty Decomposition", expanded=False):
-    if len(df_active) >= 30:
-        bnn_c1, bnn_c2, bnn_c3 = st.columns(3)
-        with bnn_c1:
-            st.metric("🎲 BNN Predicted Triad", f"#{bnn_res['premium']}", f"Sum: {bnn_res['sum']}")
-        with bnn_c2:
-            st.metric("📊 Big/Small Prob", f"{bnn_res['bs_conf']:.1f}% ({bnn_res['bs_pred']})")
-        with bnn_c3:
-            st.metric("⚖️ Odd/Even Prob", f"{bnn_res['oe_conf']:.1f}% ({bnn_res['oe_pred']})")
-            
-        st.markdown("---")
-        st.markdown("#### 🔬 Epistemic vs Aleatoric Uncertainty Decomposition")
-        u_col1, u_col2, u_col3 = st.columns(3)
-        with u_col1:
-            st.metric("🔍 Epistemic Var (Model)", f"{bnn_res['uncertainty']['epistemic_sum']:.4f}", "Low" if bnn_res['uncertainty']['epistemic_sum'] < 0.2 else "Elevated")
-        with u_col2:
-            st.metric("🎲 Aleatoric Noise (Data)", "0.1500", "Inherent RNG")
-        with u_col3:
-            st.metric("📈 Total Predictive Std", f"{bnn_res['uncertainty']['total_uncertainty']:.4f}")
-            
-        # Uncertainty bar comparison
-        u_df = pd.DataFrame({
-            'Uncertainty Type': ['Epistemic (Model Knowledge)', 'Aleatoric (Inherent Randomness)', 'Total Predictive Std'],
-            'Magnitude': [bnn_res['uncertainty']['epistemic_sum'], 0.15, bnn_res['uncertainty']['total_uncertainty']]
-        })
-        st.bar_chart(u_df.set_index('Uncertainty Type'))
-        
-        st.markdown("##### 🧬 Internal Stochastic Inference Trace:")
-        for step in bnn_res['steps']:
-            st.text(f"  • {step}")
-            
-        st.info("ℹ️ **Epistemic Uncertainty** measures variance across Monte Carlo variational weight samples. **Aleatoric Uncertainty** represents irreducible casino RNG entropy.")
-    else:
-        st.info("Need at least 30 draws for BNN inference.")
-
-with st.expander("🎓 Advanced Bayesian Deep Learning Suite (VAE • LSTM • GP • BO • HMC)", expanded=False):
-    if len(df_active) >= 30:
-        b_tab1, b_tab2, b_tab3, b_tab4, b_tab5 = st.tabs([
-            "🧬 Variational Autoencoder", 
-            "🔄 Bayesian LSTM", 
-            "📈 Gaussian Process", 
-            "🎯 Bayesian Optimization", 
-            "⚡ HMC Sampling"
-        ])
-        
-        with b_tab1:
-            st.markdown("#### 🧬 Variational Autoencoder (VAE) Latent Space")
-            if 'k3_vae_trainer' not in st.session_state:
-                st.session_state.k3_vae_trainer = K3VAETrainer(latent_dim=8)
-                st.session_state.k3_vae_trainer.train(df_active, n_epochs=20)
-            
-            latent_mu, _ = st.session_state.k3_vae_trainer.get_latent_representation(df_active)
-            if latent_mu is not None and latent_mu.shape[1] >= 2:
-                st.caption("2D Latent Manifold Projection of K3 Draw Sequences:")
-                vae_df = pd.DataFrame({
-                    'Latent Axis 1': latent_mu[:, 0],
-                    'Latent Axis 2': latent_mu[:, 1]
-                })
-                st.scatter_chart(vae_df)
-                
-            if st.button("🎲 Generate Synthetic Draws from Latent Prior (z ~ N(0, I))", key="gen_vae_btn"):
-                syn = st.session_state.k3_vae_trainer.generate_synthetic_draws(15)
-                syn_df = pd.DataFrame({
-                    'Syn Dice 1': np.clip(np.round(syn[:, 0] * 5 + 1), 1, 6).astype(int),
-                    'Syn Dice 2': np.clip(np.round(syn[:, 1] * 5 + 1), 1, 6).astype(int),
-                    'Syn Dice 3': np.clip(np.round(syn[:, 2] * 5 + 1), 1, 6).astype(int),
-                    'Syn Sum': np.clip(np.round(syn[:, 3] * 15 + 3), 3, 18).astype(int)
-                })
-                st.dataframe(syn_df, use_container_width=True, hide_index=True)
-                
-        with b_tab2:
-            st.markdown("#### 🔄 Bayesian LSTM (Temporal Uncertainty)")
-            if 'k3_blstm' not in st.session_state:
-                st.session_state.k3_blstm = BayesianLSTMTrainer(seq_len=10)
-                st.session_state.k3_blstm.train(df_active, n_epochs=15)
-            lstm_res = st.session_state.k3_blstm.predict_with_uncertainty(df_active, n_samples=30)
-            if lstm_res:
-                l_col1, l_col2 = st.columns(2)
-                with l_col1:
-                    st.metric("Recurrent Epistemic Uncertainty", f"{lstm_res['epistemic_uncertainty']:.4f}")
-                with l_col2:
-                    pred_d1 = int(np.clip(round(lstm_res['mean'][0] * 5 + 1), 1, 6))
-                    pred_d2 = int(np.clip(round(lstm_res['mean'][1] * 5 + 1), 1, 6))
-                    pred_d3 = int(np.clip(round(lstm_res['mean'][2] * 5 + 1), 1, 6))
-                    st.metric("Sequential Pred Triad", f"[{pred_d1}, {pred_d2}, {pred_d3}]")
-                lstm_chart_df = pd.DataFrame({
-                    'Feature': ['Dice 1', 'Dice 2', 'Dice 3', 'Sum', 'Big/Small', 'Odd/Even'],
-                    'Predicted Mean': lstm_res['mean'][:6],
-                    'Uncertainty Std': lstm_res['std'][:6]
-                })
-                st.dataframe(lstm_chart_df, use_container_width=True, hide_index=True)
-                
-        with b_tab3:
-            st.markdown("#### 📈 Gaussian Process Regression (RBF Covariance)")
-            if 'k3_gp' not in st.session_state:
-                st.session_state.k3_gp = K3GaussianProcess()
-                st.session_state.k3_gp.fit(df_active)
-            gp_pred = st.session_state.k3_gp.predict_with_uncertainty(df_active)
-            gp_c1, gp_c2, gp_c3 = st.columns(3)
-            gp_c1.metric("GP Expected Sum", f"{gp_pred['sum_pred']:.2f}", f"±{gp_pred['sum_std']:.2f}")
-            gp_c2.metric("GP Big/Small Prob", f"{gp_pred['bs_prob']*100:.1f}%")
-            gp_c3.metric("Non-Parametric Uncertainty", f"{gp_pred['total_uncertainty']:.4f}")
-            
-        with b_tab4:
-            st.markdown("#### 🎯 Bayesian Optimization (Expected Improvement)")
-            st.caption("Active Global Acquisition Optimization for Model Calibration:")
-            if st.button("🚀 Run 15-Iteration Bayesian Optimization Acquisition", key="run_bo_btn"):
-                bo = BayesianOptimizer(bounds=[(0.001, 0.05), (10.0, 64.0)], n_initial=4)
-                best_params, best_score = bo.optimize(lambda p: float((p[0]-0.005)**2 + (p[1]-32.0)**2 * 0.001 + np.sin(p[0]*100)), n_iterations=15)
-                st.success(f"Optimal Hyperparameter Point: Learning Rate = `{best_params[0]:.5f}`, Hidden Width = `{int(best_params[1])}` (Loss: `{best_score:.4f}`)")
-                st.line_chart(pd.DataFrame({'EI Optimization Loss': bo.y_observed}))
-                
-        with b_tab5:
-            st.markdown("#### ⚡ Hamiltonian Monte Carlo (Symplectic Leapfrog Sampling)")
-            n_odd_count = int((df_active['odd_even'] == 'Odd').sum())
-            st.caption(f"Exact Posterior Sampling for Bernoulli Odd Rate ({n_odd_count}/{len(df_active)} draws):")
-            if st.button("⚡ Run HMC Posterior Sampling (500 Samples)", key="run_hmc_btn"):
-                hmc_res = K3HMCAnalyzer().sample_bernoulli_posterior(n_odd_count, len(df_active), n_samples=500)
-                h_c1, h_c2, h_c3 = st.columns(3)
-                h_c1.metric("HMC Posterior Mean", f"{hmc_res['mean']*100:.2f}%")
-                h_c2.metric("95% HMC Credible Interval", f"[{hmc_res['credible_95'][0]*100:.1f}%, {hmc_res['credible_95'][1]*100:.1f}%]")
-                h_c3.metric("Symplectic Acceptance Rate", f"{hmc_res['acceptance_rate']*100:.1f}%")
-    else:
-        st.info("Need at least 30 draws for advanced deep learning suite.")
-
-with st.expander("🚨 Real-Time Anomaly Detection & Statistical Surveillance Engine (6-Dimensional Telemetry)", expanded=False):
-    if len(df_active) >= 15:
+    st.sidebar.markdown("## 🛡️ Real-Time Surveillance & Auditing")
+    show_sidebar_anomaly = st.sidebar.checkbox("🔍 Anomaly Detection Dashboard", value=False, help="Display the real-time 6-dimensional anomaly detection dashboard.")
+    if show_sidebar_anomaly:
         render_anomaly_dashboard(df_active)
-    else:
-        st.info("Need at least 15 draws for real-time anomaly surveillance.")
 
-with st.expander("📊 Comprehensive Model Performance Tracking & Walk-Forward Audit Suite", expanded=False):
-    if len(df_active) >= 15:
+    show_sidebar_perf = st.sidebar.checkbox("📊 Performance Tracking Dashboard", value=False, help="Display the comprehensive model performance tracker and walk-forward backtest suite.")
+    if show_sidebar_perf:
         render_performance_tracker_ui(df_active)
-    else:
-        st.info("Need at least 15 draws for full performance tracking suite.")
 
-with st.expander("🧠 Explainable AI (XAI) & Model Interpretability (SHAP, LIME, Counterfactuals)", expanded=False):
-    if len(df_active) >= 10:
+    show_sidebar_xai = st.sidebar.checkbox("🧠 Explainable AI", value=False, help="Inspect SHAP, LIME, and Counterfactual model explanations.")
+    if show_sidebar_xai:
         render_xai_ui(df_active)
-    else:
-        st.info("Need at least 10 draws for explainable AI analysis.")
 
-with st.expander("🌊 Time Series Decomposition & Spectral Analysis (STL, Fourier, Wavelets, PELT)", expanded=False):
-    if len(df_active) >= 15:
+    show_sidebar_decomp = st.sidebar.checkbox("🌊 Time Series Decomposition", value=False, help="Inspect STL, Fourier, Wavelets, and Change Point decompositions.")
+    if show_sidebar_decomp:
         render_decomposition_ui(df_active)
-    else:
-        st.info("Need at least 15 draws for time series decomposition.")
 
-# Master Orchestrator Card
-bs_badge = f'<span class="badge-big">{hive["bs_pred"].upper()}</span>' if hive['bs_pred'] == 'Big' else f'<span class="badge-small">{hive["bs_pred"].upper()}</span>'
-oe_badge = f'<span class="badge-odd">{hive["oe_pred"].upper()}</span>' if hive['oe_pred'] == 'Odd' else f'<span class="badge-even">{hive["oe_pred"].upper()}</span>'
-master_scorecard = render_scorecard_and_tracker('HIVE MIND MASTER')
+    st.sidebar.markdown("## 🎯 Probabilistic Priors")
+    bias_mode = st.sidebar.toggle("🎯 Bias Compensation Mode (Bayesian Priors)", value=False, help="Injects empirical Dirichlet priors for observed Odd-Even bias and positional face deficits.")
+    if bias_mode:
+        st.sidebar.caption("⚡ Bayesian empirical priors active in ensemble weighting.")
 
-master_card_html = f"""
-<div class="master-card">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid rgba(245, 158, 11, 0.3); padding-bottom: 12px;">
-        <div>
-            <span style="color: #fbbf24; font-size: 0.85rem; font-weight: 800; letter-spacing: 1px;">ORCHESTRATOR MASTER FORECAST</span>
-            <div class="mono-font" style="font-size: 2rem; font-weight: 900; color: #ffffff;">TARGET ISSUE #{next_issue_str}</div>
-        </div>
-        <div style="text-align: right;">
-            <div class="live-pulse"><div class="pulse-dot"></div>AUTO-SYNCING (30s)</div>
-            <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 4px;">Last draw: #{latest_issue_str} ({latest_row.get('premium', '')})</div>
-        </div>
-    </div>
-    <div style="display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 16px; margin-bottom: 12px;">
-        <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 10px; border: 1px solid rgba(245, 158, 11, 0.2);">
-            <div style="color: #94a3b8; font-size: 0.75rem; margin-bottom: 6px; text-transform: uppercase;">Predicted Triad & Premium</div>
-            <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 6px;">
-                <span class="dice-cube">{hive['dice1']}</span>
-                <span class="dice-cube">{hive['dice2']}</span>
-                <span class="dice-cube">{hive['dice3']}</span>
-                <span class="premium-badge">#{hive['premium']}</span>
-                <span class="sum-badge">SUM: {hive['sum']}</span>
-            </div>
-            <div style="display: flex; gap: 6px; align-items: center;">
-                {bs_badge} {oe_badge}
-            </div>
-        </div>
-        <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 10px; border: 1px solid rgba(245, 158, 11, 0.2);">
-            <div style="color: #94a3b8; font-size: 0.75rem; margin-bottom: 4px; text-transform: uppercase;">Confidence Gauges</div>
-            <div style="font-size: 1.25rem; font-weight: 800; color: #38bdf8;">{hive['bs_conf']:.1f}% <span style="font-size: 0.75rem; color: #94a3b8;">(B/S)</span></div>
-            <div style="font-size: 1.05rem; font-weight: 700; color: #a855f7;">{hive['oe_conf']:.1f}% <span style="font-size: 0.75rem; color: #94a3b8;">(O/E)</span></div>
-        </div>
-        <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 10px; border: 1px solid rgba(245, 158, 11, 0.2);">
-            <div style="color: #94a3b8; font-size: 0.75rem; margin-bottom: 4px; text-transform: uppercase;">Hive Agreement</div>
-            <div style="font-size: 1.3rem; font-weight: 800; color: #34d399;">{hive['agreement_pct']:.0f}% <span style="font-size: 0.8rem; color: #94a3b8;">({hive['active_agents']}/8 Agents)</span></div>
-            <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 2px;">Ensemble Consensus</div>
-        </div>
-        <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 10px; border: 1px solid rgba(245, 158, 11, 0.2);">
-            <div style="color: #94a3b8; font-size: 0.75rem; margin-bottom: 4px; text-transform: uppercase;">Kelly Bet Size</div>
-            <div style="font-size: 1.3rem; font-weight: 800; color: #fbbf24;"><span class="badge-kelly">{hive['master_kelly']:.1f}% Kelly</span></div>
-            <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 2px;">Optimal Bankroll Stake</div>
-        </div>
-    </div>
-    {master_scorecard}
-</div>
-"""
-render_html(master_card_html)
+    n_records = len(df_active)
+    st.sidebar.metric("Database Stored Records", n_records)
+    st.sidebar.caption(f"🕒 Last Polled: **{st.session_state.last_sync}**")
 
-# Top 2 Flagship Cards Side-by-Side or Stacked
-st.markdown("### 🎯 Flagship AI Engines")
-col_f1, col_f2 = st.columns(2)
-with col_f1:
-    render_pattern_sniper_card(sniper_res)
-with col_f2:
-    render_triple_threat_card(tt_res)
+    latest_row = df_active.iloc[0] if not df_active.empty else {'issueNumber': '20260818101010500', 'premium': '333'}
+    latest_issue_str = str(latest_row.get('issueNumber', '20260818101010500'))
+    next_issue_str = str(int(latest_issue_str) + 1) if latest_issue_str.isdigit() else "Next Draw"
 
-# Other 6 Specialized Agents
-st.markdown("### 🤖 Autonomous Specialized AI Agents")
 
-def render_complete_agent_card(agent):
-    bs_b = f'<span class="badge-big">{agent["bs_pred"].upper()}</span>' if agent['bs_pred'] == 'Big' else f'<span class="badge-small">{agent["bs_pred"].upper()}</span>'
-    oe_b = f'<span class="badge-odd">{agent["oe_pred"].upper()}</span>' if agent['oe_pred'] == 'Odd' else f'<span class="badge-even">{agent["oe_pred"].upper()}</span>'
-    agent_scorecard = render_scorecard_and_tracker(agent['name'])
+    # ==============================================================================
+    # 8. MULTI-MODEL INFERENCE PIPELINE
+    # ==============================================================================
+    sniper_res = run_nexus_pattern_sniper(df_active)
+    tt_res = run_nexus_k3_triple_threat(df_active)
+    oracle_res = run_quantum_temporal_oracle_k3(df_active)
+    ag1 = run_sentinel_prime_omega_k3(df_active)
+    ag2 = agent_nexus_core(df_active)
+    ag4 = agent_omni_rl(df_active)
+    ag5 = agent_omega_zero(df_active)
+    ag6 = agent_duo_force(df_active)
+    bnn_res = run_bnn_agent(df_active)
+
+    all_agents = [sniper_res, tt_res, oracle_res, ag1, ag2, ag4, ag5, ag6, bnn_res]
+    hive = orchestrate_hive_mind(all_agents, df_active, bias_compensation=bias_mode)
+
+    # Statistical & Anomaly Diagnostics
+    chi2_stat, chi2_pval, rng_status = compute_chi_square_randomness(df_active)
+    anomaly_tel = compute_anomaly_telemetry(df_active)
+
+    # Store predictions for next live validation
+    st.session_state.agent_past_predictions[next_issue_str] = {
+        'HIVE MIND MASTER': {'dice1': hive['dice1'], 'dice2': hive['dice2'], 'dice3': hive['dice3'], 'premium': hive['premium'], 'sum': hive['sum'], 'bs': hive['bs_pred'], 'oe': hive['oe_pred']},
+        'NEXUS PATTERN SNIPER': {'dice1': sniper_res['dice1'], 'dice2': sniper_res['dice2'], 'dice3': sniper_res['dice3'], 'premium': sniper_res['premium'], 'sum': sniper_res['sum'], 'bs': sniper_res['bs_pred'], 'oe': sniper_res['oe_pred']},
+        'NEXUS K3 TRIPLE THREAT': {'dice1': tt_res['dice1'], 'dice2': tt_res['dice2'], 'dice3': tt_res['dice3'], 'premium': tt_res['premium'], 'sum': tt_res['sum'], 'bs': tt_res['bs_pred'], 'oe': tt_res['oe_pred']},
+        'QUANTUM TEMPORAL ORACLE K3': {'dice1': oracle_res['dice1'], 'dice2': oracle_res['dice2'], 'dice3': oracle_res['dice3'], 'premium': oracle_res['premium'], 'sum': oracle_res['sum'], 'bs': oracle_res['bs_pred'], 'oe': oracle_res['oe_pred']},
+        'SENTINEL PRIME OMEGA K3': {'dice1': ag1['dice1'], 'dice2': ag1['dice2'], 'dice3': ag1['dice3'], 'premium': ag1['premium'], 'sum': ag1['sum'], 'bs': ag1['bs_pred'], 'oe': ag1['oe_pred']},
+        'NEXUS CORE K3': {'dice1': ag2['dice1'], 'dice2': ag2['dice2'], 'dice3': ag2['dice3'], 'premium': ag2['premium'], 'sum': ag2['sum'], 'bs': ag2['bs_pred'], 'oe': ag2['oe_pred']},
+        'OMNI K3 RL': {'dice1': ag4['dice1'], 'dice2': ag4['dice2'], 'dice3': ag4['dice3'], 'premium': ag4['premium'], 'sum': ag4['sum'], 'bs': ag4['bs_pred'], 'oe': ag4['oe_pred']},
+        'OMEGA ZERO K3': {'dice1': ag5['dice1'], 'dice2': ag5['dice2'], 'dice3': ag5['dice3'], 'premium': ag5['premium'], 'sum': ag5['sum'], 'bs': ag5['bs_pred'], 'oe': ag5['oe_pred']},
+        'DUO FORCE K3': {'dice1': ag6['dice1'], 'dice2': ag6['dice2'], 'dice3': ag6['dice3'], 'premium': ag6['premium'], 'sum': ag6['sum'], 'bs': ag6['bs_pred'], 'oe': ag6['oe_pred']},
+        'BAYESIAN NEURAL NETWORK': {'dice1': bnn_res['dice1'], 'dice2': bnn_res['dice2'], 'dice3': bnn_res['dice3'], 'premium': bnn_res['premium'], 'sum': bnn_res['sum'], 'bs': bnn_res['bs_pred'], 'oe': bnn_res['oe_pred']}
+    }
+
+    # Synchronize Out-of-Sample Predictions to Performance Tracker Logger
+    log_all_agent_predictions(all_agents + [hive], next_issue_str)
+
+
+    # ==============================================================================
+    # 9. UI RENDERERS FOR FLAGSHIP AGENTS
+    # ==============================================================================
+
+    def render_pattern_sniper_card(sniper):
+        steps = sniper.get('steps', [])
+        meta = sniper.get('meta', {})
     
-    agent_html = f"""
-    <div class="agent-card {agent['border']}">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 6px;">
-            <div style="font-weight: 800; font-size: 1.05rem; color: {agent['color']};">{agent['name']}</div>
-            <span class="badge-kelly">{agent['kelly']:.1f}% Kelly</span>
-        </div>
-        <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 10px; background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 8px;">
-            <span class="dice-cube">{agent['dice1']}</span>
-            <span class="dice-cube">{agent['dice2']}</span>
-            <span class="dice-cube">{agent['dice3']}</span>
-            <span class="premium-badge">#{agent['premium']}</span>
-            <span class="sum-badge">SUM: {agent['sum']}</span>
-        </div>
-        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.25); padding: 8px 12px; border-radius: 8px; margin-bottom: 4px;">
-            <div>
-                <span style="font-size: 0.72rem; color: #94a3b8;">Big / Small</span><br>
-                {bs_b} <b style="color: #ffffff; margin-left: 4px; font-size: 0.85rem;">{agent['bs_conf']:.1f}%</b>
+        bs_glow = '#10b981' if sniper['bs_pred'] == 'Big' else '#ef4444'
+        oe_glow = '#8b5cf6' if sniper['oe_pred'] == 'Odd' else '#f97316'
+    
+        bs_b = f'<span class="badge-big" style="font-size:1.1rem; padding:6px 14px; box-shadow:0 0 15px {bs_glow};">{sniper["bs_pred"].upper()}</span>' if sniper['bs_pred'] == 'Big' else f'<span class="badge-small" style="font-size:1.1rem; padding:6px 14px; box-shadow:0 0 15px {bs_glow};">{sniper["bs_pred"].upper()}</span>'
+        oe_b = f'<span class="badge-odd" style="font-size:1.1rem; padding:6px 14px; box-shadow:0 0 15px {oe_glow};">{sniper["oe_pred"].upper()}</span>' if sniper['oe_pred'] == 'Odd' else f'<span class="badge-even" style="font-size:1.1rem; padding:6px 14px; box-shadow:0 0 15px {oe_glow};">{sniper["oe_pred"].upper()}</span>'
+    
+        agent_scorecard = render_scorecard_and_tracker(sniper['name'])
+    
+        sniper_html = f"""
+        <div class="sniper-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid rgba(16, 185, 129, 0.3); padding-bottom: 10px;">
+                <div>
+                    <span style="color: #34d399; font-size: 0.8rem; font-weight: 800; letter-spacing: 1px;">EMPIRICAL 5-ANOMALY ENGINE (STATISTICAL EDGE)</span>
+                    <div style="font-size: 1.45rem; font-weight: 900; color: #10b981;">🎯 NEXUS PATTERN SNIPER (Spillover + Elastic Bounds + Wave Cycles)</div>
+                </div>
+                <div style="display: flex; gap: 6px;">
+                    <span style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid #34d399; padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 800;">84% Spillover</span>
+                    <span style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid #38bdf8; padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 800;">±5 Elastic</span>
+                    <span style="background: rgba(139, 92, 246, 0.15); color: #c084fc; border: 1px solid #c084fc; padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 800;">Harmonic Lag5/10</span>
+                    <span style="background: rgba(251, 191, 36, 0.15); color: #fbbf24; border: 1px solid #fbbf24; padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 800;">Kelly Stake</span>
+                </div>
             </div>
+        
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 12px;">
+                <div style="background: rgba(0,0,0,0.35); padding: 14px; border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.3); text-align: center;">
+                    <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 6px; text-transform: uppercase;">1. Big / Small Forecast</div>
+                    <div style="margin-bottom: 6px;">{bs_b}</div>
+                    <div style="font-size: 1.1rem; font-weight: 900; color: #ffffff;">Confidence: <span style="color: #38bdf8;">{sniper['bs_conf']:.1f}%</span></div>
+                </div>
+            
+                <div style="background: rgba(0,0,0,0.35); padding: 14px; border-radius: 12px; border: 1px solid rgba(139, 92, 246, 0.3); text-align: center;">
+                    <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 6px; text-transform: uppercase;">2. Odd / Even Forecast</div>
+                    <div style="margin-bottom: 6px;">{oe_b}</div>
+                    <div style="font-size: 1.1rem; font-weight: 900; color: #ffffff;">Confidence: <span style="color: #a855f7;">{sniper['oe_conf']:.1f}%</span></div>
+                </div>
+            
+                <div style="background: rgba(0,0,0,0.35); padding: 14px; border-radius: 12px; border: 1px solid rgba(251, 191, 36, 0.3); text-align: center;">
+                    <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px; text-transform: uppercase;">3. Empirical Metrics</div>
+                    <div style="font-size: 0.85rem; color: #34d399; font-weight: 800; margin-bottom: 2px;">🎲 Anchor Dice: [{meta.get('anchor', 3)}]</div>
+                    <div style="font-size: 0.82rem; color: #38bdf8; font-weight: 700; margin-bottom: 2px;">📏 Elastic Bounds: {meta.get('window', '[6-16]')}</div>
+                    <div style="font-size: 0.82rem; color: #fbbf24; font-weight: 800;">🔥 Streak: {meta.get('dragon_streak', 1)}x</div>
+                </div>
+            </div>
+        
+            <div style="display: flex; gap: 8px; align-items: center; background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 8px; margin-bottom: 6px;">
+                <span style="font-size: 0.75rem; color: #94a3b8;">Pattern Triad:</span>
+                <span class="dice-cube">{sniper['dice1']}</span>
+                <span class="dice-cube">{sniper['dice2']}</span>
+                <span class="dice-cube">{sniper['dice3']}</span>
+                <span class="premium-badge">#{sniper['premium']}</span>
+                <span class="sum-badge">SUM: {sniper['sum']}</span>
+                <span class="badge-kelly" style="margin-left: auto;">Recommended Stake: {sniper['kelly']:.1f}% Kelly</span>
+            </div>
+        
+            {agent_scorecard}
+        </div>
+        """
+        render_html(sniper_html)
+
+        with st.expander("🔬 Nexus Pattern Sniper (5 Empirical Anomalies Breakdown)", expanded=False):
+            for s in steps:
+                st.markdown(f"<small style='color: #cbd5e1;'>• {s}</small>", unsafe_allow_html=True)
+
+    def render_triple_threat_card(tt):
+        bs_glow = '#10b981' if tt['bs_pred'] == 'Big' else '#ef4444'
+        oe_glow = '#8b5cf6' if tt['oe_pred'] == 'Odd' else '#f97316'
+    
+        bs_b = f'<span class="badge-big" style="font-size:1.1rem; padding:6px 14px; box-shadow:0 0 15px {bs_glow};">{tt["bs_pred"].upper()}</span>' if tt['bs_pred'] == 'Big' else f'<span class="badge-small" style="font-size:1.1rem; padding:6px 14px; box-shadow:0 0 15px {bs_glow};">{tt["bs_pred"].upper()}</span>'
+        oe_b = f'<span class="badge-odd" style="font-size:1.1rem; padding:6px 14px; box-shadow:0 0 15px {oe_glow};">{tt["oe_pred"].upper()}</span>' if tt['oe_pred'] == 'Odd' else f'<span class="badge-even" style="font-size:1.1rem; padding:6px 14px; box-shadow:0 0 15px {oe_glow};">{tt["oe_pred"].upper()}</span>'
+        sum_b = f'<span style="font-size: 2rem; font-weight: 900; color: #fbbf24; font-family: monospace;">{tt["sum"]}</span>'
+    
+        agent_scorecard = render_scorecard_and_tracker(tt['name'])
+    
+        tt_html = f"""
+        <div class="triple-threat-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 10px;">
+                <div>
+                    <span style="color: #38bdf8; font-size: 0.8rem; font-weight: 800; letter-spacing: 1px;">TRIPLE FOCUS DEEP LEARNING AGENT</span>
+                    <div style="font-size: 1.4rem; font-weight: 900; color: #ffffff;">🎯 NEXUS K3 TRIPLE THREAT (Big/Small + Odd/Even + Sum)</div>
+                </div>
+                <div style="display: flex; gap: 6px;">
+                    <span style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid #10b981; padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 800;">Multi-Task NN</span>
+                    <span style="background: rgba(139, 92, 246, 0.15); color: #a855f7; border: 1px solid #a855f7; padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 800;">XGBoost</span>
+                    <span style="background: rgba(251, 191, 36, 0.15); color: #fbbf24; border: 1px solid #fbbf24; padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 800;">Dynamic Blend</span>
+                </div>
+            </div>
+        
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 12px;">
+                <div style="background: rgba(0,0,0,0.35); padding: 12px; border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.3); text-align: center;">
+                    <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 6px; text-transform: uppercase;">1. Big / Small</div>
+                    <div style="margin-bottom: 6px;">{bs_b}</div>
+                    <div style="font-size: 1.05rem; font-weight: 900; color: #ffffff;">Confidence: <span style="color: #38bdf8;">{tt['bs_conf']:.1f}%</span></div>
+                </div>
+            
+                <div style="background: rgba(0,0,0,0.35); padding: 12px; border-radius: 12px; border: 1px solid rgba(139, 92, 246, 0.3); text-align: center;">
+                    <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 6px; text-transform: uppercase;">2. Odd / Even</div>
+                    <div style="margin-bottom: 6px;">{oe_b}</div>
+                    <div style="font-size: 1.05rem; font-weight: 900; color: #ffffff;">Confidence: <span style="color: #a855f7;">{tt['oe_conf']:.1f}%</span></div>
+                </div>
+            
+                <div style="background: rgba(0,0,0,0.35); padding: 12px; border-radius: 12px; border: 1px solid rgba(251, 191, 36, 0.3); text-align: center;">
+                    <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 2px; text-transform: uppercase;">3. Exact Sum (3-18)</div>
+                    <div style="margin-bottom: 2px;">{sum_b}</div>
+                    <div style="font-size: 1.05rem; font-weight: 900; color: #ffffff;">Confidence: <span style="color: #fbbf24;">{tt['sum_conf']:.1f}%</span></div>
+                </div>
+            </div>
+        
+            <div style="display: flex; gap: 8px; align-items: center; background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 8px; margin-bottom: 6px;">
+                <span style="font-size: 0.75rem; color: #94a3b8;">Consensus Triad:</span>
+                <span class="dice-cube">{tt['dice1']}</span>
+                <span class="dice-cube">{tt['dice2']}</span>
+                <span class="dice-cube">{tt['dice3']}</span>
+                <span class="premium-badge">#{tt['premium']}</span>
+                <span class="sum-badge">SUM: {tt['sum']}</span>
+                <span class="badge-kelly" style="margin-left: auto;">Safe Stake: {tt['safe_kelly']:.1f}% Kelly</span>
+            </div>
+        
+            {agent_scorecard}
+        </div>
+        """
+        render_html(tt_html)
+
+
+    # ==============================================================================
+    # 10. MAIN DASHBOARD PAGE LAYOUT
+    # ==============================================================================
+
+    render_html("""
+    <div style="margin-bottom: 16px;">
+        <h1 style="margin:0; font-size: 2.2rem; font-weight:900; background: linear-gradient(135deg, #f59e0b, #10b981); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+            👑 K3 HIVE MIND | Full-Spectrum Autonomous Intelligence
+        </h1>
+        <p style="margin:4px 0 0 0; color: #94a3b8; font-size: 0.95rem;">
+            🎯 Nexus Pattern Sniper + Nexus Triple Threat + 6 Specialized AI Agents
+        </p>
+    </div>
+    """)
+
+    # Statistical Diagnostics & Live Anomaly Telemetry Bar
+    rng_glow = "#10b981" if chi2_pval >= 0.05 else "#f59e0b"
+    bias_badge = f'<span style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid #38bdf8; padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 800;">🎯 Bayesian Priors Active</span>' if bias_mode else f'<span style="background: rgba(148, 163, 184, 0.2); color: #94a3b8; border: 1px solid #64748b; padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 800;">Standard Priors</span>'
+
+    diagnostics_html = f"""
+    <div style="background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(255, 255, 255, 0.08); backdrop-filter: blur(12px); border-radius: 12px; padding: 12px 18px; margin-bottom: 16px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px;">
+        <div style="display: flex; gap: 16px; align-items: center;">
             <div>
-                <span style="font-size: 0.72rem; color: #94a3b8;">Odd / Even</span><br>
-                {oe_b} <b style="color: #ffffff; margin-left: 4px; font-size: 0.85rem;">{agent['oe_conf']:.1f}%</b>
+                <div style="font-size: 0.72rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">🎲 Chi-Square Randomness (Goodness-of-Fit)</div>
+                <div style="font-size: 0.95rem; font-weight: 800; color: {rng_glow};">
+                    χ² = {chi2_stat:.2f} (p = {chi2_pval:.3f}) • <span style="font-size: 0.8rem;">{rng_status}</span>
+                </div>
+            </div>
+            <div style="border-left: 1px solid rgba(255, 255, 255, 0.1); padding-left: 16px;">
+                <div style="font-size: 0.72rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">🚨 Live Anomaly Score</div>
+                <div style="font-size: 0.92rem; font-weight: 800; color: #ffffff;">{anomaly_tel['anomaly_score']}</div>
             </div>
         </div>
-        {agent_scorecard}
+        <div style="display: flex; gap: 10px; align-items: center; font-size: 0.78rem;">
+            <span style="background: rgba(251, 191, 36, 0.12); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); padding: 4px 8px; border-radius: 6px;">
+                👑 Triples: <b>{anomaly_tel['triples_count']}</b> <small>({', '.join(anomaly_tel['recent_triples'][:3]) if anomaly_tel['recent_triples'] else 'None'})</small>
+            </span>
+            <span style="background: rgba(139, 92, 246, 0.12); color: #c084fc; border: 1px solid rgba(139, 92, 246, 0.3); padding: 4px 8px; border-radius: 6px;">
+                🔥 Rare Sums (≤4 / ≥17): <b>{anomaly_tel['rare_sums_count']}</b>
+            </span>
+            <span style="background: rgba(16, 185, 129, 0.12); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); padding: 4px 8px; border-radius: 6px;">
+                ⚖️ Parity: Odd <b>{anomaly_tel['odd_pct']:.1f}%</b> | Even <b>{100-anomaly_tel['odd_pct']:.1f}%</b>
+            </span>
+            {bias_badge}
+        </div>
     </div>
     """
-    render_html(agent_html)
-    
-    with st.expander(f"🔬 {agent['name']} Thinking & Architecture", expanded=False):
-        for step in agent['steps']:
-            st.markdown(f"<small style='color: #cbd5e1;'>• {step}</small>", unsafe_allow_html=True)
+    render_html(diagnostics_html)
 
-row1_col1, row1_col2, row1_col3 = st.columns(3)
-with row1_col1: render_complete_agent_card(all_agents[2]) # Quantum Oracle
-with row1_col2: render_complete_agent_card(all_agents[3]) # Sentinel Prime
-with row1_col3: render_complete_agent_card(all_agents[4]) # Nexus Core
+    with st.expander("🔬 Statistical Randomness Test (Chi-Square)", expanded=False):
+        if len(df_active) >= 30:
+            chi_results = run_chi_square_tests(df_active)
+        
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                bias = chi_results.get('sum', {}).get('biased', False)
+                p_v = chi_results.get('sum', {}).get('p_value', 1.0)
+                st.metric("Sum Bias", "BIASED 🔴" if bias else "Random 🟢", f"p={p_v:.4f}")
+            with col2:
+                bias = chi_results.get('odd_even', {}).get('biased', False)
+                p_v = chi_results.get('odd_even', {}).get('p_value', 1.0)
+                st.metric("Odd/Even Bias", "BIASED 🔴" if bias else "Random 🟢", f"p={p_v:.4f}")
+            with col3:
+                bias = chi_results.get('dice3_bias', {}).get('biased', False)
+                p_v = chi_results.get('dice3_bias', {}).get('p_value', 1.0)
+                st.metric("Dice 3 Bias", "BIASED 🔴" if bias else "Random 🟢", f"p={p_v:.4f}")
+        
+            st.warning("⚠️ These are observed biases in past data. They don't guarantee future outcomes.")
+        else:
+            st.info("Need at least 30 draws for statistical tests.")
 
-row2_col1, row2_col2, row2_col3 = st.columns(3)
-with row2_col1: render_complete_agent_card(all_agents[5]) # Omni RL
-with row2_col2: render_complete_agent_card(all_agents[6]) # Omega Zero
-with row2_col3: render_complete_agent_card(all_agents[7]) # Duo Force
+    with st.expander("🧪 Advanced Statistical Forensics Suite (14 In-Depth Randomness Tests)", expanded=False):
+        if len(df_active) >= 30:
+            adv_results = run_full_advanced_analysis(df_active)
+        
+            verdicts = [v.get('verdict', '') for v in adv_results.values() if isinstance(v, dict)]
+            red_cnt = sum(1 for v in verdicts if '🔴' in v)
+            yellow_cnt = sum(1 for v in verdicts if '🟡' in v or '🟠' in v)
+            green_cnt = sum(1 for v in verdicts if '🟢' in v)
+        
+            c_v1, c_v2, c_v3 = st.columns(3)
+            c_v1.metric("🔴 Non-Random Tests", red_cnt)
+            c_v2.metric("🟡 Marginal / Mild Bias", yellow_cnt)
+            c_v3.metric("🟢 Truly Random Tests", green_cnt)
+        
+            st.markdown("---")
+        
+            t_cols = st.columns(2)
+            idx_c = 0
+            for test_key, res in adv_results.items():
+                if isinstance(res, dict):
+                    col_target = t_cols[idx_c % 2]
+                    with col_target:
+                        test_title = res.get('test', test_key)
+                        verdict_str = res.get('verdict', 'N/A')
+                        st.markdown(f"**{test_title}** — {verdict_str}")
+                        details = []
+                        for k, v in res.items():
+                            if k not in ['test', 'verdict'] and not isinstance(v, (list, dict)):
+                                if isinstance(v, float): details.append(f"`{k}`: {v:.4f}")
+                                else: details.append(f"`{k}`: {v}")
+                        if details:
+                            st.caption(" • ".join(details))
+                        st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
+                    idx_c += 1
+                
+            st.warning("⚠️ Statistical observations reflect past draw distributions. In true casino RNG, short-term micro-clusters regress to the mean over long horizons.")
+        else:
+            st.info("Need at least 30 draws for advanced statistical testing.")
 
-row3_col1, row3_col2, row3_col3 = st.columns(3)
-with row3_col1: render_complete_agent_card(all_agents[8]) # Bayesian Neural Network
+    with st.expander("🧬 Bayesian Statistical Inference & Bayes Factors Suite", expanded=False):
+        if len(df_active) >= 30:
+            b_c1, b_c2 = st.columns(2)
+            with b_c1:
+                p_alpha = st.slider("Prior α (Hypothesized Successes)", min_value=1, max_value=20, value=1, help="α=β=1 represents an uninformative uniform prior.")
+            with b_c2:
+                p_beta = st.slider("Prior β (Hypothesized Failures)", min_value=1, max_value=20, value=1, help="Higher α & β represent stronger 50/50 prior confidence.")
+            
+            b_res = run_bayesian_analysis(df_active, prior_alpha=p_alpha, prior_beta=p_beta)
+        
+            if b_res:
+                st.markdown("#### 🎯 Bayesian Posterior Parameter Estimations (95% Credible Intervals)")
+                m_col1, m_col2, m_col3 = st.columns(3)
+            
+                with m_col1:
+                    bs_mean = b_res['big_small']['summary']['posterior_mean'] * 100.0
+                    bs_ci = b_res['big_small']['model'].credible_interval()
+                    bs_bf = b_res['big_small']['bayes_factor']['bayes_factor']
+                    st.metric("Big/Small Posterior Mean", f"{bs_mean:.1f}%", f"95% CI: [{bs_ci[0]*100:.1f}%, {bs_ci[1]*100:.1f}%]")
+                    st.caption(f"**Bayes Factor vs Fair:** `{bs_bf:.3f}` ({b_res['big_small']['bayes_factor']['verdict']})")
+                
+                with m_col2:
+                    oe_mean = b_res['odd_even']['summary']['posterior_mean'] * 100.0
+                    oe_ci = b_res['odd_even']['model'].credible_interval()
+                    oe_bf = b_res['odd_even']['bayes_factor']['bayes_factor']
+                    st.metric("Odd/Even Posterior Mean", f"{oe_mean:.1f}%", f"95% CI: [{oe_ci[0]*100:.1f}%, {oe_ci[1]*100:.1f}%]")
+                    st.caption(f"**Bayes Factor vs Fair:** `{oe_bf:.3f}` ({b_res['odd_even']['bayes_factor']['verdict']})")
+                
+                with m_col3:
+                    d1_kl = b_res.get('dice1_kl', 0.0)
+                    d3_kl = b_res.get('dice3_kl', 0.0)
+                    d3_bf = b_res['dice3_face3_bf']['bayes_factor']
+                    st.metric("Dice 1 KL Divergence", f"{d1_kl:.4f}", "Uniform" if d1_kl < 0.02 else "Biased")
+                    st.caption(f"**Dice 3 Face 3 BF vs 1/6:** `{d3_bf:.3f}` ({b_res['dice3_face3_bf']['verdict']})")
+                
+                st.markdown("---")
+                cp_info = b_res.get('change_point', {})
+                st.markdown(f"**🧬 Bayesian Change Point Detection:** {cp_info.get('interpretation', 'No change')} *(Log-BF: `{cp_info.get('log_bayes_factor', 0.0):.2f}` at index #{cp_info.get('best_change_point', 0)})*")
+            
+            st.warning("⚠️ Bayesian analysis quantifies evidence weight for fairness vs anomaly. It updates continuously with each live draw.")
+        else:
+            st.info("Need at least 30 draws for Bayesian inference.")
 
-# Master Audit Vault
-st.markdown("---")
-with st.expander("🗄️ MASTER AUDIT VAULT: COMPLETE ALL-TIME AGENT PREDICTION HISTORY (Strict Verification)", expanded=False):
-    sel_agent = st.selectbox("Select Agent to View Complete Lifetime History:", list(DEFAULT_SCORECARDS.keys()))
-    vault_records = st.session_state.get('agent_lifetime_vault', {}).get(sel_agent, [])
-    if vault_records:
-        table_data = []
-        for r in vault_records:
-            table_data.append({
-                'Issue': r.get('issue', ''),
-                'D1 Pred/Act': f"{r.get('d1_pred')} ({'✅' if r.get('d1_hit') else '❌' + str(r.get('d1_act'))})",
-                'D2 Pred/Act': f"{r.get('d2_pred')} ({'✅' if r.get('d2_hit') else '❌' + str(r.get('d2_act'))})",
-                'D3 Pred/Act': f"{r.get('d3_pred')} ({'✅' if r.get('d3_hit') else '❌' + str(r.get('d3_act'))})",
-                'Prem Pred/Act': f"{r.get('prem_pred')} ({'✅' if r.get('prem_hit') else '❌' + str(r.get('prem_act'))})",
-                'Sum Pred/Act': f"{r.get('sum_pred')} ({'✅' if r.get('sum_hit') else '❌' + str(r.get('sum_act'))})",
-                'B/S Pred/Act': f"{r.get('bs_pred')} ({'✅' if r.get('bs_hit') else '❌' + str(r.get('bs_act'))})",
-                'O/E Pred/Act': f"{r.get('oe_pred')} ({'✅' if r.get('oe_hit') else '❌' + str(r.get('oe_act'))})",
-                'Score': r.get('score', '0/7')
+    with st.expander("🧠 Bayesian Neural Network (BNN) & Uncertainty Decomposition", expanded=False):
+        if len(df_active) >= 30:
+            bnn_c1, bnn_c2, bnn_c3 = st.columns(3)
+            with bnn_c1:
+                st.metric("🎲 BNN Predicted Triad", f"#{bnn_res['premium']}", f"Sum: {bnn_res['sum']}")
+            with bnn_c2:
+                st.metric("📊 Big/Small Prob", f"{bnn_res['bs_conf']:.1f}% ({bnn_res['bs_pred']})")
+            with bnn_c3:
+                st.metric("⚖️ Odd/Even Prob", f"{bnn_res['oe_conf']:.1f}% ({bnn_res['oe_pred']})")
+            
+            st.markdown("---")
+            st.markdown("#### 🔬 Epistemic vs Aleatoric Uncertainty Decomposition")
+            u_col1, u_col2, u_col3 = st.columns(3)
+            with u_col1:
+                st.metric("🔍 Epistemic Var (Model)", f"{bnn_res['uncertainty']['epistemic_sum']:.4f}", "Low" if bnn_res['uncertainty']['epistemic_sum'] < 0.2 else "Elevated")
+            with u_col2:
+                st.metric("🎲 Aleatoric Noise (Data)", "0.1500", "Inherent RNG")
+            with u_col3:
+                st.metric("📈 Total Predictive Std", f"{bnn_res['uncertainty']['total_uncertainty']:.4f}")
+            
+            # Uncertainty bar comparison
+            u_df = pd.DataFrame({
+                'Uncertainty Type': ['Epistemic (Model Knowledge)', 'Aleatoric (Inherent Randomness)', 'Total Predictive Std'],
+                'Magnitude': [bnn_res['uncertainty']['epistemic_sum'], 0.15, bnn_res['uncertainty']['total_uncertainty']]
             })
-        df_vault = pd.DataFrame(table_data)
-        st.dataframe(df_vault, use_container_width=True, hide_index=True)
-    else:
-        st.info("No lifetime records archived yet. Historical data accumulates live with every draw.")
+            st.bar_chart(u_df.set_index('Uncertainty Type'))
+        
+            st.markdown("##### 🧬 Internal Stochastic Inference Trace:")
+            for step in bnn_res['steps']:
+                st.text(f"  • {step}")
+            
+            st.info("ℹ️ **Epistemic Uncertainty** measures variance across Monte Carlo variational weight samples. **Aleatoric Uncertainty** represents irreducible casino RNG entropy.")
+        else:
+            st.info("Need at least 30 draws for BNN inference.")
 
-# Data Preview Tabs
-st.markdown("---")
-tab1, tab2 = st.tabs(["📋 Live Draw History", "📊 Summary Statistics"])
+    with st.expander("🎓 Advanced Bayesian Deep Learning Suite (VAE • LSTM • GP • BO • HMC)", expanded=False):
+        if len(df_active) >= 30:
+            b_tab1, b_tab2, b_tab3, b_tab4, b_tab5 = st.tabs([
+                "🧬 Variational Autoencoder", 
+                "🔄 Bayesian LSTM", 
+                "📈 Gaussian Process", 
+                "🎯 Bayesian Optimization", 
+                "⚡ HMC Sampling"
+            ])
+        
+            with b_tab1:
+                st.markdown("#### 🧬 Variational Autoencoder (VAE) Latent Space")
+                if 'k3_vae_trainer' not in st.session_state:
+                    st.session_state.k3_vae_trainer = K3VAETrainer(latent_dim=8)
+                    st.session_state.k3_vae_trainer.train(df_active, n_epochs=20)
+            
+                latent_mu, _ = st.session_state.k3_vae_trainer.get_latent_representation(df_active)
+                if latent_mu is not None and latent_mu.shape[1] >= 2:
+                    st.caption("2D Latent Manifold Projection of K3 Draw Sequences:")
+                    vae_df = pd.DataFrame({
+                        'Latent Axis 1': latent_mu[:, 0],
+                        'Latent Axis 2': latent_mu[:, 1]
+                    })
+                    st.scatter_chart(vae_df)
+                
+                if st.button("🎲 Generate Synthetic Draws from Latent Prior (z ~ N(0, I))", key="gen_vae_btn"):
+                    syn = st.session_state.k3_vae_trainer.generate_synthetic_draws(15)
+                    syn_df = pd.DataFrame({
+                        'Syn Dice 1': np.clip(np.round(syn[:, 0] * 5 + 1), 1, 6).astype(int),
+                        'Syn Dice 2': np.clip(np.round(syn[:, 1] * 5 + 1), 1, 6).astype(int),
+                        'Syn Dice 3': np.clip(np.round(syn[:, 2] * 5 + 1), 1, 6).astype(int),
+                        'Syn Sum': np.clip(np.round(syn[:, 3] * 15 + 3), 3, 18).astype(int)
+                    })
+                    st.dataframe(syn_df, use_container_width=True, hide_index=True)
+                
+            with b_tab2:
+                st.markdown("#### 🔄 Bayesian LSTM (Temporal Uncertainty)")
+                if 'k3_blstm' not in st.session_state:
+                    st.session_state.k3_blstm = BayesianLSTMTrainer(seq_len=10)
+                    st.session_state.k3_blstm.train(df_active, n_epochs=15)
+                lstm_res = st.session_state.k3_blstm.predict_with_uncertainty(df_active, n_samples=30)
+                if lstm_res:
+                    l_col1, l_col2 = st.columns(2)
+                    with l_col1:
+                        st.metric("Recurrent Epistemic Uncertainty", f"{lstm_res['epistemic_uncertainty']:.4f}")
+                    with l_col2:
+                        pred_d1 = int(np.clip(round(lstm_res['mean'][0] * 5 + 1), 1, 6))
+                        pred_d2 = int(np.clip(round(lstm_res['mean'][1] * 5 + 1), 1, 6))
+                        pred_d3 = int(np.clip(round(lstm_res['mean'][2] * 5 + 1), 1, 6))
+                        st.metric("Sequential Pred Triad", f"[{pred_d1}, {pred_d2}, {pred_d3}]")
+                    lstm_chart_df = pd.DataFrame({
+                        'Feature': ['Dice 1', 'Dice 2', 'Dice 3', 'Sum', 'Big/Small', 'Odd/Even'],
+                        'Predicted Mean': lstm_res['mean'][:6],
+                        'Uncertainty Std': lstm_res['std'][:6]
+                    })
+                    st.dataframe(lstm_chart_df, use_container_width=True, hide_index=True)
+                
+            with b_tab3:
+                st.markdown("#### 📈 Gaussian Process Regression (RBF Covariance)")
+                if 'k3_gp' not in st.session_state:
+                    st.session_state.k3_gp = K3GaussianProcess()
+                    st.session_state.k3_gp.fit(df_active)
+                gp_pred = st.session_state.k3_gp.predict_with_uncertainty(df_active)
+                gp_c1, gp_c2, gp_c3 = st.columns(3)
+                gp_c1.metric("GP Expected Sum", f"{gp_pred['sum_pred']:.2f}", f"±{gp_pred['sum_std']:.2f}")
+                gp_c2.metric("GP Big/Small Prob", f"{gp_pred['bs_prob']*100:.1f}%")
+                gp_c3.metric("Non-Parametric Uncertainty", f"{gp_pred['total_uncertainty']:.4f}")
+            
+            with b_tab4:
+                st.markdown("#### 🎯 Bayesian Optimization (Expected Improvement)")
+                st.caption("Active Global Acquisition Optimization for Model Calibration:")
+                if st.button("🚀 Run 15-Iteration Bayesian Optimization Acquisition", key="run_bo_btn"):
+                    bo = BayesianOptimizer(bounds=[(0.001, 0.05), (10.0, 64.0)], n_initial=4)
+                    best_params, best_score = bo.optimize(lambda p: float((p[0]-0.005)**2 + (p[1]-32.0)**2 * 0.001 + np.sin(p[0]*100)), n_iterations=15)
+                    st.success(f"Optimal Hyperparameter Point: Learning Rate = `{best_params[0]:.5f}`, Hidden Width = `{int(best_params[1])}` (Loss: `{best_score:.4f}`)")
+                    st.line_chart(pd.DataFrame({'EI Optimization Loss': bo.y_observed}))
+                
+            with b_tab5:
+                st.markdown("#### ⚡ Hamiltonian Monte Carlo (Symplectic Leapfrog Sampling)")
+                n_odd_count = int((df_active['odd_even'] == 'Odd').sum())
+                st.caption(f"Exact Posterior Sampling for Bernoulli Odd Rate ({n_odd_count}/{len(df_active)} draws):")
+                if st.button("⚡ Run HMC Posterior Sampling (500 Samples)", key="run_hmc_btn"):
+                    hmc_res = K3HMCAnalyzer().sample_bernoulli_posterior(n_odd_count, len(df_active), n_samples=500)
+                    h_c1, h_c2, h_c3 = st.columns(3)
+                    h_c1.metric("HMC Posterior Mean", f"{hmc_res['mean']*100:.2f}%")
+                    h_c2.metric("95% HMC Credible Interval", f"[{hmc_res['credible_95'][0]*100:.1f}%, {hmc_res['credible_95'][1]*100:.1f}%]")
+                    h_c3.metric("Symplectic Acceptance Rate", f"{hmc_res['acceptance_rate']*100:.1f}%")
+        else:
+            st.info("Need at least 30 draws for advanced deep learning suite.")
 
-with tab1:
-    cols = [c for c in ['issueNumber', 'premium', 'dice1', 'dice2', 'dice3', 'sum', 'big_small', 'odd_even'] if c in df_active]
-    st.dataframe(df_active[cols].astype(str).head(50), use_container_width=True, hide_index=True)
+    with st.expander("🚨 Real-Time Anomaly Detection & Statistical Surveillance Engine (6-Dimensional Telemetry)", expanded=False):
+        if len(df_active) >= 15:
+            render_anomaly_dashboard(df_active)
+        else:
+            st.info("Need at least 15 draws for real-time anomaly surveillance.")
 
-with tab2:
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Big Outcomes (11-18)", int((df_active['big_small'] == 'Big').sum()))
-    c2.metric("Small Outcomes (3-10)", int((df_active['big_small'] == 'Small').sum()))
-    c3.metric("Odd Outcomes", int((df_active['odd_even'] == 'Odd').sum()))
-    c4.metric("Even Outcomes", int((df_active['odd_even'] == 'Even').sum()))
+    with st.expander("📊 Comprehensive Model Performance Tracking & Walk-Forward Audit Suite", expanded=False):
+        if len(df_active) >= 15:
+            render_performance_tracker_ui(df_active)
+        else:
+            st.info("Need at least 15 draws for full performance tracking suite.")
+
+    with st.expander("🧠 Explainable AI (XAI) & Model Interpretability (SHAP, LIME, Counterfactuals)", expanded=False):
+        if len(df_active) >= 10:
+            render_xai_ui(df_active)
+        else:
+            st.info("Need at least 10 draws for explainable AI analysis.")
+
+    with st.expander("🌊 Time Series Decomposition & Spectral Analysis (STL, Fourier, Wavelets, PELT)", expanded=False):
+        if len(df_active) >= 15:
+            render_decomposition_ui(df_active)
+        else:
+            st.info("Need at least 15 draws for time series decomposition.")
+
+    # Master Orchestrator Card
+    bs_badge = f'<span class="badge-big">{hive["bs_pred"].upper()}</span>' if hive['bs_pred'] == 'Big' else f'<span class="badge-small">{hive["bs_pred"].upper()}</span>'
+    oe_badge = f'<span class="badge-odd">{hive["oe_pred"].upper()}</span>' if hive['oe_pred'] == 'Odd' else f'<span class="badge-even">{hive["oe_pred"].upper()}</span>'
+    master_scorecard = render_scorecard_and_tracker('HIVE MIND MASTER')
+
+    master_card_html = f"""
+    <div class="master-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid rgba(245, 158, 11, 0.3); padding-bottom: 12px;">
+            <div>
+                <span style="color: #fbbf24; font-size: 0.85rem; font-weight: 800; letter-spacing: 1px;">ORCHESTRATOR MASTER FORECAST</span>
+                <div class="mono-font" style="font-size: 2rem; font-weight: 900; color: #ffffff;">TARGET ISSUE #{next_issue_str}</div>
+            </div>
+            <div style="text-align: right;">
+                <div class="live-pulse"><div class="pulse-dot"></div>AUTO-SYNCING (30s)</div>
+                <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 4px;">Last draw: #{latest_issue_str} ({latest_row.get('premium', '')})</div>
+            </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 16px; margin-bottom: 12px;">
+            <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 10px; border: 1px solid rgba(245, 158, 11, 0.2);">
+                <div style="color: #94a3b8; font-size: 0.75rem; margin-bottom: 6px; text-transform: uppercase;">Predicted Triad & Premium</div>
+                <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 6px;">
+                    <span class="dice-cube">{hive['dice1']}</span>
+                    <span class="dice-cube">{hive['dice2']}</span>
+                    <span class="dice-cube">{hive['dice3']}</span>
+                    <span class="premium-badge">#{hive['premium']}</span>
+                    <span class="sum-badge">SUM: {hive['sum']}</span>
+                </div>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                    {bs_badge} {oe_badge}
+                </div>
+            </div>
+            <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 10px; border: 1px solid rgba(245, 158, 11, 0.2);">
+                <div style="color: #94a3b8; font-size: 0.75rem; margin-bottom: 4px; text-transform: uppercase;">Confidence Gauges</div>
+                <div style="font-size: 1.25rem; font-weight: 800; color: #38bdf8;">{hive['bs_conf']:.1f}% <span style="font-size: 0.75rem; color: #94a3b8;">(B/S)</span></div>
+                <div style="font-size: 1.05rem; font-weight: 700; color: #a855f7;">{hive['oe_conf']:.1f}% <span style="font-size: 0.75rem; color: #94a3b8;">(O/E)</span></div>
+            </div>
+            <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 10px; border: 1px solid rgba(245, 158, 11, 0.2);">
+                <div style="color: #94a3b8; font-size: 0.75rem; margin-bottom: 4px; text-transform: uppercase;">Hive Agreement</div>
+                <div style="font-size: 1.3rem; font-weight: 800; color: #34d399;">{hive['agreement_pct']:.0f}% <span style="font-size: 0.8rem; color: #94a3b8;">({hive['active_agents']}/8 Agents)</span></div>
+                <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 2px;">Ensemble Consensus</div>
+            </div>
+            <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 10px; border: 1px solid rgba(245, 158, 11, 0.2);">
+                <div style="color: #94a3b8; font-size: 0.75rem; margin-bottom: 4px; text-transform: uppercase;">Kelly Bet Size</div>
+                <div style="font-size: 1.3rem; font-weight: 800; color: #fbbf24;"><span class="badge-kelly">{hive['master_kelly']:.1f}% Kelly</span></div>
+                <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 2px;">Optimal Bankroll Stake</div>
+            </div>
+        </div>
+        {master_scorecard}
+    </div>
+    """
+    render_html(master_card_html)
+
+    # Top 2 Flagship Cards Side-by-Side or Stacked
+    st.markdown("### 🎯 Flagship AI Engines")
+    col_f1, col_f2 = st.columns(2)
+    with col_f1:
+        render_pattern_sniper_card(sniper_res)
+    with col_f2:
+        render_triple_threat_card(tt_res)
+
+    # Other 6 Specialized Agents
+    st.markdown("### 🤖 Autonomous Specialized AI Agents")
+
+    def render_complete_agent_card(agent):
+        bs_b = f'<span class="badge-big">{agent["bs_pred"].upper()}</span>' if agent['bs_pred'] == 'Big' else f'<span class="badge-small">{agent["bs_pred"].upper()}</span>'
+        oe_b = f'<span class="badge-odd">{agent["oe_pred"].upper()}</span>' if agent['oe_pred'] == 'Odd' else f'<span class="badge-even">{agent["oe_pred"].upper()}</span>'
+        agent_scorecard = render_scorecard_and_tracker(agent['name'])
+    
+        agent_html = f"""
+        <div class="agent-card {agent['border']}">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 6px;">
+                <div style="font-weight: 800; font-size: 1.05rem; color: {agent['color']};">{agent['name']}</div>
+                <span class="badge-kelly">{agent['kelly']:.1f}% Kelly</span>
+            </div>
+            <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 10px; background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 8px;">
+                <span class="dice-cube">{agent['dice1']}</span>
+                <span class="dice-cube">{agent['dice2']}</span>
+                <span class="dice-cube">{agent['dice3']}</span>
+                <span class="premium-badge">#{agent['premium']}</span>
+                <span class="sum-badge">SUM: {agent['sum']}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.25); padding: 8px 12px; border-radius: 8px; margin-bottom: 4px;">
+                <div>
+                    <span style="font-size: 0.72rem; color: #94a3b8;">Big / Small</span><br>
+                    {bs_b} <b style="color: #ffffff; margin-left: 4px; font-size: 0.85rem;">{agent['bs_conf']:.1f}%</b>
+                </div>
+                <div>
+                    <span style="font-size: 0.72rem; color: #94a3b8;">Odd / Even</span><br>
+                    {oe_b} <b style="color: #ffffff; margin-left: 4px; font-size: 0.85rem;">{agent['oe_conf']:.1f}%</b>
+                </div>
+            </div>
+            {agent_scorecard}
+        </div>
+        """
+        render_html(agent_html)
+    
+        with st.expander(f"🔬 {agent['name']} Thinking & Architecture", expanded=False):
+            for step in agent['steps']:
+                st.markdown(f"<small style='color: #cbd5e1;'>• {step}</small>", unsafe_allow_html=True)
+
+    row1_col1, row1_col2, row1_col3 = st.columns(3)
+    with row1_col1: render_complete_agent_card(all_agents[2]) # Quantum Oracle
+    with row1_col2: render_complete_agent_card(all_agents[3]) # Sentinel Prime
+    with row1_col3: render_complete_agent_card(all_agents[4]) # Nexus Core
+
+    row2_col1, row2_col2, row2_col3 = st.columns(3)
+    with row2_col1: render_complete_agent_card(all_agents[5]) # Omni RL
+    with row2_col2: render_complete_agent_card(all_agents[6]) # Omega Zero
+    with row2_col3: render_complete_agent_card(all_agents[7]) # Duo Force
+
+    row3_col1, row3_col2, row3_col3 = st.columns(3)
+    with row3_col1: render_complete_agent_card(all_agents[8]) # Bayesian Neural Network
+
+    # Master Audit Vault
+    st.markdown("---")
+    with st.expander("🗄️ MASTER AUDIT VAULT: COMPLETE ALL-TIME AGENT PREDICTION HISTORY (Strict Verification)", expanded=False):
+        sel_agent = st.selectbox("Select Agent to View Complete Lifetime History:", list(DEFAULT_SCORECARDS.keys()))
+        vault_records = st.session_state.get('agent_lifetime_vault', {}).get(sel_agent, [])
+        if vault_records:
+            table_data = []
+            for r in vault_records:
+                table_data.append({
+                    'Issue': r.get('issue', ''),
+                    'D1 Pred/Act': f"{r.get('d1_pred')} ({'✅' if r.get('d1_hit') else '❌' + str(r.get('d1_act'))})",
+                    'D2 Pred/Act': f"{r.get('d2_pred')} ({'✅' if r.get('d2_hit') else '❌' + str(r.get('d2_act'))})",
+                    'D3 Pred/Act': f"{r.get('d3_pred')} ({'✅' if r.get('d3_hit') else '❌' + str(r.get('d3_act'))})",
+                    'Prem Pred/Act': f"{r.get('prem_pred')} ({'✅' if r.get('prem_hit') else '❌' + str(r.get('prem_act'))})",
+                    'Sum Pred/Act': f"{r.get('sum_pred')} ({'✅' if r.get('sum_hit') else '❌' + str(r.get('sum_act'))})",
+                    'B/S Pred/Act': f"{r.get('bs_pred')} ({'✅' if r.get('bs_hit') else '❌' + str(r.get('bs_act'))})",
+                    'O/E Pred/Act': f"{r.get('oe_pred')} ({'✅' if r.get('oe_hit') else '❌' + str(r.get('oe_act'))})",
+                    'Score': r.get('score', '0/7')
+                })
+            df_vault = pd.DataFrame(table_data)
+            st.dataframe(df_vault, use_container_width=True, hide_index=True)
+        else:
+            st.info("No lifetime records archived yet. Historical data accumulates live with every draw.")
+
+    # Data Preview Tabs
+    st.markdown("---")
+    tab1, tab2 = st.tabs(["📋 Live Draw History", "📊 Summary Statistics"])
+
+    with tab1:
+        cols = [c for c in ['issueNumber', 'premium', 'dice1', 'dice2', 'dice3', 'sum', 'big_small', 'odd_even'] if c in df_active]
+        st.dataframe(df_active[cols].astype(str).head(50), use_container_width=True, hide_index=True)
+
+    with tab2:
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Big Outcomes (11-18)", int((df_active['big_small'] == 'Big').sum()))
+        c2.metric("Small Outcomes (3-10)", int((df_active['big_small'] == 'Small').sum()))
+        c3.metric("Odd Outcomes", int((df_active['odd_even'] == 'Odd').sum()))
+        c4.metric("Even Outcomes", int((df_active['odd_even'] == 'Even').sum()))
+
+if is_streamlit_running():
+    run_app()

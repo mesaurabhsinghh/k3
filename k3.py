@@ -313,18 +313,22 @@ def merge_k3(a, b):
 
 def resolve_consistent_triad(target_sum, preferred_bs=None, preferred_oe=None, seed_val=0):
     """Guarantees dice1, dice2, dice3, premium, sum, BS, and OE are 100% aligned and deterministic."""
-    s = int(np.clip(target_sum, 3, 18))
+    s = int(float(np.clip(target_sum, 3, 18)))
     if preferred_oe == 'Odd' and s % 2 == 0: s = s + 1 if s < 18 else s - 1
     elif preferred_oe == 'Even' and s % 2 != 0: s = s + 1 if s < 18 else s - 1
     if preferred_bs == 'Big' and s < 11: s = max(11, s + 6)
     elif preferred_bs == 'Small' and s >= 11: s = min(10, s - 6)
-    s = int(np.clip(s, 3, 18))
+    s = int(float(np.clip(s, 3, 18)))
     
     # Deterministic partition offset (zero random flicker)
-    offset = ((s * 7 + int(seed_val)) % 3) - 1
-    d1 = int(np.clip(s // 3 + offset, 1, 6))
+    try:
+        s_seed = int(float(seed_val))
+    except:
+        s_seed = 0
+    offset = ((s * 7 + s_seed) % 3) - 1
+    d1 = int(float(np.clip(s // 3 + offset, 1, 6)))
     rem = s - d1
-    d2 = int(np.clip(rem // 2, 1, 6))
+    d2 = int(float(np.clip(rem // 2, 1, 6)))
     d3 = s - d1 - d2
     if d3 < 1:
         diff = 1 - d3
@@ -2076,7 +2080,7 @@ def run_nexus_k3_triple_threat(df_k3_history, cache_info=None):
         kelly_sum = min(5.0, (p_sum_win - 1/16.0) * 150.0) if p_sum_win > 0.15 else 0.0
         safe_kelly = min(kelly_bs, kelly_oe) if (kelly_bs > 0 and kelly_oe > 0) else max(kelly_bs, kelly_oe, 2.0)
 
-        d1, d2, d3, prem, s, bs, oe = resolve_consistent_triad(pred_sum_val, preferred_bs=pred_bs, preferred_oe=pred_oe, seed_val=int(sums[-1]))
+        d1, d2, d3, prem, s, bs, oe = resolve_consistent_triad(pred_sum_val, preferred_bs=pred_bs, preferred_oe=pred_oe, seed_val=int(float(sums[-1])))
         steps.append(f"2. Multi-Task Output: BS={bs} ({conf_bs:.1f}%), OE={oe} ({conf_oe:.1f}%), Sum={s} ({conf_sum:.1f}%).")
         steps.append(f"3. Triad Resolution: [{d1}][{d2}][{d3}] -> Premium #{prem} | Safe Kelly={safe_kelly:.1f}%.")
 
@@ -2143,7 +2147,7 @@ def run_quantum_temporal_oracle_k3(df_k3_history, cache_info=None):
         conf_oe = float(np.clip(max(p_oe) * 100.0, 52.0, 89.0))
 
         target_sum = int(np.mean(sums_arr[-5:]) + (2 if pred_bs == 'Big' else -2))
-        d1, d2, d3, prem, s, bs, oe = resolve_consistent_triad(target_sum, preferred_bs=pred_bs, preferred_oe=pred_oe, seed_val=int(sums_arr[-1]))
+        d1, d2, d3, prem, s, bs, oe = resolve_consistent_triad(target_sum, preferred_bs=pred_bs, preferred_oe=pred_oe, seed_val=int(float(sums_arr[-1])))
         return {
             'name': target_name, 'border': 'border-purple', 'color': '#c084fc',
             'dice1': d1, 'dice2': d2, 'dice3': d3, 'premium': prem, 'sum': s,
@@ -2176,7 +2180,7 @@ def run_sentinel_prime_omega_k3(df_k3_history):
         conf_oe = float(max(p_oe) * 100.0)
 
         target_sum = int(np.mean(sums_arr[-10:]) + (2.0 if bs_pred == 'Big' else -2.0))
-        d1, d2, d3, prem, s, bs, oe = resolve_consistent_triad(target_sum, preferred_bs=bs_pred, preferred_oe=oe_pred, seed_val=int(sums_arr[-1]))
+        d1, d2, d3, prem, s, bs, oe = resolve_consistent_triad(target_sum, preferred_bs=bs_pred, preferred_oe=oe_pred, seed_val=int(float(sums_arr[-1])))
         return {'name': target_name, 'border': 'border-gold', 'color': '#fbbf24', 'dice1': d1, 'dice2': d2, 'dice3': d3, 'premium': prem, 'sum': s, 'bs_pred': bs, 'oe_pred': oe, 'bs_conf': conf_bs, 'oe_conf': conf_oe, 'kelly': 7.2, 'steps': ["Trained Random Forest (BS) + Extra Trees (OE) on lag tensors."]}
     except:
         d1, d2, d3, prem, s, bs, oe = resolve_consistent_triad(12)
@@ -2203,7 +2207,7 @@ def agent_nexus_core(df, window=60):
         conf_oe = float(max(p_oe) * 100.0)
 
         t_sum = int(np.mean(sums_arr[-5:]) + (2.0 if bs_pred == 'Big' else -2.0))
-        d1, d2, d3, prem, s, bs, oe = resolve_consistent_triad(t_sum, preferred_bs=bs_pred, preferred_oe=oe_pred, seed_val=int(sums_arr[-1]))
+        d1, d2, d3, prem, s, bs, oe = resolve_consistent_triad(t_sum, preferred_bs=bs_pred, preferred_oe=oe_pred, seed_val=int(float(sums_arr[-1])))
         return {'name': 'NEXUS CORE K3', 'border': 'border-orange', 'color': '#f97316', 'dice1': d1, 'dice2': d2, 'dice3': d3, 'premium': prem, 'sum': s, 'bs_pred': bs, 'oe_pred': oe, 'bs_conf': conf_bs, 'oe_conf': conf_oe, 'kelly': 6.0, 'steps': ["Trained XGBoost (BS) + Logistic Regression (OE)."]}
     except:
         d1, d2, d3, prem, s, bs, oe = resolve_consistent_triad(11)
@@ -2230,7 +2234,7 @@ def agent_omni_rl(df, window=60):
         conf_oe = float(max(p_oe) * 100.0)
 
         t_sum = int(np.median(sums_arr[-10:]))
-        d1, d2, d3, prem, s, bs, oe = resolve_consistent_triad(t_sum, preferred_bs=bs_pred, preferred_oe=oe_pred, seed_val=int(sums_arr[-1]))
+        d1, d2, d3, prem, s, bs, oe = resolve_consistent_triad(t_sum, preferred_bs=bs_pred, preferred_oe=oe_pred, seed_val=int(float(sums_arr[-1])))
         return {'name': 'OMNI K3 RL', 'border': 'border-green', 'color': '#10b981', 'dice1': d1, 'dice2': d2, 'dice3': d3, 'premium': prem, 'sum': s, 'bs_pred': bs, 'oe_pred': oe, 'bs_conf': conf_bs, 'oe_conf': conf_oe, 'kelly': 4.8, 'steps': ["Trained ElasticNet SGD Online Policy Network."]}
     except:
         d1, d2, d3, prem, s, bs, oe = resolve_consistent_triad(10)
@@ -2257,7 +2261,7 @@ def agent_omega_zero(df, window=60):
         conf_oe = float(max(p_oe) * 100.0)
 
         t_sum = 14 if bs_pred == 'Big' else 8
-        d1, d2, d3, prem, s, bs, oe = resolve_consistent_triad(t_sum, preferred_bs=bs_pred, preferred_oe=oe_pred, seed_val=int(sums_arr[-1]))
+        d1, d2, d3, prem, s, bs, oe = resolve_consistent_triad(t_sum, preferred_bs=bs_pred, preferred_oe=oe_pred, seed_val=int(float(sums_arr[-1])))
         return {'name': 'OMEGA ZERO K3', 'border': 'border-cyan', 'color': '#06b6d4', 'dice1': d1, 'dice2': d2, 'dice3': d3, 'premium': prem, 'sum': s, 'bs_pred': bs, 'oe_pred': oe, 'bs_conf': conf_bs, 'oe_conf': conf_oe, 'kelly': 5.8, 'steps': ["Trained HistGradientBoosting Tree Evaluator."]}
     except:
         d1, d2, d3, prem, s, bs, oe = resolve_consistent_triad(14)
@@ -2284,7 +2288,7 @@ def agent_duo_force(df, window=60):
         conf_oe = float(max(p_oe) * 100.0)
 
         t_sum = int(np.mean(sums_arr[-8:]))
-        d1, d2, d3, prem, s, bs, oe = resolve_consistent_triad(t_sum, preferred_bs=bs_pred, preferred_oe=oe_pred, seed_val=int(sums_arr[-1]))
+        d1, d2, d3, prem, s, bs, oe = resolve_consistent_triad(t_sum, preferred_bs=bs_pred, preferred_oe=oe_pred, seed_val=int(float(sums_arr[-1])))
         return {'name': 'DUO FORCE K3', 'border': 'border-dual', 'color': '#ec4899', 'dice1': d1, 'dice2': d2, 'dice3': d3, 'premium': prem, 'sum': s, 'bs_pred': bs, 'oe_pred': oe, 'bs_conf': conf_bs, 'oe_conf': conf_oe, 'kelly': 4.9, 'steps': ["Trained GaussianNB (BS) + KNN Instance Learner (OE)."]}
     except:
         d1, d2, d3, prem, s, bs, oe = resolve_consistent_triad(9)
@@ -2430,11 +2434,11 @@ def compute_strict_historical_backtest(df_history, max_eval=20):
             continue
 
         for name, pred in agent_map.items():
-            p_d1 = int(pred.get('dice1', 3))
-            p_d2 = int(pred.get('dice2', 3))
-            p_d3 = int(pred.get('dice3', 3))
+            p_d1 = int(float(pred.get('dice1', 3)))
+            p_d2 = int(float(pred.get('dice2', 3)))
+            p_d3 = int(float(pred.get('dice3', 3)))
             p_prem = str(pred.get('premium', f"{p_d1}{p_d2}{p_d3}")).strip()
-            p_sum = int(pred.get('sum', p_d1+p_d2+p_d3))
+            p_sum = int(float(pred.get('sum', p_d1+p_d2+p_d3)))
             p_bs = str(pred.get('bs_pred', 'Big')).strip()
             p_oe = str(pred.get('oe_pred', 'Odd')).strip()
 
@@ -2713,11 +2717,11 @@ def do_sync_k3():
                     pred = past_map.get(name, {})
                     card = st.session_state.agent_scorecards.setdefault(name, DEFAULT_SCORECARDS[name].copy())
                     
-                    p_d1 = int(pred.get('dice1', 0))
-                    p_d2 = int(pred.get('dice2', 0))
-                    p_d3 = int(pred.get('dice3', 0))
+                    p_d1 = int(float(pred.get('dice1', 0)))
+                    p_d2 = int(float(pred.get('dice2', 0)))
+                    p_d3 = int(float(pred.get('dice3', 0)))
                     p_prem = str(pred.get('premium', '')).strip()
-                    p_sum = int(pred.get('sum', 0))
+                    p_sum = int(float(pred.get('sum', 0)))
                     p_bs = str(pred.get('bs', '')).strip()
                     p_oe = str(pred.get('oe', '')).strip()
                     

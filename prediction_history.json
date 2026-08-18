@@ -1,0 +1,3452 @@
+{
+  "NEXUS PATTERN SNIPER": [
+    {
+      "id": "NEXUS PATTERN SNIPER_20260818101011091_1787076621.267032",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 1,
+        "dice2": 2,
+        "dice3": 3,
+        "sum": 6,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "premium": "123"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 0.72,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:40:21.267032",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.533797"
+    },
+    {
+      "id": "NEXUS PATTERN SNIPER_20260818101011091_1787076632.019836",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 1,
+        "dice2": 2,
+        "dice3": 3,
+        "sum": 6,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "premium": "123"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 0.72,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:40:32.019836",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.533797"
+    },
+    {
+      "id": "NEXUS PATTERN SNIPER_20260818101011091_1787076645.740323",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 1,
+        "dice2": 2,
+        "dice3": 3,
+        "sum": 6,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "premium": "123"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 0.72,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:40:45.740323",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.533797"
+    },
+    {
+      "id": "NEXUS PATTERN SNIPER_20260818101011091_1787076660.513372",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 1,
+        "dice2": 2,
+        "dice3": 3,
+        "sum": 6,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "premium": "123"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 0.72,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:00.513372",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.534796"
+    },
+    {
+      "id": "NEXUS PATTERN SNIPER_20260818101011092_1787076677.801516",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 5,
+        "dice3": 5,
+        "sum": 12,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "premium": "255"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 0.72,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:17.801516",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.613839"
+    },
+    {
+      "id": "NEXUS PATTERN SNIPER_20260818101011092_1787076693.363424",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 5,
+        "dice3": 5,
+        "sum": 12,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "premium": "255"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 0.72,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:33.363424",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.613839"
+    },
+    {
+      "id": "NEXUS PATTERN SNIPER_20260818101011092_1787076706.160904",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 5,
+        "dice3": 5,
+        "sum": 12,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "premium": "255"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 0.72,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:46.160904",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.613839"
+    },
+    {
+      "id": "NEXUS PATTERN SNIPER_20260818101011092_1787076723.683019",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 5,
+        "dice3": 5,
+        "sum": 12,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "premium": "255"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 0.72,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:42:03.683019",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.613839"
+    },
+    {
+      "id": "NEXUS PATTERN SNIPER_20260818101011093_1787076739.925068",
+      "issue": "20260818101011093",
+      "prediction": {
+        "dice1": 5,
+        "dice2": 4,
+        "dice3": 4,
+        "sum": 13,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "premium": "544"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 1,
+        "dice3": 6,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "216"
+      },
+      "confidence": 0.72,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:42:19.925068",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:43:02.224320"
+    },
+    {
+      "id": "NEXUS PATTERN SNIPER_20260818101011093_1787076755.950723",
+      "issue": "20260818101011093",
+      "prediction": {
+        "dice1": 5,
+        "dice2": 4,
+        "dice3": 4,
+        "sum": 13,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "premium": "544"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 1,
+        "dice3": 6,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "216"
+      },
+      "confidence": 0.72,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:42:35.950723",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:43:02.224320"
+    },
+    {
+      "id": "NEXUS PATTERN SNIPER_20260818101011095_1787076891.711795",
+      "issue": "20260818101011095",
+      "prediction": {
+        "dice1": 5,
+        "dice2": 4,
+        "dice3": 4,
+        "sum": 13,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "premium": "544"
+      },
+      "actual": {
+        "dice1": 1,
+        "dice2": 1,
+        "dice3": 5,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "115"
+      },
+      "confidence": 0.72,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:44:51.711795",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:45:14.293617"
+    },
+    {
+      "id": "NEXUS PATTERN SNIPER_20260818101011095_1787076902.668196",
+      "issue": "20260818101011095",
+      "prediction": {
+        "dice1": 5,
+        "dice2": 4,
+        "dice3": 4,
+        "sum": 13,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "premium": "544"
+      },
+      "actual": {
+        "dice1": 1,
+        "dice2": 1,
+        "dice3": 5,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "115"
+      },
+      "confidence": 0.72,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:45:02.668196",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:45:14.293617"
+    },
+    {
+      "id": "NEXUS PATTERN SNIPER_20260818101011096_1787076919.260398",
+      "issue": "20260818101011096",
+      "prediction": {
+        "dice1": 1,
+        "dice2": 4,
+        "dice3": 5,
+        "sum": 10,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "premium": "145"
+      },
+      "actual": null,
+      "confidence": 0.72,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:45:19.260398",
+      "validated": false,
+      "validation_timestamp": null
+    }
+  ],
+  "NEXUS K3 TRIPLE THREAT": [
+    {
+      "id": "NEXUS K3 TRIPLE THREAT_20260818101011091_1787076621.273623",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 3,
+        "dice2": 4,
+        "dice3": 5,
+        "sum": 12,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "premium": "345"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 0.5269049453735352,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:40:21.273623",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.537793"
+    },
+    {
+      "id": "NEXUS K3 TRIPLE THREAT_20260818101011091_1787076632.022839",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 3,
+        "dice2": 4,
+        "dice3": 5,
+        "sum": 12,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "premium": "345"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 0.5269049453735352,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:40:32.022839",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.537793"
+    },
+    {
+      "id": "NEXUS K3 TRIPLE THREAT_20260818101011091_1787076645.743986",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 3,
+        "dice2": 4,
+        "dice3": 5,
+        "sum": 12,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "premium": "345"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 0.5269049453735352,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:40:45.743986",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.537793"
+    },
+    {
+      "id": "NEXUS K3 TRIPLE THREAT_20260818101011091_1787076660.517895",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 3,
+        "dice2": 4,
+        "dice3": 5,
+        "sum": 12,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "premium": "345"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 0.5269049453735352,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:00.517895",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.537793"
+    },
+    {
+      "id": "NEXUS K3 TRIPLE THREAT_20260818101011092_1787076677.806518",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 5,
+        "dice2": 4,
+        "dice3": 5,
+        "sum": 14,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "premium": "545"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 0.5153771209716796,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:17.806518",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.618827"
+    },
+    {
+      "id": "NEXUS K3 TRIPLE THREAT_20260818101011092_1787076693.369418",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 5,
+        "dice2": 4,
+        "dice3": 5,
+        "sum": 14,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "premium": "545"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 0.5153771209716796,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:33.369418",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.618827"
+    },
+    {
+      "id": "NEXUS K3 TRIPLE THREAT_20260818101011092_1787076706.167902",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 5,
+        "dice2": 4,
+        "dice3": 5,
+        "sum": 14,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "premium": "545"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 0.5153771209716796,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:46.167902",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.618827"
+    },
+    {
+      "id": "NEXUS K3 TRIPLE THREAT_20260818101011092_1787076723.695187",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 5,
+        "dice2": 4,
+        "dice3": 5,
+        "sum": 14,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "premium": "545"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 0.5153771209716796,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:42:03.695187",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.618827"
+    },
+    {
+      "id": "NEXUS K3 TRIPLE THREAT_20260818101011093_1787076739.938725",
+      "issue": "20260818101011093",
+      "prediction": {
+        "dice1": 1,
+        "dice2": 3,
+        "dice3": 3,
+        "sum": 7,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "133"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 1,
+        "dice3": 6,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "216"
+      },
+      "confidence": 0.5948163223266602,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:42:19.938725",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:43:02.237263"
+    },
+    {
+      "id": "NEXUS K3 TRIPLE THREAT_20260818101011093_1787076755.96756",
+      "issue": "20260818101011093",
+      "prediction": {
+        "dice1": 1,
+        "dice2": 3,
+        "dice3": 3,
+        "sum": 7,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "133"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 1,
+        "dice3": 6,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "216"
+      },
+      "confidence": 0.5948163223266602,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:42:35.967560",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:43:02.237263"
+    },
+    {
+      "id": "NEXUS K3 TRIPLE THREAT_20260818101011095_1787076891.721798",
+      "issue": "20260818101011095",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "234"
+      },
+      "actual": {
+        "dice1": 1,
+        "dice2": 1,
+        "dice3": 5,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "115"
+      },
+      "confidence": 0.5794621658325195,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:44:51.721798",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:45:14.302625"
+    },
+    {
+      "id": "NEXUS K3 TRIPLE THREAT_20260818101011095_1787076902.683019",
+      "issue": "20260818101011095",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "234"
+      },
+      "actual": {
+        "dice1": 1,
+        "dice2": 1,
+        "dice3": 5,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "115"
+      },
+      "confidence": 0.5794621658325195,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:45:02.683019",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:45:14.302625"
+    },
+    {
+      "id": "NEXUS K3 TRIPLE THREAT_20260818101011096_1787076919.270048",
+      "issue": "20260818101011096",
+      "prediction": {
+        "dice1": 1,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 8,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "premium": "134"
+      },
+      "actual": null,
+      "confidence": 0.6338060379028321,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:45:19.270048",
+      "validated": false,
+      "validation_timestamp": null
+    }
+  ],
+  "QUANTUM TEMPORAL ORACLE K3": [
+    {
+      "id": "QUANTUM TEMPORAL ORACLE K3_20260818101011091_1787076621.278633",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 3,
+        "sum": 7,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "223"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 0.92,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:40:21.278633",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.541798"
+    },
+    {
+      "id": "QUANTUM TEMPORAL ORACLE K3_20260818101011091_1787076632.026836",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 3,
+        "sum": 7,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "223"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 0.92,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:40:32.026836",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.541798"
+    },
+    {
+      "id": "QUANTUM TEMPORAL ORACLE K3_20260818101011091_1787076645.747282",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 3,
+        "sum": 7,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "223"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 0.92,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:40:45.747282",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.541798"
+    },
+    {
+      "id": "QUANTUM TEMPORAL ORACLE K3_20260818101011091_1787076660.521918",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 3,
+        "sum": 7,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "223"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 0.92,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:00.521918",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.541798"
+    },
+    {
+      "id": "QUANTUM TEMPORAL ORACLE K3_20260818101011092_1787076677.810514",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 3,
+        "dice2": 2,
+        "dice3": 3,
+        "sum": 8,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "premium": "323"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 0.92,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:17.810514",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.625831"
+    },
+    {
+      "id": "QUANTUM TEMPORAL ORACLE K3_20260818101011092_1787076693.374417",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 3,
+        "dice2": 2,
+        "dice3": 3,
+        "sum": 8,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "premium": "323"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 0.92,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:33.374417",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.625831"
+    },
+    {
+      "id": "QUANTUM TEMPORAL ORACLE K3_20260818101011092_1787076706.1759",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 3,
+        "dice2": 2,
+        "dice3": 3,
+        "sum": 8,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "premium": "323"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 0.92,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:46.175900",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.625831"
+    },
+    {
+      "id": "QUANTUM TEMPORAL ORACLE K3_20260818101011092_1787076723.707177",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 3,
+        "dice2": 2,
+        "dice3": 3,
+        "sum": 8,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "premium": "323"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 0.92,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:42:03.707177",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.625831"
+    },
+    {
+      "id": "QUANTUM TEMPORAL ORACLE K3_20260818101011093_1787076739.953663",
+      "issue": "20260818101011093",
+      "prediction": {
+        "dice1": 4,
+        "dice2": 2,
+        "dice3": 3,
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "423"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 1,
+        "dice3": 6,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "216"
+      },
+      "confidence": 0.92,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:42:19.953663",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:43:02.248785"
+    },
+    {
+      "id": "QUANTUM TEMPORAL ORACLE K3_20260818101011093_1787076755.985872",
+      "issue": "20260818101011093",
+      "prediction": {
+        "dice1": 4,
+        "dice2": 2,
+        "dice3": 3,
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "423"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 1,
+        "dice3": 6,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "216"
+      },
+      "confidence": 0.92,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:42:35.985872",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:43:02.248785"
+    },
+    {
+      "id": "QUANTUM TEMPORAL ORACLE K3_20260818101011095_1787076891.729796",
+      "issue": "20260818101011095",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "234"
+      },
+      "actual": {
+        "dice1": 1,
+        "dice2": 1,
+        "dice3": 5,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "115"
+      },
+      "confidence": 0.92,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:44:51.729796",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:45:14.311097"
+    },
+    {
+      "id": "QUANTUM TEMPORAL ORACLE K3_20260818101011095_1787076902.697028",
+      "issue": "20260818101011095",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "234"
+      },
+      "actual": {
+        "dice1": 1,
+        "dice2": 1,
+        "dice3": 5,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "115"
+      },
+      "confidence": 0.92,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:45:02.697028",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:45:14.311097"
+    },
+    {
+      "id": "QUANTUM TEMPORAL ORACLE K3_20260818101011096_1787076919.278043",
+      "issue": "20260818101011096",
+      "prediction": {
+        "dice1": 3,
+        "dice2": 3,
+        "dice3": 3,
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "333"
+      },
+      "actual": null,
+      "confidence": 0.5930493545532226,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:45:19.278043",
+      "validated": false,
+      "validation_timestamp": null
+    }
+  ],
+  "SENTINEL PRIME OMEGA K3": [
+    {
+      "id": "SENTINEL PRIME OMEGA K3_20260818101011091_1787076621.287646",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 3,
+        "sum": 7,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "223"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 0.6589060594874548,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:40:21.287646",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.545798"
+    },
+    {
+      "id": "SENTINEL PRIME OMEGA K3_20260818101011091_1787076632.029835",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 3,
+        "sum": 7,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "223"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 0.6589060594874548,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:40:32.029835",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.545798"
+    },
+    {
+      "id": "SENTINEL PRIME OMEGA K3_20260818101011091_1787076645.75166",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 3,
+        "sum": 7,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "223"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 0.6589060594874548,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:40:45.751660",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.545798"
+    },
+    {
+      "id": "SENTINEL PRIME OMEGA K3_20260818101011091_1787076660.525581",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 3,
+        "sum": 7,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "223"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 0.6589060594874548,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:00.525581",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.545798"
+    },
+    {
+      "id": "SENTINEL PRIME OMEGA K3_20260818101011092_1787076677.816514",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 3,
+        "sum": 7,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "223"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 0.8068627450980393,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:17.816514",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.631834"
+    },
+    {
+      "id": "SENTINEL PRIME OMEGA K3_20260818101011092_1787076693.380423",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 3,
+        "sum": 7,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "223"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 0.8068627450980393,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:33.380423",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.631834"
+    },
+    {
+      "id": "SENTINEL PRIME OMEGA K3_20260818101011092_1787076706.182818",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 3,
+        "sum": 7,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "223"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 0.8068627450980393,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:46.182818",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.631834"
+    },
+    {
+      "id": "SENTINEL PRIME OMEGA K3_20260818101011092_1787076723.721169",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 3,
+        "sum": 7,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "223"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 0.8068627450980393,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:42:03.721169",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.631834"
+    },
+    {
+      "id": "SENTINEL PRIME OMEGA K3_20260818101011093_1787076739.966921",
+      "issue": "20260818101011093",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 3,
+        "dice3": 3,
+        "sum": 8,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "premium": "233"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 1,
+        "dice3": 6,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "216"
+      },
+      "confidence": 0.5648054435799118,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:42:19.966921",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:43:02.263550"
+    },
+    {
+      "id": "SENTINEL PRIME OMEGA K3_20260818101011093_1787076756.009749",
+      "issue": "20260818101011093",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 3,
+        "dice3": 3,
+        "sum": 8,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "premium": "233"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 1,
+        "dice3": 6,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "216"
+      },
+      "confidence": 0.5648054435799118,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:42:36.009749",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:43:02.263550"
+    },
+    {
+      "id": "SENTINEL PRIME OMEGA K3_20260818101011095_1787076891.738262",
+      "issue": "20260818101011095",
+      "prediction": {
+        "dice1": 3,
+        "dice2": 4,
+        "dice3": 5,
+        "sum": 12,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "premium": "345"
+      },
+      "actual": {
+        "dice1": 1,
+        "dice2": 1,
+        "dice3": 5,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "115"
+      },
+      "confidence": 0.7046679812506262,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:44:51.738262",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:45:14.318723"
+    },
+    {
+      "id": "SENTINEL PRIME OMEGA K3_20260818101011095_1787076902.713052",
+      "issue": "20260818101011095",
+      "prediction": {
+        "dice1": 3,
+        "dice2": 4,
+        "dice3": 5,
+        "sum": 12,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "premium": "345"
+      },
+      "actual": {
+        "dice1": 1,
+        "dice2": 1,
+        "dice3": 5,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "115"
+      },
+      "confidence": 0.7046679812506262,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:45:02.713052",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:45:14.318723"
+    },
+    {
+      "id": "SENTINEL PRIME OMEGA K3_20260818101011096_1787076919.290052",
+      "issue": "20260818101011096",
+      "prediction": {
+        "dice1": 3,
+        "dice2": 3,
+        "dice3": 3,
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "333"
+      },
+      "actual": null,
+      "confidence": 0.6762660542072308,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:45:19.290052",
+      "validated": false,
+      "validation_timestamp": null
+    }
+  ],
+  "NEXUS CORE K3": [
+    {
+      "id": "NEXUS CORE K3_20260818101011091_1787076621.295174",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 3,
+        "dice2": 2,
+        "dice3": 3,
+        "sum": 8,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "premium": "323"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 0.5123758316040039,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:40:21.295174",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.550799"
+    },
+    {
+      "id": "NEXUS CORE K3_20260818101011091_1787076632.031834",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 3,
+        "dice2": 2,
+        "dice3": 3,
+        "sum": 8,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "premium": "323"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 0.5123758316040039,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:40:32.031834",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.550799"
+    },
+    {
+      "id": "NEXUS CORE K3_20260818101011091_1787076645.755306",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 3,
+        "dice2": 2,
+        "dice3": 3,
+        "sum": 8,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "premium": "323"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 0.5123758316040039,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:40:45.755306",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.550799"
+    },
+    {
+      "id": "NEXUS CORE K3_20260818101011091_1787076660.530417",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 3,
+        "dice2": 2,
+        "dice3": 3,
+        "sum": 8,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "premium": "323"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 0.5123758316040039,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:00.530417",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.550799"
+    },
+    {
+      "id": "NEXUS CORE K3_20260818101011092_1787076677.820514",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 3,
+        "sum": 7,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "223"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 0.7772340393066406,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:17.820514",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.638540"
+    },
+    {
+      "id": "NEXUS CORE K3_20260818101011092_1787076693.387418",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 3,
+        "sum": 7,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "223"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 0.7772340393066406,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:33.387418",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.638540"
+    },
+    {
+      "id": "NEXUS CORE K3_20260818101011092_1787076706.191112",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 3,
+        "sum": 7,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "223"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 0.7772340393066406,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:46.191112",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.638540"
+    },
+    {
+      "id": "NEXUS CORE K3_20260818101011092_1787076723.733304",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 3,
+        "sum": 7,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "223"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 0.7772340393066406,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:42:03.733304",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.638540"
+    },
+    {
+      "id": "NEXUS CORE K3_20260818101011093_1787076739.981914",
+      "issue": "20260818101011093",
+      "prediction": {
+        "dice1": 3,
+        "dice2": 5,
+        "dice3": 5,
+        "sum": 13,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "premium": "355"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 1,
+        "dice3": 6,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "216"
+      },
+      "confidence": 0.5239060974121094,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:42:19.981914",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:43:02.275918"
+    },
+    {
+      "id": "NEXUS CORE K3_20260818101011093_1787076756.028803",
+      "issue": "20260818101011093",
+      "prediction": {
+        "dice1": 3,
+        "dice2": 5,
+        "dice3": 5,
+        "sum": 13,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "premium": "355"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 1,
+        "dice3": 6,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "216"
+      },
+      "confidence": 0.5239060974121094,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:42:36.028803",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:43:02.275918"
+    },
+    {
+      "id": "NEXUS CORE K3_20260818101011095_1787076891.748257",
+      "issue": "20260818101011095",
+      "prediction": {
+        "dice1": 3,
+        "dice2": 4,
+        "dice3": 5,
+        "sum": 12,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "premium": "345"
+      },
+      "actual": {
+        "dice1": 1,
+        "dice2": 1,
+        "dice3": 5,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "115"
+      },
+      "confidence": 0.5655699920654297,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:44:51.748257",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:45:14.327716"
+    },
+    {
+      "id": "NEXUS CORE K3_20260818101011095_1787076902.72759",
+      "issue": "20260818101011095",
+      "prediction": {
+        "dice1": 3,
+        "dice2": 4,
+        "dice3": 5,
+        "sum": 12,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "premium": "345"
+      },
+      "actual": {
+        "dice1": 1,
+        "dice2": 1,
+        "dice3": 5,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "115"
+      },
+      "confidence": 0.5655699920654297,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:45:02.727590",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:45:14.327716"
+    },
+    {
+      "id": "NEXUS CORE K3_20260818101011096_1787076919.304392",
+      "issue": "20260818101011096",
+      "prediction": {
+        "dice1": 4,
+        "dice2": 4,
+        "dice3": 4,
+        "sum": 12,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "premium": "444"
+      },
+      "actual": null,
+      "confidence": 0.5009844970703125,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:45:19.304392",
+      "validated": false,
+      "validation_timestamp": null
+    }
+  ],
+  "OMNI K3 RL": [
+    {
+      "id": "OMNI K3 RL_20260818101011091_1787076621.300694",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 5,
+        "dice2": 5,
+        "dice3": 6,
+        "sum": 16,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "premium": "556"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 1.0,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:40:21.300694",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.555309"
+    },
+    {
+      "id": "OMNI K3 RL_20260818101011091_1787076632.034835",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 5,
+        "dice2": 5,
+        "dice3": 6,
+        "sum": 16,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "premium": "556"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 1.0,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:40:32.034835",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.555309"
+    },
+    {
+      "id": "OMNI K3 RL_20260818101011091_1787076645.758307",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 5,
+        "dice2": 5,
+        "dice3": 6,
+        "sum": 16,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "premium": "556"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 1.0,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:40:45.758307",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.555309"
+    },
+    {
+      "id": "OMNI K3 RL_20260818101011091_1787076660.533426",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 5,
+        "dice2": 5,
+        "dice3": 6,
+        "sum": 16,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "premium": "556"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 1.0,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:00.533426",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.555309"
+    },
+    {
+      "id": "OMNI K3 RL_20260818101011092_1787076677.825515",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 4,
+        "dice2": 5,
+        "dice3": 6,
+        "sum": 15,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "premium": "456"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 1.0,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:17.825515",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.645807"
+    },
+    {
+      "id": "OMNI K3 RL_20260818101011092_1787076693.392642",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 4,
+        "dice2": 5,
+        "dice3": 6,
+        "sum": 15,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "premium": "456"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 1.0,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:33.392642",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.645807"
+    },
+    {
+      "id": "OMNI K3 RL_20260818101011092_1787076706.197127",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 4,
+        "dice2": 5,
+        "dice3": 6,
+        "sum": 15,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "premium": "456"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 1.0,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:46.197127",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.645807"
+    },
+    {
+      "id": "OMNI K3 RL_20260818101011092_1787076723.744396",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 4,
+        "dice2": 5,
+        "dice3": 6,
+        "sum": 15,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "premium": "456"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 1.0,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:42:03.745406",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.645807"
+    },
+    {
+      "id": "OMNI K3 RL_20260818101011093_1787076739.997915",
+      "issue": "20260818101011093",
+      "prediction": {
+        "dice1": 4,
+        "dice2": 6,
+        "dice3": 6,
+        "sum": 16,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "premium": "466"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 1,
+        "dice3": 6,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "216"
+      },
+      "confidence": 1.0,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:42:19.997915",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:43:02.284629"
+    },
+    {
+      "id": "OMNI K3 RL_20260818101011093_1787076756.048963",
+      "issue": "20260818101011093",
+      "prediction": {
+        "dice1": 4,
+        "dice2": 6,
+        "dice3": 6,
+        "sum": 16,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "premium": "466"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 1,
+        "dice3": 6,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "216"
+      },
+      "confidence": 1.0,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:42:36.048963",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:43:02.284629"
+    },
+    {
+      "id": "OMNI K3 RL_20260818101011095_1787076891.759918",
+      "issue": "20260818101011095",
+      "prediction": {
+        "dice1": 3,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 10,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "premium": "334"
+      },
+      "actual": {
+        "dice1": 1,
+        "dice2": 1,
+        "dice3": 5,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "115"
+      },
+      "confidence": 1.0,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:44:51.759918",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:45:14.336721"
+    },
+    {
+      "id": "OMNI K3 RL_20260818101011095_1787076902.742586",
+      "issue": "20260818101011095",
+      "prediction": {
+        "dice1": 3,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 10,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "premium": "334"
+      },
+      "actual": {
+        "dice1": 1,
+        "dice2": 1,
+        "dice3": 5,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "115"
+      },
+      "confidence": 1.0,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:45:02.742586",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:45:14.336721"
+    },
+    {
+      "id": "OMNI K3 RL_20260818101011096_1787076919.317558",
+      "issue": "20260818101011096",
+      "prediction": {
+        "dice1": 4,
+        "dice2": 3,
+        "dice3": 3,
+        "sum": 10,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "premium": "433"
+      },
+      "actual": null,
+      "confidence": 1.0,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:45:19.317558",
+      "validated": false,
+      "validation_timestamp": null
+    }
+  ],
+  "OMEGA ZERO K3": [
+    {
+      "id": "OMEGA ZERO K3_20260818101011091_1787076621.304692",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 5,
+        "dice2": 4,
+        "dice3": 5,
+        "sum": 14,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "premium": "545"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 0.5047373785969913,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:40:21.304692",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.559309"
+    },
+    {
+      "id": "OMEGA ZERO K3_20260818101011091_1787076632.03784",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 5,
+        "dice2": 4,
+        "dice3": 5,
+        "sum": 14,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "premium": "545"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 0.5047373785969913,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:40:32.037840",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.559309"
+    },
+    {
+      "id": "OMEGA ZERO K3_20260818101011091_1787076645.763305",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 5,
+        "dice2": 4,
+        "dice3": 5,
+        "sum": 14,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "premium": "545"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 0.5047373785969913,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:40:45.763305",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.559309"
+    },
+    {
+      "id": "OMEGA ZERO K3_20260818101011091_1787076660.537426",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 5,
+        "dice2": 4,
+        "dice3": 5,
+        "sum": 14,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "premium": "545"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 0.5047373785969913,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:00.538434",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.559309"
+    },
+    {
+      "id": "OMEGA ZERO K3_20260818101011092_1787076677.829517",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "234"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 0.5559596090047034,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:17.829517",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.651182"
+    },
+    {
+      "id": "OMEGA ZERO K3_20260818101011092_1787076693.398648",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "234"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 0.5559596090047034,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:33.398648",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.651182"
+    },
+    {
+      "id": "OMEGA ZERO K3_20260818101011092_1787076706.206127",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "234"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 0.5559596090047034,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:46.206127",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.651182"
+    },
+    {
+      "id": "OMEGA ZERO K3_20260818101011092_1787076723.75819",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "234"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 0.5559596090047034,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:42:03.758190",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.651182"
+    },
+    {
+      "id": "OMEGA ZERO K3_20260818101011093_1787076740.0157",
+      "issue": "20260818101011093",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 3,
+        "dice3": 3,
+        "sum": 8,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "premium": "233"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 1,
+        "dice3": 6,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "216"
+      },
+      "confidence": 0.5857393842250601,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:42:20.015700",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:43:02.294623"
+    },
+    {
+      "id": "OMEGA ZERO K3_20260818101011093_1787076756.076415",
+      "issue": "20260818101011093",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 3,
+        "dice3": 3,
+        "sum": 8,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "premium": "233"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 1,
+        "dice3": 6,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "216"
+      },
+      "confidence": 0.5857393842250601,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:42:36.076415",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:43:02.294623"
+    },
+    {
+      "id": "OMEGA ZERO K3_20260818101011095_1787076891.770916",
+      "issue": "20260818101011095",
+      "prediction": {
+        "dice1": 3,
+        "dice2": 2,
+        "dice3": 3,
+        "sum": 8,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "premium": "323"
+      },
+      "actual": {
+        "dice1": 1,
+        "dice2": 1,
+        "dice3": 5,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "115"
+      },
+      "confidence": 0.5048095091579812,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:44:51.770916",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:45:14.344716"
+    },
+    {
+      "id": "OMEGA ZERO K3_20260818101011095_1787076902.750584",
+      "issue": "20260818101011095",
+      "prediction": {
+        "dice1": 3,
+        "dice2": 2,
+        "dice3": 3,
+        "sum": 8,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "premium": "323"
+      },
+      "actual": {
+        "dice1": 1,
+        "dice2": 1,
+        "dice3": 5,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "115"
+      },
+      "confidence": 0.5048095091579812,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:45:02.750584",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:45:14.344716"
+    },
+    {
+      "id": "OMEGA ZERO K3_20260818101011096_1787076919.334748",
+      "issue": "20260818101011096",
+      "prediction": {
+        "dice1": 1,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 8,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "premium": "134"
+      },
+      "actual": null,
+      "confidence": 0.567787750296131,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:45:19.334748",
+      "validated": false,
+      "validation_timestamp": null
+    }
+  ],
+  "DUO FORCE K3": [
+    {
+      "id": "DUO FORCE K3_20260818101011091_1787076621.307774",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "234"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 0.52954644622125,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:40:21.307774",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.563819"
+    },
+    {
+      "id": "DUO FORCE K3_20260818101011091_1787076632.041836",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "234"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 0.52954644622125,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:40:32.041836",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.563819"
+    },
+    {
+      "id": "DUO FORCE K3_20260818101011091_1787076645.766305",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "234"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 0.52954644622125,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:40:45.766305",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.563819"
+    },
+    {
+      "id": "DUO FORCE K3_20260818101011091_1787076660.541434",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "234"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 0.52954644622125,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:00.541434",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.563819"
+    },
+    {
+      "id": "DUO FORCE K3_20260818101011092_1787076677.835514",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "234"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 0.8417045295880957,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:17.835514",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.657192"
+    },
+    {
+      "id": "DUO FORCE K3_20260818101011092_1787076693.407141",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "234"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 0.8417045295880957,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:33.407141",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.657192"
+    },
+    {
+      "id": "DUO FORCE K3_20260818101011092_1787076706.213645",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "234"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 0.8417045295880957,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:46.213645",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.657192"
+    },
+    {
+      "id": "DUO FORCE K3_20260818101011092_1787076723.770817",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "234"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 0.8417045295880957,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:42:03.770817",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.657192"
+    },
+    {
+      "id": "DUO FORCE K3_20260818101011093_1787076740.031789",
+      "issue": "20260818101011093",
+      "prediction": {
+        "dice1": 4,
+        "dice2": 6,
+        "dice3": 6,
+        "sum": 16,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "premium": "466"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 1,
+        "dice3": 6,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "216"
+      },
+      "confidence": 0.7501817207299135,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:42:20.031789",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:43:02.303154"
+    },
+    {
+      "id": "DUO FORCE K3_20260818101011093_1787076756.091452",
+      "issue": "20260818101011093",
+      "prediction": {
+        "dice1": 4,
+        "dice2": 6,
+        "dice3": 6,
+        "sum": 16,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "premium": "466"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 1,
+        "dice3": 6,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "216"
+      },
+      "confidence": 0.7501817207299135,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:42:36.091452",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:43:02.303154"
+    },
+    {
+      "id": "DUO FORCE K3_20260818101011095_1787076891.779921",
+      "issue": "20260818101011095",
+      "prediction": {
+        "dice1": 5,
+        "dice2": 5,
+        "dice3": 6,
+        "sum": 16,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "premium": "556"
+      },
+      "actual": {
+        "dice1": 1,
+        "dice2": 1,
+        "dice3": 5,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "115"
+      },
+      "confidence": 0.5892404051926555,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:44:51.779921",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:45:14.353720"
+    },
+    {
+      "id": "DUO FORCE K3_20260818101011095_1787076902.759585",
+      "issue": "20260818101011095",
+      "prediction": {
+        "dice1": 5,
+        "dice2": 5,
+        "dice3": 6,
+        "sum": 16,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "premium": "556"
+      },
+      "actual": {
+        "dice1": 1,
+        "dice2": 1,
+        "dice3": 5,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "115"
+      },
+      "confidence": 0.5892404051926555,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:45:02.759585",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:45:14.353720"
+    },
+    {
+      "id": "DUO FORCE K3_20260818101011096_1787076919.352775",
+      "issue": "20260818101011096",
+      "prediction": {
+        "dice1": 4,
+        "dice2": 3,
+        "dice3": 3,
+        "sum": 10,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "premium": "433"
+      },
+      "actual": null,
+      "confidence": 0.7740206134343295,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:45:19.352775",
+      "validated": false,
+      "validation_timestamp": null
+    }
+  ],
+  "BAYESIAN NEURAL NETWORK": [
+    {
+      "id": "BAYESIAN NEURAL NETWORK_20260818101011091_1787076621.312788",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 4,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 11,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "premium": "434"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 0.6,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:40:21.312788",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.568338"
+    },
+    {
+      "id": "BAYESIAN NEURAL NETWORK_20260818101011091_1787076632.044835",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 4,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 11,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "premium": "434"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 0.6,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:40:32.044835",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.568338"
+    },
+    {
+      "id": "BAYESIAN NEURAL NETWORK_20260818101011091_1787076645.770306",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 4,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 11,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "premium": "434"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 0.6,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:40:45.770306",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.568338"
+    },
+    {
+      "id": "BAYESIAN NEURAL NETWORK_20260818101011091_1787076660.545433",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 4,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 11,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "premium": "434"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 0.6,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:00.545433",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.568338"
+    },
+    {
+      "id": "BAYESIAN NEURAL NETWORK_20260818101011092_1787076677.840513",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 4,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 11,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "premium": "434"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 0.6,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:17.840513",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.664565"
+    },
+    {
+      "id": "BAYESIAN NEURAL NETWORK_20260818101011092_1787076693.413147",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 4,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 11,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "premium": "434"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 0.6,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:33.413147",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.664565"
+    },
+    {
+      "id": "BAYESIAN NEURAL NETWORK_20260818101011092_1787076706.22428",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 4,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 11,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "premium": "434"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 0.6,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:46.224280",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.664565"
+    },
+    {
+      "id": "BAYESIAN NEURAL NETWORK_20260818101011092_1787076723.78396",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 4,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 11,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "premium": "434"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 0.6,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:42:03.783960",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.664565"
+    },
+    {
+      "id": "BAYESIAN NEURAL NETWORK_20260818101011093_1787076740.046118",
+      "issue": "20260818101011093",
+      "prediction": {
+        "dice1": 4,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 11,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "premium": "434"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 1,
+        "dice3": 6,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "216"
+      },
+      "confidence": 0.6,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:42:20.046118",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:43:02.315584"
+    },
+    {
+      "id": "BAYESIAN NEURAL NETWORK_20260818101011093_1787076756.110441",
+      "issue": "20260818101011093",
+      "prediction": {
+        "dice1": 4,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 11,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "premium": "434"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 1,
+        "dice3": 6,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "216"
+      },
+      "confidence": 0.6,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:42:36.110441",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:43:02.315584"
+    },
+    {
+      "id": "BAYESIAN NEURAL NETWORK_20260818101011095_1787076891.790918",
+      "issue": "20260818101011095",
+      "prediction": {
+        "dice1": 4,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 11,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "premium": "434"
+      },
+      "actual": {
+        "dice1": 1,
+        "dice2": 1,
+        "dice3": 5,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "115"
+      },
+      "confidence": 0.6,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:44:51.790918",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:45:14.361716"
+    },
+    {
+      "id": "BAYESIAN NEURAL NETWORK_20260818101011095_1787076902.767584",
+      "issue": "20260818101011095",
+      "prediction": {
+        "dice1": 4,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 11,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "premium": "434"
+      },
+      "actual": {
+        "dice1": 1,
+        "dice2": 1,
+        "dice3": 5,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "115"
+      },
+      "confidence": 0.6,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:45:02.767584",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:45:14.361716"
+    },
+    {
+      "id": "BAYESIAN NEURAL NETWORK_20260818101011096_1787076919.372772",
+      "issue": "20260818101011096",
+      "prediction": {
+        "dice1": 4,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 11,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "premium": "434"
+      },
+      "actual": null,
+      "confidence": 0.6,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:45:19.372772",
+      "validated": false,
+      "validation_timestamp": null
+    }
+  ],
+  "HIVE MIND MASTER": [
+    {
+      "id": "HIVE MIND MASTER_20260818101011091_1787076621.319787",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 3,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 10,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "premium": "334"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 0.845,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:40:21.319787",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.528793"
+    },
+    {
+      "id": "HIVE MIND MASTER_20260818101011091_1787076632.047836",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 3,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 10,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "premium": "334"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 0.845,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:40:32.047836",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.529793"
+    },
+    {
+      "id": "HIVE MIND MASTER_20260818101011091_1787076645.774306",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 3,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 10,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "premium": "334"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 0.845,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:40:45.774306",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.529793"
+    },
+    {
+      "id": "HIVE MIND MASTER_20260818101011091_1787076660.548433",
+      "issue": "20260818101011091",
+      "prediction": {
+        "dice1": 3,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 10,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "premium": "334"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 2,
+        "dice3": 5,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "225"
+      },
+      "confidence": 0.845,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:00.548433",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:41:13.529793"
+    },
+    {
+      "id": "HIVE MIND MASTER_20260818101011092_1787076677.845513",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "234"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 0.845,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:17.845513",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.607816"
+    },
+    {
+      "id": "HIVE MIND MASTER_20260818101011092_1787076693.41915",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "234"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 0.845,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:33.419150",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.607816"
+    },
+    {
+      "id": "HIVE MIND MASTER_20260818101011092_1787076706.232881",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "234"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 0.845,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:41:46.232881",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.607816"
+    },
+    {
+      "id": "HIVE MIND MASTER_20260818101011092_1787076723.797818",
+      "issue": "20260818101011092",
+      "prediction": {
+        "dice1": 2,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 9,
+        "bs_pred": "Small",
+        "oe_pred": "Odd",
+        "premium": "234"
+      },
+      "actual": {
+        "dice1": 5,
+        "dice2": 6,
+        "dice3": 3,
+        "sum": 14,
+        "bs": "Big",
+        "oe": "Even",
+        "premium": "563"
+      },
+      "confidence": 0.845,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:42:03.797818",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:42:12.607816"
+    },
+    {
+      "id": "HIVE MIND MASTER_20260818101011093_1787076740.05914",
+      "issue": "20260818101011093",
+      "prediction": {
+        "dice1": 4,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 11,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "premium": "434"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 1,
+        "dice3": 6,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "216"
+      },
+      "confidence": 0.845,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:42:20.059140",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:43:02.214273"
+    },
+    {
+      "id": "HIVE MIND MASTER_20260818101011093_1787076756.128416",
+      "issue": "20260818101011093",
+      "prediction": {
+        "dice1": 4,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 11,
+        "bs_pred": "Big",
+        "oe_pred": "Odd",
+        "premium": "434"
+      },
+      "actual": {
+        "dice1": 2,
+        "dice2": 1,
+        "dice3": 6,
+        "sum": 9,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "216"
+      },
+      "confidence": 0.845,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:42:36.128416",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:43:02.214273"
+    },
+    {
+      "id": "HIVE MIND MASTER_20260818101011095_1787076891.802911",
+      "issue": "20260818101011095",
+      "prediction": {
+        "dice1": 5,
+        "dice2": 5,
+        "dice3": 6,
+        "sum": 16,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "premium": "556"
+      },
+      "actual": {
+        "dice1": 1,
+        "dice2": 1,
+        "dice3": 5,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "115"
+      },
+      "confidence": 0.845,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:44:51.802911",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:45:14.285624"
+    },
+    {
+      "id": "HIVE MIND MASTER_20260818101011095_1787076902.775584",
+      "issue": "20260818101011095",
+      "prediction": {
+        "dice1": 5,
+        "dice2": 5,
+        "dice3": 6,
+        "sum": 16,
+        "bs_pred": "Big",
+        "oe_pred": "Even",
+        "premium": "556"
+      },
+      "actual": {
+        "dice1": 1,
+        "dice2": 1,
+        "dice3": 5,
+        "sum": 7,
+        "bs": "Small",
+        "oe": "Odd",
+        "premium": "115"
+      },
+      "confidence": 0.845,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:45:02.775584",
+      "validated": true,
+      "validation_timestamp": "2026-08-18T23:45:14.285624"
+    },
+    {
+      "id": "HIVE MIND MASTER_20260818101011096_1787076919.392927",
+      "issue": "20260818101011096",
+      "prediction": {
+        "dice1": 3,
+        "dice2": 3,
+        "dice3": 4,
+        "sum": 10,
+        "bs_pred": "Small",
+        "oe_pred": "Even",
+        "premium": "334"
+      },
+      "actual": null,
+      "confidence": 0.845,
+      "metadata": {},
+      "timestamp": "2026-08-18T23:45:19.392927",
+      "validated": false,
+      "validation_timestamp": null
+    }
+  ]
+}

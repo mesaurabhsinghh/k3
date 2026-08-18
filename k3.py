@@ -5,7 +5,8 @@ import requests
 import json
 from pathlib import Path
 from datetime import datetime
-from collections import deque
+from collections import deque, defaultdict
+from typing import Dict, List, Optional, Any
 import math
 from itertools import permutations
 from scipy import stats
@@ -33,6 +34,7 @@ from streamlit_autorefresh import st_autorefresh
 BASE = Path(__file__).resolve().parent
 CSV_K3 = BASE / 'k3_history.csv'
 STORE_FILE = BASE / 'agent_performance_history.json'
+PRED_HISTORY_FILE = BASE / 'prediction_history.json'
 API_K3 = 'https://draw.ar-lottery01.com/K3/K3_1M/GetHistoryIssuePage.json'
 HEADERS = {
     'Accept': 'application/json, text/plain, */*',
@@ -860,6 +862,570 @@ def render_anomaly_dashboard(df):
                 'Anomaly Rate': f"{(w_stats['anomalies_detected'] / max(1, w_stats['total_checks']) * 100):.1f}%"
             })
         st.dataframe(pd.DataFrame(w_results), use_container_width=True, hide_index=True)
+
+
+# ==============================================================================
+# MODEL PERFORMANCE TRACKING & WALK-FORWARD AUDIT SYSTEM
+# ==============================================================================
+
+class PredictionLogger:
+    """Logs every prediction with full context and validates against actual outcomes upon draw ingestion."""
+    def __init__(self, storage_path=None):
+        self.storage_path = Path(storage_path) if storage_path else PRED_HISTORY_FILE
+        self.predictions = defaultdict(list)
+        self.load_from_disk()
+    
+    def log_prediction(self, model_name: str, issue_number: str, prediction: Dict, confidence: float = None, metadata: Dict = None) -> str:
+        log_entry = {
+            'id': f"{model_name}_{issue_number}_{datetime.now().timestamp()}",
+            'issue': str(issue_number),
+            'prediction': prediction,
+            'actual': None,
+            'confidence': float(confidence) if confidence is not None else 0.5,
+            'metadata': metadata or {},
+            'timestamp': datetime.now().isoformat(),
+            'validated': False,
+            'validation_timestamp': None
+        }
+        self.predictions[model_name].append(log_entry)
+        self.save_to_disk()
+        return log_entry['id']
+    
+    def validate_prediction(self, model_name: str, issue_number: str, actual: Dict) -> bool:
+        entries = self.predictions.get(model_name, [])
+        updated = False
+        for entry in entries:
+            if str(entry['issue']) == str(issue_number) and not entry['validated']:
+                entry['actual'] = actual
+                entry['validated'] = True
+                entry['validation_timestamp'] = datetime.now().isoformat()
+                updated = True
+        if updated:
+            self.save_to_disk()
+        return updated
+    
+    def get_pending_predictions(self, model_name: str = None) -> List[Dict]:
+        if model_name:
+            return [e for e in self.predictions.get(model_name, []) if not e['validated']]
+        all_pending = []
+        for model, entries in self.predictions.items():
+            all_pending.extend([e for e in entries if not e['validated']])
+        return all_pending
+    
+    def get_validated_predictions(self, model_name: str = None) -> List[Dict]:
+        if model_name:
+            return [e for e in self.predictions.get(model_name, []) if e['validated']]
+        all_validated = []
+        for model, entries in self.predictions.items():
+            all_validated.extend([e for e in entries if e['validated']])
+        return all_validated
+    
+    def get_model_history(self, model_name: str) -> List[Dict]:
+        return self.predictions.get(model_name, [])
+    
+    def get_all_models(self) -> List[str]:
+        return list(self.predictions.keys())
+    
+    def save_to_disk(self):
+        try:
+            data = {k: v for k, v in self.predictions.items()}
+            self.storage_path.parent.mkdir(parents=True, exist_ok=True)
+            self.storage_path.write_text(json.dumps(data, indent=2, default=str), encoding='utf-8')
+        except Exception:
+            pass
+    
+    def load_from_disk(self):
+        if self.storage_path.exists():
+            try:
+                data = json.loads(self.storage_path.read_text(encoding='utf-8'))
+                self.predictions = defaultdict(list, data)
+            except Exception:
+                self.predictions = defaultdict(list)
+
+
+class PerformanceMetrics:
+    """Calculates comprehensive parameter-wise accuracy, Brier scores, calibration error, and F1 statistics."""
+    @staticmethod
+    def calculate_all(validated_predictions: List[Dict]) -> Dict:
+        if not validated_predictions:
+            return {'error': 'No validated predictions'}
+        n = len(validated_predictions)
+        metrics = {
+            'total_predictions': n,
+            'first_prediction': validated_predictions[0].get('timestamp', '')[:19],
+            'last_prediction': validated_predictions[-1].get('timestamp', '')[:19]
+        }
+        param_accuracy = PerformanceMetrics._parameter_accuracy(validated_predictions)
+        metrics.update(param_accuracy)
+        metrics['exact_match_rate'] = PerformanceMetrics._exact_match_rate(validated_predictions)
+        metrics['partial_match_score'] = PerformanceMetrics._partial_match_score(validated_predictions)
+        metrics['big_small_metrics'] = PerformanceMetrics._binary_metrics(validated_predictions, 'bs_pred', 'bs')
+        metrics['odd_even_metrics'] = PerformanceMetrics._binary_metrics(validated_predictions, 'oe_pred', 'oe')
+        metrics['calibration'] = PerformanceMetrics._calibration_analysis(validated_predictions)
+        metrics['brier_score_bs'] = PerformanceMetrics._brier_score(validated_predictions, 'bs_pred', 'bs')
+        metrics['trend'] = PerformanceMetrics._trend_analysis(validated_predictions)
+        metrics['rolling_performance'] = PerformanceMetrics._rolling_performance(validated_predictions)
+        return metrics
+    
+    @staticmethod
+    def _parameter_accuracy(predictions: List[Dict]) -> Dict:
+        params = ['dice1', 'dice2', 'dice3', 'premium', 'sum', 'bs', 'oe']
+        accuracy = {}
+        for param in params:
+            pred_key = param if param not in ['bs', 'oe'] else ('bs_pred' if param == 'bs' else 'oe_pred')
+            correct = 0
+            total = 0
+            for entry in predictions:
+                pred = entry.get('prediction', {}).get(pred_key)
+                actual = entry.get('actual', {}).get(param)
+                if pred is not None and actual is not None:
+                    total += 1
+                    if str(pred).strip().lower() == str(actual).strip().lower():
+                        correct += 1
+            accuracy[f'{param}_accuracy'] = correct / total if total > 0 else 0.0
+            accuracy[f'{param}_count'] = total
+        return accuracy
+    
+    @staticmethod
+    def _exact_match_rate(predictions: List[Dict]) -> float:
+        exact_matches = 0
+        total = 0
+        params = [('dice1', 'dice1'), ('dice2', 'dice2'), ('dice3', 'dice3'), ('sum', 'sum'), ('bs_pred', 'bs'), ('oe_pred', 'oe')]
+        for entry in predictions:
+            pred = entry.get('prediction', {})
+            actual = entry.get('actual', {})
+            all_match = True
+            has_all = True
+            for pred_key, actual_key in params:
+                if pred.get(pred_key) is None or actual.get(actual_key) is None:
+                    has_all = False
+                    break
+                if str(pred[pred_key]).strip().lower() != str(actual[actual_key]).strip().lower():
+                    all_match = False
+                    break
+            if has_all:
+                total += 1
+                if all_match: exact_matches += 1
+        return exact_matches / total if total > 0 else 0.0
+    
+    @staticmethod
+    def _partial_match_score(predictions: List[Dict]) -> float:
+        if not predictions: return 0.0
+        params = [('dice1', 'dice1'), ('dice2', 'dice2'), ('dice3', 'dice3'), ('sum', 'sum'), ('bs_pred', 'bs'), ('oe_pred', 'oe')]
+        total_scores = []
+        for entry in predictions:
+            pred = entry.get('prediction', {})
+            actual = entry.get('actual', {})
+            matches = 0
+            valid_params = 0
+            for pred_key, actual_key in params:
+                p = pred.get(pred_key)
+                a = actual.get(actual_key)
+                if p is not None and a is not None:
+                    valid_params += 1
+                    if str(p).strip().lower() == str(a).strip().lower():
+                        matches += 1
+            if valid_params > 0:
+                total_scores.append(matches / valid_params)
+        return float(np.mean(total_scores)) if total_scores else 0.0
+    
+    @staticmethod
+    def _binary_metrics(predictions: List[Dict], pred_key: str, actual_key: str) -> Dict:
+        tp = fp = tn = fn = 0
+        for entry in predictions:
+            pred = str(entry.get('prediction', {}).get(pred_key, '')).capitalize()
+            actual = str(entry.get('actual', {}).get(actual_key, '')).capitalize()
+            if not pred or not actual: continue
+            if pred == actual:
+                if pred in ['Big', 'Odd']: tp += 1
+                else: tn += 1
+            else:
+                if pred in ['Big', 'Odd']: fp += 1
+                else: fn += 1
+        precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+        recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+        f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
+        accuracy = (tp + tn) / (tp + fp + tn + fn) if (tp + fp + tn + fn) > 0 else 0.0
+        return {
+            'precision': precision, 'recall': recall, 'f1_score': f1, 'accuracy': accuracy,
+            'true_positives': tp, 'false_positives': fp, 'true_negatives': tn, 'false_negatives': fn
+        }
+    
+    @staticmethod
+    def _calibration_analysis(predictions: List[Dict]) -> Dict:
+        bins = {
+            'very_low (0-20%)': {'preds': [], 'range': (0.0, 0.2)},
+            'low (20-40%)': {'preds': [], 'range': (0.2, 0.4)},
+            'medium (40-60%)': {'preds': [], 'range': (0.4, 0.6)},
+            'high (60-80%)': {'preds': [], 'range': (0.6, 0.8)},
+            'very_high (80-100%)': {'preds': [], 'range': (0.8, 1.01)}
+        }
+        for entry in predictions:
+            conf = entry.get('confidence')
+            if conf is None: continue
+            if conf > 1.0: conf = conf / 100.0
+            pred_sum = entry.get('prediction', {}).get('sum')
+            actual_sum = entry.get('actual', {}).get('sum')
+            is_correct = (int(float(pred_sum)) == int(float(actual_sum))) if (pred_sum is not None and actual_sum is not None) else False
+            for bin_name, bin_data in bins.items():
+                low, high = bin_data['range']
+                if low <= conf < high:
+                    bin_data['preds'].append({'confidence': conf, 'correct': is_correct})
+                    break
+        calibration_results = {}
+        for bin_name, bin_data in bins.items():
+            preds = bin_data['preds']
+            if preds:
+                avg_conf = float(np.mean([p['confidence'] for p in preds]))
+                accuracy = float(np.mean([p['correct'] for p in preds]))
+                calibration_results[bin_name] = {
+                    'count': len(preds),
+                    'avg_confidence': avg_conf,
+                    'actual_accuracy': accuracy,
+                    'calibration_error': abs(avg_conf - accuracy)
+                }
+        total_preds = sum(b['count'] for b in calibration_results.values())
+        if total_preds > 0:
+            ece = sum(b['calibration_error'] * b['count'] for b in calibration_results.values()) / total_preds
+            calibration_results['expected_calibration_error'] = ece
+        return calibration_results
+    
+    @staticmethod
+    def _brier_score(predictions: List[Dict], pred_key: str, actual_key: str) -> Optional[float]:
+        scores = []
+        for entry in predictions:
+            pred = str(entry.get('prediction', {}).get(pred_key, '')).capitalize()
+            actual = str(entry.get('actual', {}).get(actual_key, '')).capitalize()
+            conf = entry.get('confidence')
+            if pred and actual and conf is not None:
+                c_val = conf / 100.0 if conf > 1.0 else conf
+                pred_prob = c_val if pred in ['Big', 'Odd'] else (1.0 - c_val)
+                actual_prob = 1.0 if actual in ['Big', 'Odd'] else 0.0
+                scores.append((pred_prob - actual_prob) ** 2)
+        return float(np.mean(scores)) if scores else None
+    
+    @staticmethod
+    def _trend_analysis(predictions: List[Dict]) -> Dict:
+        if len(predictions) < 15:
+            return {'error': 'Insufficient data for trend'}
+        w_size = min(20, len(predictions) // 2)
+        first_w = predictions[:w_size]
+        last_w = predictions[-w_size:]
+        first_acc = PerformanceMetrics._calculate_accuracy_window(first_w)
+        last_acc = PerformanceMetrics._calculate_accuracy_window(last_w)
+        improvement = last_acc - first_acc
+        if improvement > 0.05: trend = "IMPROVING (+)"
+        elif improvement < -0.05: trend = "DEGRADING (-)"
+        else: trend = "STABLE (=)"
+        return {
+            'trend': trend, 'first_20_accuracy': first_acc, 'last_20_accuracy': last_acc, 'improvement': improvement
+        }
+    
+    @staticmethod
+    def _calculate_accuracy_window(predictions: List[Dict]) -> float:
+        correct = 0
+        total = 0
+        for entry in predictions:
+            pred = str(entry.get('prediction', {}).get('bs_pred', '')).capitalize()
+            actual = str(entry.get('actual', {}).get('bs', '')).capitalize()
+            if pred and actual:
+                total += 1
+                if pred == actual: correct += 1
+        return correct / total if total > 0 else 0.0
+    
+    @staticmethod
+    def _rolling_performance(predictions: List[Dict], window: int = 20) -> List[Dict]:
+        accuracies = []
+        if len(predictions) < window: return accuracies
+        for i in range(window, len(predictions) + 1):
+            window_preds = predictions[i-window:i]
+            acc = PerformanceMetrics._calculate_accuracy_window(window_preds)
+            accuracies.append({'index': i, 'accuracy': acc, 'issue': window_preds[-1].get('issue', '')})
+        return accuracies
+
+
+class WalkForwardBacktester:
+    """Simulates expanding walk-forward out-of-sample backtesting on historical draws."""
+    def __init__(self, model_functions: Dict, logger: PredictionLogger):
+        self.model_functions = model_functions
+        self.logger = logger
+    
+    def run_backtest(self, df: pd.DataFrame, initial_window: int = 50, step: int = 1, confidence_provider: callable = None) -> Dict:
+        df_sorted = df.dropna(subset=['sum', 'dice1', 'dice2', 'dice3']).sort_values('issueNumber').reset_index(drop=True)
+        results = {
+            'total_draws': 0,
+            'models_tested': list(self.model_functions.keys()),
+            'predictions_made': defaultdict(int),
+            'errors': []
+        }
+        for i in range(initial_window, len(df_sorted), step):
+            train_data = df_sorted.iloc[:i]
+            current = df_sorted.iloc[i]
+            actual = {
+                'dice1': int(float(current['dice1'])),
+                'dice2': int(float(current['dice2'])),
+                'dice3': int(float(current['dice3'])),
+                'sum': int(float(current['sum'])),
+                'bs': str(current['big_small']),
+                'oe': str(current['odd_even']),
+                'premium': str(current.get('premium', f"{int(float(current['dice1']))}{int(float(current['dice2']))}{int(float(current['dice3']))}"))
+            }
+            results['total_draws'] += 1
+            for model_name, model_func in self.model_functions.items():
+                try:
+                    prediction = model_func(train_data)
+                    confidence = 0.65
+                    if confidence_provider:
+                        try: confidence = confidence_provider(prediction)
+                        except: confidence = 0.65
+                    elif isinstance(prediction, dict):
+                        confidence = float(prediction.get('bs_conf', prediction.get('confidence', 65.0))) / 100.0
+                    self.logger.log_prediction(model_name=model_name, issue_number=str(current['issueNumber']), prediction=prediction, confidence=confidence)
+                    self.logger.validate_prediction(model_name, str(current['issueNumber']), actual)
+                    results['predictions_made'][model_name] += 1
+                except Exception as e:
+                    results['errors'].append({'model': model_name, 'issue': str(current['issueNumber']), 'error': str(e)})
+        return results
+
+    def generate_backtest_report(self, df: pd.DataFrame, initial_window: int = 50) -> pd.DataFrame:
+        results = []
+        for model_name in self.model_functions.keys():
+            validated = self.logger.get_validated_predictions(model_name)
+            metrics = PerformanceMetrics.calculate_all(validated)
+            if 'error' not in metrics:
+                results.append({
+                    'Model': model_name,
+                    'Predictions': metrics['total_predictions'],
+                    'Exact Match': f"{metrics['exact_match_rate']*100:.2f}%",
+                    'BS Accuracy': f"{metrics['big_small_metrics']['accuracy']*100:.2f}%",
+                    'OE Accuracy': f"{metrics['odd_even_metrics']['accuracy']*100:.2f}%",
+                    'Sum Accuracy': f"{metrics['sum_accuracy']*100:.2f}%",
+                    'Dice1 Acc': f"{metrics['dice1_accuracy']*100:.2f}%",
+                    'F1 (BS)': f"{metrics['big_small_metrics']['f1_score']*100:.2f}%",
+                    'ECE': f"{metrics['calibration'].get('expected_calibration_error', 0):.3f}",
+                    'Trend': metrics['trend'].get('trend', 'N/A') if isinstance(metrics['trend'], dict) else 'N/A'
+                })
+        return pd.DataFrame(results)
+
+
+def render_performance_tracker_ui(df):
+    """Renders comprehensive 5-tab Model Performance Tracking Dashboard."""
+    if 'pred_logger' not in st.session_state:
+        st.session_state.pred_logger = PredictionLogger()
+    logger = st.session_state.pred_logger
+    all_models = logger.get_all_models()
+    
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("🤖 Models Tracked", len(all_models))
+    total_validated = sum(len(logger.get_validated_predictions(m)) for m in all_models)
+    col2.metric("✅ Validated Predictions", total_validated)
+    total_pending = sum(len(logger.get_pending_predictions(m)) for m in all_models)
+    col3.metric("⏳ Pending Validation", total_pending)
+    
+    best_model, best_acc = None, 0.0
+    for model in all_models:
+        val = logger.get_validated_predictions(model)
+        if val:
+            met = PerformanceMetrics.calculate_all(val)
+            if 'big_small_metrics' in met:
+                acc = met['big_small_metrics']['accuracy']
+                if acc > best_acc:
+                    best_acc = acc
+                    best_model = model
+    col4.metric("🏆 Top Performing Model", f"{best_model[:14]}..." if best_model else "N/A", f"{best_acc*100:.1f}% BS Acc" if best_model else "")
+    
+    st.markdown("---")
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "📝 Manual Logging", "🔬 Walk-Forward Backtest", "📈 Performance Dashboard", "🏆 Model Comparison", "📄 Detailed Reports"
+    ])
+    
+    with tab1:
+        st.markdown("#### 📝 Manual Prediction Logger & Ground-Truth Validator")
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown("**1️⃣ Log Out-of-Sample Prediction**")
+            m_name = st.text_input("Target Model", "NEXUS PATTERN SNIPER", key="log_m_name")
+            m_iss = st.text_input("Target Issue #", "20260818101010600", key="log_m_iss")
+            ca, cb = st.columns(2)
+            with ca:
+                pd1 = st.number_input("Pred Dice 1", 1, 6, 3, key="p_d1")
+                pd2 = st.number_input("Pred Dice 2", 1, 6, 4, key="p_d2")
+                pd3 = st.number_input("Pred Dice 3", 1, 6, 5, key="p_d3")
+            with cb:
+                psum = st.number_input("Pred Sum", 3, 18, 12, key="p_sum")
+                pbs = st.selectbox("Pred B/S", ["Big", "Small"], key="p_bs")
+                poe = st.selectbox("Pred O/E", ["Odd", "Even"], key="p_oe")
+            pconf = st.slider("Forecast Confidence", 0.0, 1.0, 0.75, key="p_conf")
+            if st.button("📝 Log Prediction Entry", use_container_width=True):
+                pid = logger.log_prediction(m_name, m_iss, {'dice1': pd1, 'dice2': pd2, 'dice3': pd3, 'sum': psum, 'bs_pred': pbs, 'oe_pred': poe, 'premium': f"{pd1}{pd2}{pd3}"}, confidence=pconf)
+                st.success(f"✅ Prediction Logged! (ID: `{pid[:24]}...`)")
+                st.rerun()
+                
+        with c2:
+            st.markdown("**2️⃣ Validate Ground-Truth Outcome**")
+            val_m = st.selectbox("Select Model", all_models if all_models else ["None"], key="val_m_sel")
+            if val_m and val_m != "None":
+                pending = logger.get_pending_predictions(val_m)
+                if pending:
+                    iss_to_val = st.selectbox("Pending Issue", [p['issue'] for p in pending[:20]], key="val_iss_sel")
+                    c2a, c2b = st.columns(2)
+                    with c2a:
+                        ad1 = st.number_input("Actual Dice 1", 1, 6, 3, key="act_d1")
+                        ad2 = st.number_input("Actual Dice 2", 1, 6, 4, key="act_d2")
+                        ad3 = st.number_input("Actual Dice 3", 1, 6, 5, key="act_d3")
+                    with c2b:
+                        asum = st.number_input("Actual Sum", 3, 18, int(ad1+ad2+ad3), key="act_sum")
+                        abs_val = "Big" if asum >= 11 else "Small"
+                        aoe_val = "Odd" if asum % 2 == 1 else "Even"
+                        st.info(f"Actual: **{abs_val}** | **{aoe_val}**")
+                    if st.button("✅ Validate Issue Outcome", use_container_width=True):
+                        if logger.validate_prediction(val_m, iss_to_val, {'dice1': ad1, 'dice2': ad2, 'dice3': ad3, 'sum': asum, 'bs': abs_val, 'oe': aoe_val, 'premium': f"{ad1}{ad2}{ad3}"}):
+                            st.success(f"✅ Validated Issue #{iss_to_val}!")
+                            st.rerun()
+                else:
+                    st.info("No pending unvalidated predictions for this model.")
+    
+    with tab2:
+        st.markdown("#### 🔬 Expanding Walk-Forward Backtester (Zero-Leakage Simulation)")
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown("**Active Models in Evaluation:**")
+            m_sniper = st.checkbox("NEXUS PATTERN SNIPER", value=True)
+            m_tt = st.checkbox("NEXUS TRIPLE THREAT", value=True)
+            m_oracle = st.checkbox("QUANTUM TEMPORAL ORACLE", value=True)
+            m_sentinel = st.checkbox("SENTINEL PRIME OMEGA", value=True)
+            m_bnn = st.checkbox("BAYESIAN NEURAL NETWORK", value=True)
+        with c2:
+            wf_window = st.slider("Initial Training Window Size", 20, 100, 50, key="wf_win")
+            wf_step = st.slider("Step Frequency (Every N draws)", 1, 5, 1, key="wf_step")
+        
+        funcs = {}
+        if m_sniper: funcs['NEXUS PATTERN SNIPER'] = run_nexus_pattern_sniper
+        if m_tt: funcs['NEXUS TRIPLE THREAT'] = run_nexus_k3_triple_threat
+        if m_oracle: funcs['QUANTUM TEMPORAL ORACLE'] = run_quantum_temporal_oracle_k3
+        if m_sentinel: funcs['SENTINEL PRIME OMEGA'] = run_sentinel_prime_omega_k3
+        if m_bnn: funcs['BAYESIAN NEURAL NETWORK'] = run_bnn_agent
+        
+        if st.button("🚀 Execute Walk-Forward Backtest Audit", use_container_width=True):
+            with st.spinner(f"Running expanding walk-forward validation across {len(df)} historical draws..."):
+                t_log = PredictionLogger(storage_path=BASE / 'walkforward_backtest_audit.json')
+                tester = WalkForwardBacktester(funcs, t_log)
+                b_res = tester.run_backtest(df, initial_window=wf_window, step=wf_step)
+                st.session_state.wf_tester = tester
+                st.session_state.wf_res = b_res
+                st.session_state.wf_log = t_log
+            st.success(f"✅ Walk-Forward Audit Complete! Audited {b_res['total_draws']} consecutive out-of-sample draws.")
+            
+        if 'wf_res' in st.session_state and 'wf_tester' in st.session_state:
+            st.markdown("##### Walk-Forward Comparative Audit Summary Table")
+            rep_df = st.session_state.wf_tester.generate_backtest_report(df, initial_window=wf_window)
+            st.dataframe(rep_df, use_container_width=True, hide_index=True)
+
+    with tab3:
+        st.markdown("#### 📈 Deep Performance Visual Telemetry")
+        if all_models:
+            sel_m = st.selectbox("Select Model for Analysis", all_models, key="perf_sel_m")
+            val_p = logger.get_validated_predictions(sel_m)
+            if val_p:
+                m_res = PerformanceMetrics.calculate_all(val_p)
+                k1, k2, k3, k4 = st.columns(4)
+                k1.metric("🎯 Exact Triad Match", f"{m_res['exact_match_rate']*100:.1f}%")
+                k2.metric("🔴 Big/Small Accuracy", f"{m_res['big_small_metrics']['accuracy']*100:.1f}%")
+                k3.metric("🟣 Odd/Even Accuracy", f"{m_res['odd_even_metrics']['accuracy']*100:.1f}%")
+                k4.metric("➕ Sum Accuracy", f"{m_res['sum_accuracy']*100:.1f}%")
+                
+                # Parameter-wise bar
+                labels = ['Dice 1', 'Dice 2', 'Dice 3', 'Sum', 'Big/Small', 'Odd/Even']
+                acc_vals = [
+                    m_res.get('dice1_accuracy', 0)*100, m_res.get('dice2_accuracy', 0)*100,
+                    m_res.get('dice3_accuracy', 0)*100, m_res.get('sum_accuracy', 0)*100,
+                    m_res['big_small_metrics']['accuracy']*100, m_res['odd_even_metrics']['accuracy']*100
+                ]
+                fig_bar = go.Figure(data=[go.Bar(
+                    x=labels, y=acc_vals,
+                    marker_color=['#38bdf8' if v >= 50 else '#f59e0b' for v in acc_vals],
+                    text=[f"{v:.1f}%" for v in acc_vals], textposition='auto'
+                )])
+                fig_bar.add_hline(y=50, line=dict(color='red', dash='dash'), annotation_text="50% Binary Baseline")
+                fig_bar.update_layout(title=f"Per-Parameter Empirical Accuracy: {sel_m}", yaxis_title="Accuracy (%)", template="plotly_dark", height=320, margin=dict(l=20, r=20, t=40, b=20))
+                st.plotly_chart(fig_bar, use_container_width=True)
+                
+                # Rolling Accuracy Trajectory
+                rolling_data = m_res.get('rolling_performance', [])
+                if rolling_data:
+                    rdf = pd.DataFrame(rolling_data)
+                    fig_roll = go.Figure()
+                    fig_roll.add_trace(go.Scatter(y=rdf['accuracy']*100, mode='lines+markers', line=dict(color='#10b981', width=2), name='Rolling Accuracy (20w)'))
+                    fig_roll.add_hline(y=50, line=dict(color='red', dash='dot'), annotation_text="50% Random Floor")
+                    fig_roll.update_layout(title="Rolling Window (20-Draws) Accuracy Trajectory", template="plotly_dark", height=300, margin=dict(l=20, r=20, t=40, b=20))
+                    st.plotly_chart(fig_roll, use_container_width=True)
+            else:
+                st.info(f"No validated predictions yet for {sel_m}.")
+        else:
+            st.info("No models registered yet. Use Walk-Forward Backtester or Manual Logger to generate records.")
+
+    with tab4:
+        st.markdown("#### 🏆 Cross-Model Head-to-Head Comparison")
+        if all_models:
+            comp_rows = []
+            for m in all_models:
+                v = logger.get_validated_predictions(m)
+                if v:
+                    met = PerformanceMetrics.calculate_all(v)
+                    if 'error' not in met:
+                        comp_rows.append({
+                            'Model': m,
+                            'Samples': met['total_predictions'],
+                            'Exact Match %': met['exact_match_rate'] * 100,
+                            'BS Accuracy %': met['big_small_metrics']['accuracy'] * 100,
+                            'OE Accuracy %': met['odd_even_metrics']['accuracy'] * 100,
+                            'Sum Accuracy %': met['sum_accuracy'] * 100,
+                            'F1 (BS)': met['big_small_metrics']['f1_score'] * 100,
+                            'Brier Score': met.get('brier_score_bs', 0.25)
+                        })
+            if comp_rows:
+                cdf = pd.DataFrame(comp_rows)
+                st.dataframe(cdf, use_container_width=True, hide_index=True)
+                fig_comp = go.Figure(data=[go.Bar(
+                    x=cdf['Model'], y=cdf['BS Accuracy %'],
+                    marker_color='#8b5cf6', text=[f"{v:.1f}%" for v in cdf['BS Accuracy %']], textposition='auto'
+                )])
+                fig_comp.add_hline(y=50, line=dict(color='red', dash='dash'), annotation_text="Fair RNG Benchmark (50%)")
+                fig_comp.update_layout(title="Big/Small Prediction Accuracy Benchmark by AI Agent", yaxis_title="Accuracy (%)", template="plotly_dark", height=320, margin=dict(l=20, r=20, t=40, b=20))
+                st.plotly_chart(fig_comp, use_container_width=True)
+
+    with tab5:
+        st.markdown("#### 📄 Exportable Performance Audit Reports")
+        if all_models:
+            rep_m = st.selectbox("Select Model for Official Audit Report", all_models, key="audit_rep_sel")
+            v_reps = logger.get_validated_predictions(rep_m)
+            if v_reps:
+                m_rep = PerformanceMetrics.calculate_all(v_reps)
+                txt_report = f"""
+╔════════════════════════════════════════════════════════════════════════╗
+║             K3 AUTONOMOUS MODEL AUDIT REPORT: {rep_m:<24} ║
+╠════════════════════════════════════════════════════════════════════════╣
+║ AUDIT PERIOD: {m_rep.get('first_prediction', 'N/A')} to {m_rep.get('last_prediction', 'N/A')}
+║ TOTAL VERIFIED SAMPLES: {m_rep.get('total_predictions', 0)}
+╠════════════════════════════════════════════════════════════════════════╣
+║ PARAMETER ACCURACY METRICS:
+║   🎲 Dice 1:    {m_rep.get('dice1_accuracy', 0)*100:>6.2f}%
+║   🎲 Dice 2:    {m_rep.get('dice2_accuracy', 0)*100:>6.2f}%
+║   🎲 Dice 3:    {m_rep.get('dice3_accuracy', 0)*100:>6.2f}%
+║   ➕ Sum Total:  {m_rep.get('sum_accuracy', 0)*100:>6.2f}%
+╠════════════════════════════════════════════════════════════════════════╣
+║ PARITY CLASSIFICATION BENCHMARKS:
+║   Big / Small Accuracy:   {m_rep['big_small_metrics']['accuracy']*100:>6.2f}%  (F1: {m_rep['big_small_metrics']['f1_score']*100:>6.2f}%)
+║   Odd / Even Accuracy:    {m_rep['odd_even_metrics']['accuracy']*100:>6.2f}%  (F1: {m_rep['odd_even_metrics']['f1_score']*100:>6.2f}%)
+╠════════════════════════════════════════════════════════════════════════╣
+║ COMPOSITE METRICS & CALIBRATION:
+║   Exact Triad Match:      {m_rep.get('exact_match_rate', 0)*100:>6.2f}%
+║   Partial Match Score:    {m_rep.get('partial_match_score', 0)*100:>6.2f}%
+║   Brier Calibration Loss: {m_rep.get('brier_score_bs', 0.25):>6.4f}
+╚════════════════════════════════════════════════════════════════════════╝
+"""
+                st.code(txt_report, language="text")
+                st.download_button("📥 Download Official Audit Report", txt_report, file_name=f"k3_audit_{rep_m.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.txt", mime="text/plain")
 
 def run_bias_aware_prediction(df):
     """Generates prediction weighted by observed historical biases."""
@@ -3192,6 +3758,18 @@ def do_sync_k3():
 
                 save_persisted_performance()
 
+            # Automatic Ground-Truth Validation in PredictionLogger
+            if 'pred_logger' not in st.session_state:
+                st.session_state.pred_logger = PredictionLogger()
+            
+            actual_dict = {
+                'dice1': actual_d1, 'dice2': actual_d2, 'dice3': actual_d3,
+                'sum': actual_sum, 'bs': actual_bs, 'oe': actual_oe,
+                'premium': actual_prem
+            }
+            for model_k in DEFAULT_SCORECARDS.keys():
+                st.session_state.pred_logger.validate_prediction(model_k, newest_issue, actual_dict)
+
             # Automatic Real-Time Anomaly Surveillance Processing on New Draw
             if 'anomaly_engine' not in st.session_state:
                 st.session_state.anomaly_engine = AnomalyDetectionEngine()
@@ -3250,10 +3828,14 @@ if st.sidebar.button("🔄 Recalculate Backtest", use_container_width=True):
     st.success("Re-evaluated with 100% mathematical equality!")
     st.rerun()
 
-st.sidebar.markdown("## 🛡️ Real-Time Surveillance")
+st.sidebar.markdown("## 🛡️ Real-Time Surveillance & Auditing")
 show_sidebar_anomaly = st.sidebar.checkbox("🔍 Anomaly Detection Dashboard", value=False, help="Display the real-time 6-dimensional anomaly detection dashboard.")
 if show_sidebar_anomaly:
     render_anomaly_dashboard(df_active)
+
+show_sidebar_perf = st.sidebar.checkbox("📊 Performance Tracking Dashboard", value=False, help="Display the comprehensive model performance tracker and walk-forward backtest suite.")
+if show_sidebar_perf:
+    render_performance_tracker_ui(df_active)
 
 st.sidebar.markdown("## 🎯 Probabilistic Priors")
 bias_mode = st.sidebar.toggle("🎯 Bias Compensation Mode (Bayesian Priors)", value=False, help="Injects empirical Dirichlet priors for observed Odd-Even bias and positional face deficits.")
@@ -3302,6 +3884,26 @@ st.session_state.agent_past_predictions[next_issue_str] = {
     'DUO FORCE K3': {'dice1': ag6['dice1'], 'dice2': ag6['dice2'], 'dice3': ag6['dice3'], 'premium': ag6['premium'], 'sum': ag6['sum'], 'bs': ag6['bs_pred'], 'oe': ag6['oe_pred']},
     'BAYESIAN NEURAL NETWORK': {'dice1': bnn_res['dice1'], 'dice2': bnn_res['dice2'], 'dice3': bnn_res['dice3'], 'premium': bnn_res['premium'], 'sum': bnn_res['sum'], 'bs': bnn_res['bs_pred'], 'oe': bnn_res['oe_pred']}
 }
+
+# Synchronize Out-of-Sample Predictions to Performance Tracker Logger
+if 'pred_logger' not in st.session_state:
+    st.session_state.pred_logger = PredictionLogger()
+
+for ag_obj in all_agents + [hive]:
+    st.session_state.pred_logger.log_prediction(
+        model_name=ag_obj['name'],
+        issue_number=next_issue_str,
+        prediction={
+            'dice1': int(float(ag_obj['dice1'])),
+            'dice2': int(float(ag_obj['dice2'])),
+            'dice3': int(float(ag_obj['dice3'])),
+            'sum': int(float(ag_obj['sum'])),
+            'bs_pred': str(ag_obj['bs_pred']),
+            'oe_pred': str(ag_obj['oe_pred']),
+            'premium': str(ag_obj['premium'])
+        },
+        confidence=float(ag_obj.get('bs_conf', 65.0)) / 100.0
+    )
 
 
 # ==============================================================================
@@ -3718,6 +4320,12 @@ with st.expander("🚨 Real-Time Anomaly Detection & Statistical Surveillance En
         render_anomaly_dashboard(df_active)
     else:
         st.info("Need at least 15 draws for real-time anomaly surveillance.")
+
+with st.expander("📊 Comprehensive Model Performance Tracking & Walk-Forward Audit Suite", expanded=False):
+    if len(df_active) >= 15:
+        render_performance_tracker_ui(df_active)
+    else:
+        st.info("Need at least 15 draws for full performance tracking suite.")
 
 # Master Orchestrator Card
 bs_badge = f'<span class="badge-big">{hive["bs_pred"].upper()}</span>' if hive['bs_pred'] == 'Big' else f'<span class="badge-small">{hive["bs_pred"].upper()}</span>'

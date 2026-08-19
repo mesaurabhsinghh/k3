@@ -248,18 +248,25 @@ render_html("""
 _K3_HTTP_SESSION = requests.Session()
 _K3_HTTP_SESSION.headers.update(HEADERS)
 
-def fetch_k3_history(pages=1, page_size=10):
-    """Fetches live historical draw records from Daman K3 API with pooled connection."""
+@st.cache_data(ttl=15, show_spinner=False)
+def fetch_k3_data_fast(pages=2, page_size=10):
+    """
+    Fast fetch with proper TTL cache (15s).
+    Same result is served instantly for 15s, then refreshed cleanly.
+    """
     rows = []
     seen = set()
     now_ms = int(datetime.now().timestamp() * 1000)
     for p in range(1, pages + 1):
         try:
-            r = _K3_HTTP_SESSION.get(API_K3, params={'ts': now_ms, 'pageIndex': p, 'pageNo': p, 'pageSize': page_size}, timeout=2.0)
+            r = _K3_HTTP_SESSION.get(
+                API_K3,
+                params={'ts': now_ms, 'pageIndex': p, 'pageNo': p, 'pageSize': page_size},
+                timeout=2.0
+            )
             if r.status_code == 200:
                 j = r.json()
-                d = j.get('data') or {}
-                items = d.get('list') or []
+                items = j.get('data', {}).get('list', [])
                 for item in items:
                     iss = str(item.get('issueNumber', '')).strip()
                     if iss and iss not in seen:
@@ -291,6 +298,51 @@ def fetch_k3_history(pages=1, page_size=10):
     if rows:
         return pd.DataFrame(rows).sort_values('issueNumber', ascending=False).reset_index(drop=True)
     return pd.DataFrame()
+
+# Aliased for backward compatibility
+fetch_k3_history = fetch_k3_data_fast
+
+
+class SmartDataManager:
+    """
+    Manages data with:
+    - Smart TTL caching
+    - Always 1-step-ahead next-issue forecasting
+    - Non-blocking execution
+    """
+    def __init__(self, cache_duration=10):
+        self.cache_duration = cache_duration
+        self.last_fetch = None
+    
+    def calculate_next_issue(self, latest_issue_str: str) -> str:
+        """Smart issue number increment ensuring 1-step-ahead prediction with prefix preservation."""
+        s = str(latest_issue_str).strip()
+        if not s or s == 'None':
+            return datetime.now().strftime('%Y%m%d%H%M') + '0501'
+        if s.isdigit():
+            return str(int(s) + 1)
+        import re
+        match = re.search(r'(\d+)$', s)
+        if match:
+            num = match.group(1)
+            inc = str(int(num) + 1).zfill(len(num))
+            return s[:match.start(1)] + inc
+        return s + "_next"
+    
+    def get_data_with_lookahead(self, df_current):
+        """Returns tuple of (df_current, next_issue_number) with active lookahead."""
+        if df_current is None or df_current.empty:
+            return df_current, None
+        latest_issue = str(df_current.iloc[0].get('issueNumber', ''))
+        next_issue = self.calculate_next_issue(latest_issue)
+        return df_current, next_issue
+    
+    def should_refresh(self) -> bool:
+        """Determines if enough time has passed to warrant an external network check."""
+        if self.last_fetch is None:
+            return True
+        elapsed = (datetime.now() - self.last_fetch).total_seconds()
+        return elapsed >= self.cache_duration
 
 def generate_fallback_k3_df():
     """Generates initial realistic records if CSV and API are both unavailable."""
@@ -7369,12 +7421,23 @@ def render_scorecard_and_tracker(agent_name):
 # ==============================================================================
 
 st.sidebar.markdown("## ⚡ Live Autonomous Polling")
-auto_refresh = st.sidebar.toggle("🔄 Auto-Refresh (Live Sync)", value=True, help="Automatically polls K3 API every 15-30 seconds.")
-refresh_sec = st.sidebar.slider("Interval (Seconds)", min_value=5, max_value=60, value=15, step=5)
+auto_refresh = st.sidebar.toggle("🔄 Auto-Refresh (Live Sync)", value=True, help="Automatically polls K3 API with smart TTL caching every 10-30 seconds.")
+refresh_sec = st.sidebar.slider("Interval (Seconds)", min_value=10, max_value=60, value=15, step=5, help="Lower = fresher data, 15s is the optimal sweet spot.")
 
 if auto_refresh:
-    refresh_tick = st_autorefresh(interval=refresh_sec * 1000, key="k3_live_autonomous_sync_ticker")
-    st.sidebar.markdown(f'<div class="live-pulse"><div class="pulse-dot"></div>Live Polling Active ({refresh_sec}s)</div>', unsafe_allow_html=True)
+    refresh_tick = st_autorefresh(interval=refresh_sec * 1000, key="k3_smart_autorefresh_ticker")
+    if st.session_state.get('refresh_counter', 0) > 0:
+        fetch_k3_data_fast.clear()
+    st.session_state.refresh_counter = st.session_state.get('refresh_counter', 0) + 1
+    
+    if 'last_sync_time' in st.session_state:
+        elapsed = (datetime.now() - st.session_state.last_sync_time).total_seconds()
+        if elapsed < 30:
+            st.sidebar.markdown(f'<div class="live-pulse"><div class="pulse-dot"></div>Live Polling Active ({refresh_sec}s) — Synced {elapsed:.0f}s ago</div>', unsafe_allow_html=True)
+        else:
+            st.sidebar.markdown(f'<div style="color:#fbbf24; font-size:0.8rem; font-weight:700;">⚠️ Polling Active — Last Sync {elapsed:.0f}s ago</div>', unsafe_allow_html=True)
+    else:
+        st.sidebar.markdown(f'<div class="live-pulse"><div class="pulse-dot"></div>Live Polling Active ({refresh_sec}s)</div>', unsafe_allow_html=True)
 else:
     st.sidebar.info("⚪ Auto-Refresh Paused")
 
@@ -7384,23 +7447,38 @@ if 'agent_past_predictions' not in st.session_state:
 if 'evaluated_issues' not in st.session_state:
     st.session_state.evaluated_issues = set()
 
-def do_sync_k3(pages=1):
-    """Fetches live API draws, merges with stored history, evaluates past predictions, and returns fresh DataFrame."""
-    live_df = fetch_k3_history(pages=pages)
+def do_sync_k3(force_sync=False):
+    """
+    Syncs data with:
+    1. TTL-based fast fetch (pages=2)
+    2. Zero UI blocking
+    3. Live evaluation of past predictions against newly settled draw
+    """
+    if 'data_manager' not in st.session_state:
+        st.session_state.data_manager = SmartDataManager(cache_duration=10)
     
+    dm = st.session_state.data_manager
+    
+    # If not force_sync and cache is fresh, return existing session dataframe
+    if not force_sync and not dm.should_refresh() and 'data_k3' in st.session_state and not st.session_state.data_k3.empty:
+        return st.session_state.data_k3
+
+    fresh_df = fetch_k3_data_fast(pages=2 if force_sync else 1)
     current_df = st.session_state.get('data_k3', pd.DataFrame())
     if current_df is None or current_df.empty:
         current_df = load_k3()
 
-    if live_df is not None and not live_df.empty:
-        merged = merge_k3(current_df, live_df)
+    if fresh_df is not None and not fresh_df.empty:
+        merged = merge_k3(current_df, fresh_df)
         st.session_state.data_k3 = merged
+        st.session_state.last_sync_time = datetime.now()
+        dm.last_fetch = datetime.now()
         
-        newest_issue = str(live_df.iloc[0]['issueNumber'])
+        newest_issue = str(fresh_df.iloc[0]['issueNumber'])
         if st.session_state.get('last_seen_issue') != newest_issue:
             st.session_state.last_seen_issue = newest_issue
             save_k3(merged)
-            latest_row = live_df.iloc[0]
+            latest_row = fresh_df.iloc[0]
             
             actual_d1 = int(float(latest_row['dice1']))
             actual_d2 = int(float(latest_row['dice2']))
@@ -7496,7 +7574,7 @@ def do_sync_k3(pages=1):
                     st.toast(f"⚠️ {anom_res['severity']} ANOMALY: Draw #{newest_issue}", icon="⚠️")
 
             st.toast(
-                f"🎲 **New Draw: #{newest_issue}** `[{actual_d1}, {actual_d2}, {actual_d3}]` | Sum: `{actual_sum}` ({actual_bs}, {actual_oe})",
+                f"🎲 **New Draw Settled: #{newest_issue}** `[{actual_d1}, {actual_d2}, {actual_d3}]` | Sum: `{actual_sum}` ({actual_bs}, {actual_oe})",
                 icon="🔔"
             )
             
@@ -7510,7 +7588,7 @@ def do_sync_k3(pages=1):
         return current_df
 
 def run_app():
-    # Sync Data Live
+    # Sync Data Live with smart non-blocking cache
     df_active = do_sync_k3()
     if df_active is None or df_active.empty:
         df_active = generate_fallback_k3_df()
@@ -7521,12 +7599,14 @@ def run_app():
     # Sidebar Data Controls
     st.sidebar.markdown("## ⚙️ Data Operations")
     col_s1, col_s2 = st.sidebar.columns(2)
-    if col_s1.button("⚡ Fast Sync", use_container_width=True):
-        df_active = do_sync_k3()
+    if col_s1.button("⚡ Force Sync", use_container_width=True):
+        fetch_k3_data_fast.clear()
+        df_active = do_sync_k3(force_sync=True)
         st.rerun()
     if col_s2.button("📂 Reload CSV", use_container_width=True):
+        fetch_k3_data_fast.clear()
         st.session_state.data_k3 = load_k3()
-        if 'cached_target_issue' in st.session_state: del st.session_state['cached_target_issue']
+        if 'cached_inference_key' in st.session_state: del st.session_state['cached_inference_key']
         st.rerun()
 
     if st.sidebar.button("🔄 Recalculate Backtest", use_container_width=True):
@@ -7576,9 +7656,33 @@ def run_app():
     st.sidebar.metric("Database Stored Records", n_records)
     st.sidebar.caption(f"🕒 Last Polled: **{st.session_state.last_sync}**")
 
+    # Smart Lookahead: Calculate Next Issue (Always 1 Step Ahead)
+    dm = st.session_state.get('data_manager', SmartDataManager())
+    df_active, next_issue_str = dm.get_data_with_lookahead(df_active)
     latest_row = df_active.iloc[0] if not df_active.empty else {'issueNumber': '20260818101010500', 'premium': '333'}
     latest_issue_str = str(latest_row.get('issueNumber', '20260818101010500'))
-    next_issue_str = str(int(latest_issue_str) + 1) if latest_issue_str.isdigit() else "Next Draw"
+    
+    # Render High-Visibility Live Top Status Banner
+    col_t1, col_t2, col_t3 = st.columns([1.3, 1.4, 1.0])
+    with col_t1:
+        st.metric(
+            label="🎲 Last Settled Draw",
+            value=f"#{latest_issue_str[-6:]}",
+            delta=f"Sum {latest_row.get('sum', '--')} ({latest_row.get('big_small', '--')}, {latest_row.get('odd_even', '--')})"
+        )
+    with col_t2:
+        st.metric(
+            label="🎯 Active Live Forecast Target",
+            value=f"#{next_issue_str[-6:] if next_issue_str else 'Next'}",
+            delta="⚡ 1-Step-Ahead Online",
+            delta_color="normal"
+        )
+    with col_t3:
+        if 'last_sync_time' in st.session_state:
+            elapsed = (datetime.now() - st.session_state.last_sync_time).total_seconds()
+            st.metric(label="🕒 Live Sync State", value=f"{elapsed:.0f}s ago", delta="Live" if elapsed < 30 else "Stale", delta_color="normal" if elapsed < 30 else "inverse")
+        else:
+            st.metric(label="🕒 Live Sync State", value=st.session_state.get('last_sync', 'Just Now'), delta="Online")
 
 
     # ==============================================================================

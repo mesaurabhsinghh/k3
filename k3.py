@@ -245,14 +245,17 @@ render_html("""
 # ==============================================================================
 # 1. DATA INGESTION & PIPELINE (DAMAN K3 LIVE API)
 # ==============================================================================
-def fetch_k3_history(pages=3, page_size=10):
-    """Fetches live historical draw records from Daman K3 API."""
+_K3_HTTP_SESSION = requests.Session()
+_K3_HTTP_SESSION.headers.update(HEADERS)
+
+def fetch_k3_history(pages=1, page_size=10):
+    """Fetches live historical draw records from Daman K3 API with pooled connection."""
     rows = []
     seen = set()
     now_ms = int(datetime.now().timestamp() * 1000)
     for p in range(1, pages + 1):
         try:
-            r = requests.get(API_K3, params={'ts': now_ms, 'pageIndex': p, 'pageNo': p, 'pageSize': page_size}, headers=HEADERS, timeout=4.0)
+            r = _K3_HTTP_SESSION.get(API_K3, params={'ts': now_ms, 'pageIndex': p, 'pageNo': p, 'pageSize': page_size}, timeout=2.0)
             if r.status_code == 200:
                 j = r.json()
                 d = j.get('data') or {}
@@ -4652,10 +4655,10 @@ class AlertSystem:
     def _send_telegram(self, alert: Dict) -> bool:
         try:
             cfg = self.config['telegram']
-            if not cfg['bot_token'] or not cfg['chat_ids']: return False
+            if not cfg['8945802591:AAFSQInrloNUR-q-vyUxIP1p_QOI6IbFs4A'] or not cfg['chat_ids']: return False
             text = f"🚨 *{alert['severity']}* - *{alert['title']}*\n\n{alert['message']}\n\n_Time: {alert['timestamp']}_"
             for chat_id in cfg['chat_ids']:
-                url = f"https://api.telegram.org/bot{cfg['bot_token']}/sendMessage"
+                url = f"https://api.telegram.org/bot{cfg['8945802591:AAFSQInrloNUR-q-vyUxIP1p_QOI6IbFs4A']}/sendMessage"
                 requests.post(url, data={'chat_id': chat_id, 'text': text, 'parse_mode': 'Markdown'}, timeout=5)
             return True
         except Exception as e:
@@ -5941,32 +5944,29 @@ def get_trained_bnn(data_len, last_issue):
     """Caches BNN weights and prevents repeated retraining across 30s auto-refresh ticks."""
     return K3BayesianNetwork(input_dim=47, hidden_dims=[64, 32])
 
-def train_bnn_fast(bnn_model, X_train, y_train, n_epochs=20, lr=0.003):
-    """Fast variational training using mini-batch ELBO loss."""
+def train_bnn_fast(bnn_model, X_train, y_train, n_epochs=6, lr=0.005):
+    """Fast variational training using vectorised tensor ELBO loss."""
     if len(X_train) < 10: return []
-    dataset = TensorDataset(torch.tensor(X_train), torch.tensor(y_train))
-    loader = DataLoader(dataset, batch_size=32, shuffle=True)
+    X_t = torch.tensor(X_train[-60:], dtype=torch.float32)
+    y_t = torch.tensor(y_train[-60:], dtype=torch.float32)
     optimizer = torch.optim.Adam(bnn_model.parameters(), lr=lr)
     bnn_model.train()
     
     losses = []
     for epoch in range(n_epochs):
-        epoch_loss = 0.0
-        for X_b, y_b in loader:
-            optimizer.zero_grad()
-            preds = bnn_model(X_b, sample=True)
-            dice_loss = F.mse_loss(preds['dice'], y_b[:, :3])
-            sum_loss = F.mse_loss(preds['sum'], y_b[:, 3])
-            bs_loss = F.binary_cross_entropy_with_logits(preds['big_small'], y_b[:, 4])
-            oe_loss = F.binary_cross_entropy_with_logits(preds['odd_even'], y_b[:, 5])
-            recon = dice_loss + sum_loss + bs_loss + oe_loss
-            kl = bnn_model.kl_divergence() / len(X_b)
-            loss = recon + 0.0005 * kl
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_(bnn_model.parameters(), 1.0)
-            optimizer.step()
-            epoch_loss += loss.item()
-        losses.append(epoch_loss / max(1, len(loader)))
+        optimizer.zero_grad()
+        preds = bnn_model(X_t, sample=True)
+        dice_loss = F.mse_loss(preds['dice'], y_t[:, :3])
+        sum_loss = F.mse_loss(preds['sum'], y_t[:, 3])
+        bs_loss = F.binary_cross_entropy_with_logits(preds['big_small'], y_t[:, 4])
+        oe_loss = F.binary_cross_entropy_with_logits(preds['odd_even'], y_t[:, 5])
+        recon = dice_loss + sum_loss + bs_loss + oe_loss
+        kl = bnn_model.kl_divergence() / len(X_t)
+        loss = recon + 0.0005 * kl
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(bnn_model.parameters(), 1.0)
+        optimizer.step()
+        losses.append(loss.item())
     return losses
 
 def predict_bnn_with_uncertainty(bnn_model, X_input, n_samples=50):
@@ -6658,7 +6658,7 @@ def extract_triple_threat_features(df_chrono):
     ]
     
     rows = []
-    min_t = max(30, min(10, len(sums)-1))
+    min_t = max(30, len(sums) - 60)
     for t in range(min_t, len(sums)+1):
         s_win = sums[:t]
         d1_win = d1[:t]
@@ -6941,7 +6941,7 @@ def agent_omni_rl(df, window=60):
         return {'name': 'OMNI K3 RL', 'border': 'border-green', 'color': '#10b981', 'dice1': d1, 'dice2': d2, 'dice3': d3, 'premium': prem, 'sum': s, 'bs_pred': bs, 'oe_pred': oe, 'bs_conf': 55.0, 'oe_conf': 55.0, 'kelly': 2.0, 'steps': ["Fallback active."]}
 
 def agent_omega_zero(df, window=60):
-    """OMEGA ZERO: Histogram Gradient Boosting MCTS Value Evaluator."""
+    """OMEGA ZERO: Gradient Boosting MCTS Value Evaluator."""
     try:
         df_chrono = df.iloc[::-1].reset_index(drop=True)
         sums_arr = pd.to_numeric(df_chrono['sum'], errors='coerce').fillna(10).values.astype(float)
@@ -6949,11 +6949,11 @@ def agent_omega_zero(df, window=60):
         y_bs = (sums_arr[15:] >= 11).astype(int)
         y_oe = (sums_arr[15:] % 2 == 1).astype(int)
 
-        hgb_bs = HistGradientBoostingClassifier(max_iter=10, max_depth=2, random_state=42).fit(X[-window:-1], y_bs[-window:-1])
-        hgb_oe = HistGradientBoostingClassifier(max_iter=10, max_depth=2, random_state=42).fit(X[-window:-1], y_oe[-window:-1])
+        gb_bs = GradientBoostingClassifier(n_estimators=10, max_depth=2, random_state=42).fit(X[-window:-1], y_bs[-window:-1])
+        gb_oe = GradientBoostingClassifier(n_estimators=10, max_depth=2, random_state=42).fit(X[-window:-1], y_oe[-window:-1])
 
-        p_bs = hgb_bs.predict_proba(X[-1:])[0]
-        p_oe = hgb_oe.predict_proba(X[-1:])[0]
+        p_bs = gb_bs.predict_proba(X[-1:])[0]
+        p_oe = gb_oe.predict_proba(X[-1:])[0]
         
         bs_pred = 'Big' if p_bs[1] >= p_bs[0] else 'Small'
         oe_pred = 'Odd' if p_oe[1] >= p_oe[0] else 'Even'
@@ -6962,7 +6962,7 @@ def agent_omega_zero(df, window=60):
 
         t_sum = 14 if bs_pred == 'Big' else 8
         d1, d2, d3, prem, s, bs, oe = resolve_consistent_triad(t_sum, preferred_bs=bs_pred, preferred_oe=oe_pred, seed_val=int(float(sums_arr[-1])))
-        return {'name': 'OMEGA ZERO K3', 'border': 'border-cyan', 'color': '#06b6d4', 'dice1': d1, 'dice2': d2, 'dice3': d3, 'premium': prem, 'sum': s, 'bs_pred': bs, 'oe_pred': oe, 'bs_conf': conf_bs, 'oe_conf': conf_oe, 'kelly': 5.8, 'steps': ["Trained HistGradientBoosting Tree Evaluator."]}
+        return {'name': 'OMEGA ZERO K3', 'border': 'border-cyan', 'color': '#06b6d4', 'dice1': d1, 'dice2': d2, 'dice3': d3, 'premium': prem, 'sum': s, 'bs_pred': bs, 'oe_pred': oe, 'bs_conf': conf_bs, 'oe_conf': conf_oe, 'kelly': 5.8, 'steps': ["Trained GradientBoosting Tree Evaluator."]}
     except:
         d1, d2, d3, prem, s, bs, oe = resolve_consistent_triad(14)
         return {'name': 'OMEGA ZERO K3', 'border': 'border-cyan', 'color': '#06b6d4', 'dice1': d1, 'dice2': d2, 'dice3': d3, 'premium': prem, 'sum': s, 'bs_pred': bs, 'oe_pred': oe, 'bs_conf': 55.0, 'oe_conf': 55.0, 'kelly': 2.0, 'steps': ["Fallback active."]}
@@ -7185,6 +7185,8 @@ def compute_strict_historical_backtest(df_history, max_eval=20):
     return agent_scorecards, agent_vaults, evaluated_set
 
 def init_scorecards_and_history(df_history):
+    if 'agent_scorecards' in st.session_state and st.session_state.agent_scorecards:
+        return
     saved_data = load_persisted_performance()
     if saved_data and 'scorecards' in saved_data and 'lifetime_vault' in saved_data:
         v_sample = saved_data['lifetime_vault'].get('HIVE MIND MASTER', [])
@@ -7382,9 +7384,9 @@ if 'agent_past_predictions' not in st.session_state:
 if 'evaluated_issues' not in st.session_state:
     st.session_state.evaluated_issues = set()
 
-def do_sync_k3():
+def do_sync_k3(pages=1):
     """Fetches live API draws, merges with stored history, evaluates past predictions, and returns fresh DataFrame."""
-    live_df = fetch_k3_history(pages=3)
+    live_df = fetch_k3_history(pages=pages)
     
     current_df = st.session_state.get('data_k3', pd.DataFrame())
     if current_df is None or current_df.empty:
@@ -7393,11 +7395,11 @@ def do_sync_k3():
     if live_df is not None and not live_df.empty:
         merged = merge_k3(current_df, live_df)
         st.session_state.data_k3 = merged
-        save_k3(merged)
         
         newest_issue = str(live_df.iloc[0]['issueNumber'])
         if st.session_state.get('last_seen_issue') != newest_issue:
             st.session_state.last_seen_issue = newest_issue
+            save_k3(merged)
             latest_row = live_df.iloc[0]
             
             actual_d1 = int(float(latest_row['dice1']))
@@ -7580,41 +7582,82 @@ def run_app():
 
 
     # ==============================================================================
-    # 8. MULTI-MODEL INFERENCE PIPELINE
+    # 8. MULTI-MODEL INFERENCE PIPELINE (CACHED WITH ZERO-LATENCY ON AUTO-REFRESH)
     # ==============================================================================
-    sniper_res = run_nexus_pattern_sniper(df_active)
-    tt_res = run_nexus_k3_triple_threat(df_active)
-    oracle_res = run_quantum_temporal_oracle_k3(df_active)
-    ag1 = run_sentinel_prime_omega_k3(df_active)
-    ag2 = agent_nexus_core(df_active)
-    ag4 = agent_omni_rl(df_active)
-    ag5 = agent_omega_zero(df_active)
-    ag6 = agent_duo_force(df_active)
-    bnn_res = run_bnn_agent(df_active)
+    cache_key = f"{latest_issue_str}_{bias_mode}_{n_records}"
+    if (
+        st.session_state.get('cached_inference_key') == cache_key
+        and 'cached_inference_bundle' in st.session_state
+    ):
+        bundle = st.session_state.cached_inference_bundle
+        sniper_res = bundle['sniper_res']
+        tt_res = bundle['tt_res']
+        oracle_res = bundle['oracle_res']
+        ag1 = bundle['ag1']
+        ag2 = bundle['ag2']
+        ag4 = bundle['ag4']
+        ag5 = bundle['ag5']
+        ag6 = bundle['ag6']
+        bnn_res = bundle['bnn_res']
+        all_agents = bundle['all_agents']
+        hive = bundle['hive']
+        chi2_stat = bundle['chi2_stat']
+        chi2_pval = bundle['chi2_pval']
+        rng_status = bundle['rng_status']
+        anomaly_tel = bundle['anomaly_tel']
+    else:
+        sniper_res = run_nexus_pattern_sniper(df_active)
+        tt_res = run_nexus_k3_triple_threat(df_active)
+        oracle_res = run_quantum_temporal_oracle_k3(df_active)
+        ag1 = run_sentinel_prime_omega_k3(df_active)
+        ag2 = agent_nexus_core(df_active)
+        ag4 = agent_omni_rl(df_active)
+        ag5 = agent_omega_zero(df_active)
+        ag6 = agent_duo_force(df_active)
+        bnn_res = run_bnn_agent(df_active)
 
-    all_agents = [sniper_res, tt_res, oracle_res, ag1, ag2, ag4, ag5, ag6, bnn_res]
-    hive = orchestrate_hive_mind(all_agents, df_active, bias_compensation=bias_mode)
+        all_agents = [sniper_res, tt_res, oracle_res, ag1, ag2, ag4, ag5, ag6, bnn_res]
+        hive = orchestrate_hive_mind(all_agents, df_active, bias_compensation=bias_mode)
 
-    # Statistical & Anomaly Diagnostics
-    chi2_stat, chi2_pval, rng_status = compute_chi_square_randomness(df_active)
-    anomaly_tel = compute_anomaly_telemetry(df_active)
+        # Statistical & Anomaly Diagnostics
+        chi2_stat, chi2_pval, rng_status = compute_chi_square_randomness(df_active)
+        anomaly_tel = compute_anomaly_telemetry(df_active)
 
-    # Store predictions for next live validation
-    st.session_state.agent_past_predictions[next_issue_str] = {
-        'HIVE MIND MASTER': {'dice1': hive['dice1'], 'dice2': hive['dice2'], 'dice3': hive['dice3'], 'premium': hive['premium'], 'sum': hive['sum'], 'bs': hive['bs_pred'], 'oe': hive['oe_pred']},
-        'NEXUS PATTERN SNIPER': {'dice1': sniper_res['dice1'], 'dice2': sniper_res['dice2'], 'dice3': sniper_res['dice3'], 'premium': sniper_res['premium'], 'sum': sniper_res['sum'], 'bs': sniper_res['bs_pred'], 'oe': sniper_res['oe_pred']},
-        'NEXUS K3 TRIPLE THREAT': {'dice1': tt_res['dice1'], 'dice2': tt_res['dice2'], 'dice3': tt_res['dice3'], 'premium': tt_res['premium'], 'sum': tt_res['sum'], 'bs': tt_res['bs_pred'], 'oe': tt_res['oe_pred']},
-        'QUANTUM TEMPORAL ORACLE K3': {'dice1': oracle_res['dice1'], 'dice2': oracle_res['dice2'], 'dice3': oracle_res['dice3'], 'premium': oracle_res['premium'], 'sum': oracle_res['sum'], 'bs': oracle_res['bs_pred'], 'oe': oracle_res['oe_pred']},
-        'SENTINEL PRIME OMEGA K3': {'dice1': ag1['dice1'], 'dice2': ag1['dice2'], 'dice3': ag1['dice3'], 'premium': ag1['premium'], 'sum': ag1['sum'], 'bs': ag1['bs_pred'], 'oe': ag1['oe_pred']},
-        'NEXUS CORE K3': {'dice1': ag2['dice1'], 'dice2': ag2['dice2'], 'dice3': ag2['dice3'], 'premium': ag2['premium'], 'sum': ag2['sum'], 'bs': ag2['bs_pred'], 'oe': ag2['oe_pred']},
-        'OMNI K3 RL': {'dice1': ag4['dice1'], 'dice2': ag4['dice2'], 'dice3': ag4['dice3'], 'premium': ag4['premium'], 'sum': ag4['sum'], 'bs': ag4['bs_pred'], 'oe': ag4['oe_pred']},
-        'OMEGA ZERO K3': {'dice1': ag5['dice1'], 'dice2': ag5['dice2'], 'dice3': ag5['dice3'], 'premium': ag5['premium'], 'sum': ag5['sum'], 'bs': ag5['bs_pred'], 'oe': ag5['oe_pred']},
-        'DUO FORCE K3': {'dice1': ag6['dice1'], 'dice2': ag6['dice2'], 'dice3': ag6['dice3'], 'premium': ag6['premium'], 'sum': ag6['sum'], 'bs': ag6['bs_pred'], 'oe': ag6['oe_pred']},
-        'BAYESIAN NEURAL NETWORK': {'dice1': bnn_res['dice1'], 'dice2': bnn_res['dice2'], 'dice3': bnn_res['dice3'], 'premium': bnn_res['premium'], 'sum': bnn_res['sum'], 'bs': bnn_res['bs_pred'], 'oe': bnn_res['oe_pred']}
-    }
+        st.session_state.cached_inference_key = cache_key
+        st.session_state.cached_inference_bundle = {
+            'sniper_res': sniper_res,
+            'tt_res': tt_res,
+            'oracle_res': oracle_res,
+            'ag1': ag1,
+            'ag2': ag2,
+            'ag4': ag4,
+            'ag5': ag5,
+            'ag6': ag6,
+            'bnn_res': bnn_res,
+            'all_agents': all_agents,
+            'hive': hive,
+            'chi2_stat': chi2_stat,
+            'chi2_pval': chi2_pval,
+            'rng_status': rng_status,
+            'anomaly_tel': anomaly_tel
+        }
 
-    # Synchronize Out-of-Sample Predictions to Performance Tracker Logger
-    log_all_agent_predictions(all_agents + [hive], next_issue_str)
+        # Store predictions for next live validation
+        st.session_state.agent_past_predictions[next_issue_str] = {
+            'HIVE MIND MASTER': {'dice1': hive['dice1'], 'dice2': hive['dice2'], 'dice3': hive['dice3'], 'premium': hive['premium'], 'sum': hive['sum'], 'bs': hive['bs_pred'], 'oe': hive['oe_pred']},
+            'NEXUS PATTERN SNIPER': {'dice1': sniper_res['dice1'], 'dice2': sniper_res['dice2'], 'dice3': sniper_res['dice3'], 'premium': sniper_res['premium'], 'sum': sniper_res['sum'], 'bs': sniper_res['bs_pred'], 'oe': sniper_res['oe_pred']},
+            'NEXUS K3 TRIPLE THREAT': {'dice1': tt_res['dice1'], 'dice2': tt_res['dice2'], 'dice3': tt_res['dice3'], 'premium': tt_res['premium'], 'sum': tt_res['sum'], 'bs': tt_res['bs_pred'], 'oe': tt_res['oe_pred']},
+            'QUANTUM TEMPORAL ORACLE K3': {'dice1': oracle_res['dice1'], 'dice2': oracle_res['dice2'], 'dice3': oracle_res['dice3'], 'premium': oracle_res['premium'], 'sum': oracle_res['sum'], 'bs': oracle_res['bs_pred'], 'oe': oracle_res['oe_pred']},
+            'SENTINEL PRIME OMEGA K3': {'dice1': ag1['dice1'], 'dice2': ag1['dice2'], 'dice3': ag1['dice3'], 'premium': ag1['premium'], 'sum': ag1['sum'], 'bs': ag1['bs_pred'], 'oe': ag1['oe_pred']},
+            'NEXUS CORE K3': {'dice1': ag2['dice1'], 'dice2': ag2['dice2'], 'dice3': ag2['dice3'], 'premium': ag2['premium'], 'sum': ag2['sum'], 'bs': ag2['bs_pred'], 'oe': ag2['oe_pred']},
+            'OMNI K3 RL': {'dice1': ag4['dice1'], 'dice2': ag4['dice2'], 'dice3': ag4['dice3'], 'premium': ag4['premium'], 'sum': ag4['sum'], 'bs': ag4['bs_pred'], 'oe': ag4['oe_pred']},
+            'OMEGA ZERO K3': {'dice1': ag5['dice1'], 'dice2': ag5['dice2'], 'dice3': ag5['dice3'], 'premium': ag5['premium'], 'sum': ag5['sum'], 'bs': ag5['bs_pred'], 'oe': ag5['oe_pred']},
+            'DUO FORCE K3': {'dice1': ag6['dice1'], 'dice2': ag6['dice2'], 'dice3': ag6['dice3'], 'premium': ag6['premium'], 'sum': ag6['sum'], 'bs': ag6['bs_pred'], 'oe': ag6['oe_pred']},
+            'BAYESIAN NEURAL NETWORK': {'dice1': bnn_res['dice1'], 'dice2': bnn_res['dice2'], 'dice3': bnn_res['dice3'], 'premium': bnn_res['premium'], 'sum': bnn_res['sum'], 'bs': bnn_res['bs_pred'], 'oe': bnn_res['oe_pred']}
+        }
+
+        # Synchronize Out-of-Sample Predictions to Performance Tracker Logger
+        log_all_agent_predictions(all_agents + [hive], next_issue_str)
 
 
     # ==============================================================================

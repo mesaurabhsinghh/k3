@@ -7406,6 +7406,10 @@ def render_nexus_quantum_core_ui(df_k3_history):
     bs_badge = f'<span class="badge-big">{q_res["bs_pred"].upper()}</span>' if q_res['bs_pred'] == 'Big' else f'<span class="badge-small">{q_res["bs_pred"].upper()}</span>'
     oe_badge = f'<span class="badge-odd">{q_res["oe_pred"].upper()}</span>' if q_res['oe_pred'] == 'Odd' else f'<span class="badge-even">{q_res["oe_pred"].upper()}</span>'
     
+    q_bs_conf = f"{q_res['bs_conf']:.1f}%"
+    q_oe_conf = f"{q_res['oe_conf']:.1f}%"
+    q_kelly = f"{q_res['kelly']:.1f}%"
+    
     quantum_card_html = f"""
     <div style="
         background: linear-gradient(135deg, rgba(251, 191, 36, 0.08), rgba(6, 182, 212, 0.08), rgba(168, 85, 247, 0.08));
@@ -7436,24 +7440,24 @@ def render_nexus_quantum_core_ui(df_k3_history):
             <div style="background: rgba(0,0,0,0.4); padding: 14px; border-radius: 12px; border: 1px solid rgba(251, 191, 36, 0.2); text-align: center;">
                 <div style="color: #94a3b8; font-size: 0.75rem; text-transform: uppercase; font-weight: 700;">Big / Small Target</div>
                 <div style="margin: 8px 0;">{bs_badge}</div>
-                <div style="font-size: 1.3rem; font-weight: 900; color: #38bdf8;">{q_res['bs_conf']:.1f}% <span style="font-size: 0.75rem; color: #94a3b8;">Conf</span></div>
+                <div style="font-size: 1.3rem; font-weight: 900; color: #38bdf8;">{q_bs_conf} <span style="font-size: 0.75rem; color: #94a3b8;">Conf</span></div>
             </div>
             
             <div style="background: rgba(0,0,0,0.4); padding: 14px; border-radius: 12px; border: 1px solid rgba(168, 85, 247, 0.2); text-align: center;">
                 <div style="color: #94a3b8; font-size: 0.75rem; text-transform: uppercase; font-weight: 700;">Odd / Even Target</div>
                 <div style="margin: 8px 0;">{oe_badge}</div>
-                <div style="font-size: 1.3rem; font-weight: 900; color: #a855f7;">{q_res['oe_conf']:.1f}% <span style="font-size: 0.75rem; color: #94a3b8;">Conf</span></div>
+                <div style="font-size: 1.3rem; font-weight: 900; color: #a855f7;">{q_oe_conf} <span style="font-size: 0.75rem; color: #94a3b8;">Conf</span></div>
             </div>
             
             <div style="background: rgba(0,0,0,0.4); padding: 14px; border-radius: 12px; border: 1px solid rgba(6, 182, 212, 0.2); text-align: center;">
                 <div style="color: #94a3b8; font-size: 0.75rem; text-transform: uppercase; font-weight: 700;">Optimal Kelly Stake</div>
-                <div style="font-size: 1.8rem; font-weight: 900; color: #fbbf24; margin-top: 4px;">{q_res['kelly']:.1f}%</div>
+                <div style="font-size: 1.8rem; font-weight: 900; color: #fbbf24; margin-top: 4px;">{q_kelly}</div>
                 <div style="font-size: 0.7rem; color: #34d399; font-weight: 700; margin-top: 2px;">Fractional Bankroll Allocation</div>
             </div>
         </div>
     </div>
     """
-    st.markdown(quantum_card_html, unsafe_allow_html=True)
+    render_html(quantum_card_html)
     
     with st.expander("🛠️ Quantum Core Lab (Telemetry, PPO Action, Conformal & Entropy)", expanded=False):
         c1, c2, c3 = st.columns(3)
@@ -8648,8 +8652,6 @@ def run_app():
         else:
             st.info("Need at least 10 draws for Phase 5 features.")
 
-    render_nexus_quantum_core_ui(df_active)
-
     # Master Orchestrator Card
     bs_badge = f'<span class="badge-big">{hive["bs_pred"].upper()}</span>' if hive['bs_pred'] == 'Big' else f'<span class="badge-small">{hive["bs_pred"].upper()}</span>'
     oe_badge = f'<span class="badge-odd">{hive["oe_pred"].upper()}</span>' if hive['oe_pred'] == 'Odd' else f'<span class="badge-even">{hive["oe_pred"].upper()}</span>'
@@ -8702,8 +8704,9 @@ def run_app():
     """
     render_html(master_card_html)
 
-    # Top 2 Flagship Cards Side-by-Side or Stacked
+    # Top Flagship Cards
     st.markdown("### 🎯 Flagship AI Engines")
+    render_nexus_quantum_core_ui(df_active)
     col_f1, col_f2 = st.columns(2)
     with col_f1:
         render_pattern_sniper_card(sniper_res)

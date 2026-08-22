@@ -3296,8 +3296,11 @@ class SHAPExplainer:
         if baseline is None:
             baseline = np.zeros_like(features)
         
-        baseline_pred = self.model_func(baseline.reshape(1, -1))
-        actual_pred = self.model_func(features.reshape(1, -1))
+        baseline_arr = baseline.reshape(1, -1) if baseline.ndim == 1 else baseline
+        actual_arr = features.reshape(1, -1) if features.ndim == 1 else features
+        
+        baseline_pred = self.model_func(baseline_arr)
+        actual_pred = self.model_func(actual_arr)
         
         n_features = len(features)
         shap_values = np.zeros(n_features)
@@ -7496,9 +7499,10 @@ def do_sync_k3(force_sync=False):
             actual_oe = str(latest_row['odd_even']).strip()
             
             # STRICT LIVE COMPARISON
-            if newest_issue not in st.session_state.evaluated_issues and newest_issue in st.session_state.agent_past_predictions:
-                st.session_state.evaluated_issues.add(newest_issue)
-                past_map = st.session_state.agent_past_predictions[newest_issue]
+            if newest_issue not in st.session_state.evaluated_issues:
+                if newest_issue in st.session_state.agent_past_predictions:
+                    st.session_state.evaluated_issues.add(newest_issue)
+                    past_map = st.session_state.agent_past_predictions[newest_issue]
                 
                 for name in DEFAULT_SCORECARDS.keys():
                     pred = past_map.get(name, {})
@@ -7553,6 +7557,7 @@ def do_sync_k3(force_sync=False):
                         'oe_hit': oe_hit, 'oe_pred': p_oe, 'oe_act': actual_oe,
                         'score': f"{hits_count}/7"
                     })
+                    st.session_state.agent_lifetime_vault[name] = st.session_state.agent_lifetime_vault[name][:500]
 
                 save_persisted_performance()
 

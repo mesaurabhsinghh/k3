@@ -1,3 +1,8 @@
+import warnings
+warnings.filterwarnings('ignore')
+import logging
+logging.getLogger('streamlit').setLevel(logging.ERROR)
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -5564,7 +5569,9 @@ def anderson_darling_test(sequence, dist='norm'):
     """Anderson-Darling goodness of fit test."""
     seq = np.array(sequence, dtype=float)
     try:
-        result = anderson(seq, dist='norm')
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            result = anderson(seq, dist='norm')
         stat = float(result.statistic)
         critical_5 = float(result.critical_values[2])
         verdict = '🔴 NOT NORMAL' if stat > critical_5 else '🟢 NORMAL'

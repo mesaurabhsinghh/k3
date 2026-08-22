@@ -894,7 +894,7 @@ def render_anomaly_dashboard(df):
         fig_sum.add_trace(go.Scatter(y=df_clean['sum'].astype(float).values, mode='lines+markers', name='Draw Sum', line=dict(color='#38bdf8', width=1.5)))
         fig_sum.add_hline(y=float(df_clean['sum'].astype(float).mean()), line=dict(color='#10b981', dash='dash'), annotation_text="Empirical Mean")
         fig_sum.update_layout(title="K3 Historical Sums & Anomaly Bounds", template="plotly_dark", height=320, margin=dict(l=20, r=20, t=40, b=20))
-        st.plotly_chart(fig_sum, use_container_width=True)
+        st.plotly_chart(fig_sum, width='stretch')
         
         # Plot 2: Position-wise Frequency Heatmap
         positions = ['dice1', 'dice2', 'dice3']
@@ -908,7 +908,7 @@ def render_anomaly_dashboard(df):
             text=[[f"{v:.1f}%" for v in r] for r in bias_matrix], texttemplate="%{text}"
         ))
         fig_heat.update_layout(title="Dice Face Frequency Heatmap (Benchmark = 16.7%)", template="plotly_dark", height=280, margin=dict(l=20, r=20, t=40, b=20))
-        st.plotly_chart(fig_heat, use_container_width=True)
+        st.plotly_chart(fig_heat, width='stretch')
 
     with tab_log:
         st.markdown("#### 🔥 Anomaly Alerts Historical Log")
@@ -922,7 +922,7 @@ def render_anomaly_dashboard(df):
                     'Timestamp': a['timestamp'][:19],
                     'Alert Details': "; ".join([x.get('explanation', '') for x in a.get('all_alerts', [])])
                 })
-            st.dataframe(pd.DataFrame(log_rows), use_container_width=True, hide_index=True)
+            st.dataframe(pd.DataFrame(log_rows), width='stretch', hide_index=True)
         else:
             st.info("No anomalies logged yet. Run 'Batch Process All History Draws' above to populate.")
 
@@ -946,7 +946,7 @@ def render_anomaly_dashboard(df):
                 'Critical': w_stats['critical_alerts'],
                 'Anomaly Rate': f"{(w_stats['anomalies_detected'] / max(1, w_stats['total_checks']) * 100):.1f}%"
             })
-        st.dataframe(pd.DataFrame(w_results), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(w_results), width='stretch', hide_index=True)
 
 
 # ==============================================================================
@@ -2214,7 +2214,7 @@ def render_ensemble_ui(df):
             ensemble.base.weights = weights
     
     st.markdown("### 🎯 Multi-Method Ensemble Forecasts")
-    if st.button("🚀 Generate All 7 Ensemble Predictions", key="btn_run_all_ensembles", use_container_width=True):
+    if st.button("🚀 Generate All 7 Ensemble Predictions", key="btn_run_all_ensembles", width='stretch'):
         with st.spinner("Running all 7 ensemble methods (Majority, Weighted, Confidence, BMA, Stacking, Dynamic, Adaptive)..."):
             all_preds = ensemble.predict_all_methods(df)
             st.session_state.all_ensemble_preds = all_preds
@@ -2239,7 +2239,7 @@ def render_ensemble_ui(df):
         })
     
     comp_df = pd.DataFrame(comparison_data)
-    st.dataframe(comp_df, use_container_width=True, hide_index=True)
+    st.dataframe(comp_df, width='stretch', hide_index=True)
     
     # Agreement Analysis
     st.markdown("### 🤝 Model Agreement Analysis")
@@ -2291,7 +2291,7 @@ def render_ensemble_ui(df):
         plot_bgcolor="rgba(0,0,0,0.2)",
         height=360
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
     
     # Active Selected Method Card
     st.markdown(f"### 🎯 Active Forecast Strategy: **{method.upper()}**")
@@ -2398,7 +2398,7 @@ def render_full_pipeline_ui(df):
 
     col_act1, col_act2 = st.columns([1, 2])
     with col_act1:
-        run_new = st.button("🚀 Re-Run Full Walk-Forward Pipeline", use_container_width=True, key="btn_rerun_full_pipeline")
+        run_new = st.button("🚀 Re-Run Full Walk-Forward Pipeline", width='stretch', key="btn_rerun_full_pipeline")
     with col_act2:
         model_choice = st.selectbox(
             "Select Backtesting Model Suite:",
@@ -2540,7 +2540,7 @@ def render_full_pipeline_ui(df):
                     'Tested Draws': m_data.get('total_predictions', 0)
                 })
             df_matrix = pd.DataFrame(matrix_rows)
-            st.dataframe(df_matrix, use_container_width=True, hide_index=True)
+            st.dataframe(df_matrix, width='stretch', hide_index=True)
             
             fig_bar = go.Figure()
             models_list = list(metrics.keys())
@@ -2563,7 +2563,7 @@ def render_full_pipeline_ui(df):
                 yaxis_title="Accuracy (%)",
                 height=350
             )
-            st.plotly_chart(fig_bar, use_container_width=True)
+            st.plotly_chart(fig_bar, width='stretch')
 
     with t3:
         if engine:
@@ -2588,7 +2588,7 @@ def render_full_pipeline_ui(df):
                     xaxis_title="Walk-Forward Draw Sequence Steps",
                     height=400
                 )
-                st.plotly_chart(fig_roll, use_container_width=True)
+                st.plotly_chart(fig_roll, width='stretch')
             else:
                 st.info("Rolling accuracy data will populate after walk-forward runs.")
 
@@ -2630,7 +2630,7 @@ def render_full_pipeline_ui(df):
                 height=350,
                 title=f"Multi-Parameter Radar Profile: {sel_m}"
             )
-            st.plotly_chart(fig_radar, use_container_width=True)
+            st.plotly_chart(fig_radar, width='stretch')
 
     with t5:
         st.markdown("#### 📜 Complete Raw ASCII Terminal Log Output")
@@ -2950,7 +2950,7 @@ def render_performance_tracker_ui(df):
                 pbs = st.selectbox("Pred B/S", ["Big", "Small"], key="p_bs")
                 poe = st.selectbox("Pred O/E", ["Odd", "Even"], key="p_oe")
             pconf = st.slider("Forecast Confidence", 0.0, 1.0, 0.75, key="p_conf")
-            if st.button("📝 Log Prediction Entry", use_container_width=True):
+            if st.button("📝 Log Prediction Entry", width='stretch'):
                 pid = logger.log_prediction(m_name, m_iss, {'dice1': pd1, 'dice2': pd2, 'dice3': pd3, 'sum': psum, 'bs_pred': pbs, 'oe_pred': poe, 'premium': f"{pd1}{pd2}{pd3}"}, confidence=pconf)
                 st.success(f"✅ Prediction Logged! (ID: `{pid[:24]}...`)")
                 st.rerun()
@@ -2972,7 +2972,7 @@ def render_performance_tracker_ui(df):
                         abs_val = "Big" if asum >= 11 else "Small"
                         aoe_val = "Odd" if asum % 2 == 1 else "Even"
                         st.info(f"Actual: **{abs_val}** | **{aoe_val}**")
-                    if st.button("✅ Validate Issue Outcome", use_container_width=True):
+                    if st.button("✅ Validate Issue Outcome", width='stretch'):
                         if logger.validate_prediction(val_m, iss_to_val, {'dice1': ad1, 'dice2': ad2, 'dice3': ad3, 'sum': asum, 'bs': abs_val, 'oe': aoe_val, 'premium': f"{ad1}{ad2}{ad3}"}):
                             st.success(f"✅ Validated Issue #{iss_to_val}!")
                             st.rerun()
@@ -3000,7 +3000,7 @@ def render_performance_tracker_ui(df):
         if m_sentinel: funcs['SENTINEL PRIME OMEGA'] = run_sentinel_prime_omega_k3
         if m_bnn: funcs['BAYESIAN NEURAL NETWORK'] = run_bnn_agent
         
-        if st.button("🚀 Execute Walk-Forward Backtest Audit", use_container_width=True):
+        if st.button("🚀 Execute Walk-Forward Backtest Audit", width='stretch'):
             with st.spinner(f"Running expanding walk-forward validation across {len(df)} historical draws..."):
                 t_log = PredictionLogger(storage_path=BASE / 'walkforward_backtest_audit.json')
                 tester = WalkForwardBacktester(funcs, t_log)
@@ -3013,7 +3013,7 @@ def render_performance_tracker_ui(df):
         if 'wf_res' in st.session_state and 'wf_tester' in st.session_state:
             st.markdown("##### Walk-Forward Comparative Audit Summary Table")
             rep_df = st.session_state.wf_tester.generate_backtest_report(df, initial_window=wf_window)
-            st.dataframe(rep_df, use_container_width=True, hide_index=True)
+            st.dataframe(rep_df, width='stretch', hide_index=True)
 
     with tab3:
         st.markdown("#### 📈 Deep Performance Visual Telemetry")
@@ -3042,7 +3042,7 @@ def render_performance_tracker_ui(df):
                 )])
                 fig_bar.add_hline(y=50, line=dict(color='red', dash='dash'), annotation_text="50% Binary Baseline")
                 fig_bar.update_layout(title=f"Per-Parameter Empirical Accuracy: {sel_m}", yaxis_title="Accuracy (%)", template="plotly_dark", height=320, margin=dict(l=20, r=20, t=40, b=20))
-                st.plotly_chart(fig_bar, use_container_width=True)
+                st.plotly_chart(fig_bar, width='stretch')
                 
                 # Rolling Accuracy Trajectory
                 rolling_data = m_res.get('rolling_performance', [])
@@ -3052,7 +3052,7 @@ def render_performance_tracker_ui(df):
                     fig_roll.add_trace(go.Scatter(y=rdf['accuracy']*100, mode='lines+markers', line=dict(color='#10b981', width=2), name='Rolling Accuracy (20w)'))
                     fig_roll.add_hline(y=50, line=dict(color='red', dash='dot'), annotation_text="50% Random Floor")
                     fig_roll.update_layout(title="Rolling Window (20-Draws) Accuracy Trajectory", template="plotly_dark", height=300, margin=dict(l=20, r=20, t=40, b=20))
-                    st.plotly_chart(fig_roll, use_container_width=True)
+                    st.plotly_chart(fig_roll, width='stretch')
             else:
                 st.info(f"No validated predictions yet for {sel_m}.")
         else:
@@ -3079,14 +3079,14 @@ def render_performance_tracker_ui(df):
                         })
             if comp_rows:
                 cdf = pd.DataFrame(comp_rows)
-                st.dataframe(cdf, use_container_width=True, hide_index=True)
+                st.dataframe(cdf, width='stretch', hide_index=True)
                 fig_comp = go.Figure(data=[go.Bar(
                     x=cdf['Model'], y=cdf['BS Accuracy %'],
                     marker_color='#8b5cf6', text=[f"{v:.1f}%" for v in cdf['BS Accuracy %']], textposition='auto'
                 )])
                 fig_comp.add_hline(y=50, line=dict(color='red', dash='dash'), annotation_text="Fair RNG Benchmark (50%)")
                 fig_comp.update_layout(title="Big/Small Prediction Accuracy Benchmark by AI Agent", yaxis_title="Accuracy (%)", template="plotly_dark", height=320, margin=dict(l=20, r=20, t=40, b=20))
-                st.plotly_chart(fig_comp, use_container_width=True)
+                st.plotly_chart(fig_comp, width='stretch')
 
     with tab5:
         st.markdown("#### 📄 Exportable Performance Audit Reports")
@@ -3657,7 +3657,7 @@ def render_xai_ui(df):
             template="plotly_dark",
             height=350
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
     # TAB 2
     with tab2:
@@ -3689,7 +3689,7 @@ def render_xai_ui(df):
                         height=480,
                         yaxis={'autorange': 'reversed'}
                     )
-                    st.plotly_chart(fig_glob, use_container_width=True)
+                    st.plotly_chart(fig_glob, width='stretch')
                 
                 with col2:
                     st.markdown("**Feature Telemetry Descriptions:**")
@@ -3724,7 +3724,7 @@ def render_xai_ui(df):
         contrib_df = pd.DataFrame(shap_exp['feature_importance'], columns=['Feature', 'SHAP Value'])
         contrib_df['Description'] = contrib_df['Feature'].apply(fe.get_feature_description)
         contrib_df['Impact Direction'] = contrib_df['SHAP Value'].apply(lambda x: '⬆️ Positive (Up)' if x > 0 else '🔽 Negative (Down)')
-        st.dataframe(contrib_df, use_container_width=True, height=350)
+        st.dataframe(contrib_df, width='stretch', height=350)
 
     # TAB 4
     with tab4:
@@ -3756,7 +3756,7 @@ def render_xai_ui(df):
                     template="plotly_dark",
                     height=450
                 )
-                st.plotly_chart(fig_lime, use_container_width=True)
+                st.plotly_chart(fig_lime, width='stretch')
                 st.metric("Surrogate Explanation Quality (R²)", f"{lime_exp.get('r_squared', 0.0):.3f}")
 
     # TAB 5
@@ -4209,7 +4209,7 @@ def render_decomposition_ui(df):
         wavelet = st.selectbox("Wavelet Family", ['db4', 'haar', 'sym4', 'coif2'], key="sel_ts_wavelet")
         decomposer.wavelet.wavelet = wavelet
     
-    if st.button("🔍 Run Full Time Series Decomposition", use_container_width=True, key="btn_run_decomp"):
+    if st.button("🔍 Run Full Time Series Decomposition", width='stretch', key="btn_run_decomp"):
         with st.spinner("Decomposing multi-scale signals across time..."):
             results = decomposer.full_decomposition(df, value_col)
             st.session_state.decomp_results = results
@@ -4252,7 +4252,7 @@ def render_decomposition_ui(df):
             fig.add_trace(go.Scatter(y=stl['residual'], name='Residual', line=dict(color='#f87171', width=1.0)), row=4, col=1)
             
             fig.update_layout(template="plotly_dark", height=650, showlegend=False, title_text="STL LOESS Multi-Component Breakdown")
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
             
             # Anomaly Highlights
             anom_pts = decomposer.stl.find_anomalies(threshold=2.5)
@@ -4295,7 +4295,7 @@ def render_decomposition_ui(df):
                 template="plotly_dark",
                 height=380
             )
-            st.plotly_chart(fig_fft, use_container_width=True)
+            st.plotly_chart(fig_fft, width='stretch')
             
             n_harm = st.slider("Harmonic Components to Retain (Denoising Filter)", 1, 10, 3, key="slider_harm_n")
             recon = decomposer.fourier.reconstruct_signal(results['series'], n_harmonics=n_harm)
@@ -4303,7 +4303,7 @@ def render_decomposition_ui(df):
             fig_recon.add_trace(go.Scatter(y=results['series'], name='Raw Signal', line=dict(color='rgba(148, 163, 184, 0.4)', width=1)))
             fig_recon.add_trace(go.Scatter(y=recon, name=f'FFT Denoised (Top {n_harm} Harmonics)', line=dict(color='#a855f7', width=2.5)))
             fig_recon.update_layout(template="plotly_dark", height=320, title=f"Raw vs FFT Denoised Harmonic Filter (Top {n_harm} Harmonics)")
-            st.plotly_chart(fig_recon, use_container_width=True)
+            st.plotly_chart(fig_recon, width='stretch')
         else:
             st.error(f"Fourier Error: {results['fourier'].get('error')}")
 
@@ -4326,14 +4326,14 @@ def render_decomposition_ui(df):
                 )
             ])
             fig_pie.update_layout(template="plotly_dark", height=320, title="Wavelet Energy Distribution by Resolution Scale")
-            st.plotly_chart(fig_pie, use_container_width=True)
+            st.plotly_chart(fig_pie, width='stretch')
             
             n_comps = len(wav['components'])
             fig_wav = make_subplots(rows=n_comps, cols=1, shared_xaxes=True, subplot_titles=list(wav['components'].keys()), vertical_spacing=0.05)
             for idx, (c_name, c_vals) in enumerate(wav['components'].items(), 1):
                 fig_wav.add_trace(go.Scatter(y=c_vals, name=c_name, line=dict(width=1.5)), row=idx, col=1)
             fig_wav.update_layout(template="plotly_dark", height=150 * n_comps, showlegend=False, title_text="Wavelet Sub-Band Component Waveforms")
-            st.plotly_chart(fig_wav, use_container_width=True)
+            st.plotly_chart(fig_wav, width='stretch')
         else:
             st.error(f"Wavelet Error: {results['wavelet'].get('error')}")
 
@@ -4359,12 +4359,12 @@ def render_decomposition_ui(df):
                 xaxis_title="Chronological Draw Index",
                 yaxis_title="Observed Value"
             )
-            st.plotly_chart(fig_cp, use_container_width=True)
+            st.plotly_chart(fig_cp, width='stretch')
             
             if cp_data.get('segments'):
                 st.markdown("#### Segment Statistics")
                 seg_df = pd.DataFrame(cp_data['segments'])
-                st.dataframe(seg_df, use_container_width=True)
+                st.dataframe(seg_df, width='stretch')
         else:
             st.error(f"Change Point Error: {results['change_points'].get('error')}")
 
@@ -4395,7 +4395,7 @@ def render_decomposition_ui(df):
             fig_ac.add_hline(y=-cb, line_dash="dash", line_color="#f59e0b", row=2, col=1)
             
             fig_ac.update_layout(template="plotly_dark", height=500, showlegend=False)
-            st.plotly_chart(fig_ac, use_container_width=True)
+            st.plotly_chart(fig_ac, width='stretch')
             
             if ac['significant_acf_lags']:
                 st.info(f"Significant ACF Lags (outside 95% CI): {', '.join([f'Lag {lag} ({val:+.3f})' for lag, val in ac['significant_acf_lags'][:5]])}")
@@ -4417,7 +4417,7 @@ def render_decomposition_ui(df):
                     'Length': p['length'],
                     'Occurrence Count': p['count']
                 } for p in pats[:10]])
-                st.dataframe(pat_df, use_container_width=True)
+                st.dataframe(pat_df, width='stretch')
             else:
                 st.info("No recurring patterns with sufficient support found.")
                 
@@ -4426,7 +4426,7 @@ def render_decomposition_ui(df):
             cycles = results.get('cycles', {})
             if isinstance(cycles, dict) and cycles.get('cycles'):
                 cyc_df = pd.DataFrame(cycles['cycles'])
-                st.dataframe(cyc_df, use_container_width=True)
+                st.dataframe(cyc_df, width='stretch')
                 if cycles.get('strongest_cycle'):
                     sc = cycles['strongest_cycle']
                     st.success(f"🏆 Strongest Cycle: Period `{sc['cycle_length']}` (Match Rate: `{sc['match_rate']*100:.1f}%`)")
@@ -5028,7 +5028,7 @@ def render_advanced_features_ui(df):
         
         col_btn, col_metric = st.columns([1, 2])
         with col_btn:
-            run_automl_btn = st.button("🚀 Run Walk-Forward AutoML Evaluation", key="btn_run_automl", use_container_width=True)
+            run_automl_btn = st.button("🚀 Run Walk-Forward AutoML Evaluation", key="btn_run_automl", width='stretch')
             
         if run_automl_btn or 'automl_results' not in st.session_state:
             with st.spinner("Training & validating 8 classification models over time-series splits..."):
@@ -5054,7 +5054,7 @@ def render_advanced_features_ui(df):
                     {'Model': name, 'Mean CV Accuracy': f"{r['mean_score']*100:.2f}%", 'Std Dev': f"{r['std_score']*100:.2f}%", 'Folds': r['n_folds']}
                     for name, r in results['all_results'].items()
                 ]).sort_values('Mean CV Accuracy', ascending=False)
-                st.dataframe(all_results_df, use_container_width=True, hide_index=True)
+                st.dataframe(all_results_df, width='stretch', hide_index=True)
                 
             st.markdown("#### 🔮 Forecast with Best AutoML Model:")
             pred_best = st.session_state.automl.predict_with_best(df)
@@ -5123,7 +5123,7 @@ def render_advanced_features_ui(df):
         if recent:
             st.dataframe(pd.DataFrame([{
                 'Timestamp': a['timestamp'][:19], 'Severity': a['severity'], 'Title': a['title'], 'Channels': ', '.join(a['channels_sent'])
-            } for a in recent]), use_container_width=True, hide_index=True)
+            } for a in recent]), width='stretch', hide_index=True)
         else:
             st.info("No push alerts recorded in this session yet.")
             
@@ -5145,7 +5145,7 @@ def render_advanced_features_ui(df):
         st.markdown("#### 🔧 Database Operations")
         col_d1, col_d2 = st.columns(2)
         with col_d1:
-            if st.button("📥 Import Active CSV History into DB", key="btn_db_import_csv", use_container_width=True):
+            if st.button("📥 Import Active CSV History into DB", key="btn_db_import_csv", width='stretch'):
                 inserted = db.bulk_insert_draws(df)
                 st.success(f"✅ Successfully inserted / verified {inserted} draws into SQLite DB!")
                 st.rerun()
@@ -5158,7 +5158,7 @@ def render_advanced_features_ui(df):
                     "k3_database_export.csv",
                     "text/csv",
                     key="btn_download_db_csv",
-                    use_container_width=True
+                    width='stretch'
                 )
             else:
                 st.info("DB currently empty. Click import to load draws.")
@@ -5166,7 +5166,7 @@ def render_advanced_features_ui(df):
         st.markdown("#### 📋 Recent Draws in Database Table")
         recent_draws_df = db.get_recent_draws(15)
         if not recent_draws_df.empty:
-            st.dataframe(recent_draws_df, use_container_width=True, hide_index=True)
+            st.dataframe(recent_draws_df, width='stretch', hide_index=True)
         else:
             st.info("No records in database. Click 'Import Active CSV History' above.")
 
@@ -7606,17 +7606,17 @@ def run_app():
     # Sidebar Data Controls
     st.sidebar.markdown("## ⚙️ Data Operations")
     col_s1, col_s2 = st.sidebar.columns(2)
-    if col_s1.button("⚡ Force Sync", use_container_width=True):
+    if col_s1.button("⚡ Force Sync", width='stretch'):
         fetch_k3_data_fast.clear()
         df_active = do_sync_k3(force_sync=True)
         st.rerun()
-    if col_s2.button("📂 Reload CSV", use_container_width=True):
+    if col_s2.button("📂 Reload CSV", width='stretch'):
         fetch_k3_data_fast.clear()
         st.session_state.data_k3 = load_k3()
         if 'cached_inference_key' in st.session_state: del st.session_state['cached_inference_key']
         st.rerun()
 
-    if st.sidebar.button("🔄 Recalculate Backtest", use_container_width=True):
+    if st.sidebar.button("🔄 Recalculate Backtest", width='stretch'):
         sc, vault, ev_set = compute_strict_historical_backtest(df_active, max_eval=20)
         st.session_state.agent_scorecards = sc
         st.session_state.agent_lifetime_vault = vault
@@ -8123,7 +8123,7 @@ def run_app():
                         'Syn Dice 3': np.clip(np.round(syn[:, 2] * 5 + 1), 1, 6).astype(int),
                         'Syn Sum': np.clip(np.round(syn[:, 3] * 15 + 3), 3, 18).astype(int)
                     })
-                    st.dataframe(syn_df, use_container_width=True, hide_index=True)
+                    st.dataframe(syn_df, width='stretch', hide_index=True)
                 
             with b_tab2:
                 st.markdown("#### 🔄 Bayesian LSTM (Temporal Uncertainty)")
@@ -8145,7 +8145,7 @@ def run_app():
                         'Predicted Mean': lstm_res['mean'][:6],
                         'Uncertainty Std': lstm_res['std'][:6]
                     })
-                    st.dataframe(lstm_chart_df, use_container_width=True, hide_index=True)
+                    st.dataframe(lstm_chart_df, width='stretch', hide_index=True)
                 
             with b_tab3:
                 st.markdown("#### 📈 Gaussian Process Regression (RBF Covariance)")
@@ -8355,7 +8355,7 @@ def run_app():
                     'Score': r.get('score', '0/7')
                 })
             df_vault = pd.DataFrame(table_data)
-            st.dataframe(df_vault, use_container_width=True, hide_index=True)
+            st.dataframe(df_vault, width='stretch', hide_index=True)
         else:
             st.info("No lifetime records archived yet. Historical data accumulates live with every draw.")
 
@@ -8365,7 +8365,7 @@ def run_app():
 
     with tab1:
         cols = [c for c in ['issueNumber', 'premium', 'dice1', 'dice2', 'dice3', 'sum', 'big_small', 'odd_even'] if c in df_active]
-        st.dataframe(df_active[cols].astype(str).head(50), use_container_width=True, hide_index=True)
+        st.dataframe(df_active[cols].astype(str).head(50), width='stretch', hide_index=True)
 
     with tab2:
         c1, c2, c3, c4 = st.columns(4)
